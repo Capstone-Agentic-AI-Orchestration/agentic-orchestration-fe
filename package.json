@@ -1,5 +1,5 @@
 {
-  "name": "cicd-fe-single",
+  "name": "devflow-frontend",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -9,22 +9,35 @@
     "lint": "eslint",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:e2e": "tsx tests/e2e/playwright-e2e.ts"
+    "test:e2e": "tsx tests/e2e/playwright-e2e.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "next": "16.2.1",
-    "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "@gsap/react": "^2.1.2",
+    "@supabase/supabase-js": "^2.106.2",
+    "@xyflow/react": "^12.11.0",
+    "gsap": "^3.15.0",
+    "lenis": "^1.3.23",
+    "motion": "^12.40.0",
+    "next": "16.2.6",
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
+    "socket.io-client": "^4.8.3",
+    "three": "^0.171.0",
+    "zustand": "^5.0.14"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.2",
     "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
     "@types/jest": "^30.0.0",
     "@types/node": "^25.5.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "@types/three": "^0.171.0",
     "eslint": "^9.0.0",
-    "eslint-config-next": "16.2.1",
+    "eslint-config-next": "16.2.6",
     "jest": "^30.3.0",
     "jest-environment-jsdom": "^30.3.0",
     "playwright": "^1.58.2",

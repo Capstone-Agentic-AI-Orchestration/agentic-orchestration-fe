@@ -4,7 +4,8 @@ import { chromium, firefox, webkit } from 'playwright';
 
 type BrowserName = 'chromium' | 'firefox' | 'webkit';
 
-const LOCAL_PAGE_MARKERS = ['Get started by editing', 'To get started, edit the page.tsx file.'];
+// Markers present in the migrated marketing home view (MarketingHomeView)
+const LOCAL_PAGE_MARKERS = ['Build Production-Ready', 'Enterprise IT Solutions for Philippine MSMEs'];
 
 function hasExpectedLandingMarker(text: string): boolean {
   return LOCAL_PAGE_MARKERS.some((marker) => text.includes(marker));

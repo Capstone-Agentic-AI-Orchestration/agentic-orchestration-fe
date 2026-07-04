@@ -1,0 +1,110 @@
+/* Hero */
+
+.hero {
+  position: relative;
+  padding: 160px 0 120px;
+  border-bottom: 1px solid var(--border-soft);
+  background: var(--bg-0);
+  overflow: hidden;
+}
+
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: 80px 80px;
+  pointer-events: none;
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+/* WebGL agent graph — right-side layer, faded toward the headline */
+.hero-scene {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(64%, 900px);
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.9;
+  -webkit-mask-image: radial-gradient(130% 110% at 85% 50%, #000 45%, rgba(0, 0, 0, 0.5) 65%, transparent 85%);
+  mask-image: radial-gradient(130% 110% at 85% 50%, #000 45%, rgba(0, 0, 0, 0.5) 65%, transparent 85%);
+}
+.hero-scene canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.hero-inner {
+  position: relative;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 32px;
+  z-index: 1;
+}
+
+.hero-headline {
+  font-size: clamp(48px, 7vw, 88px);
+  line-height: 0.96;
+  font-weight: 500;
+  letter-spacing: -0.045em;
+  color: var(--text);
+  margin: 0 0 24px;
+  max-width: 900px;
+}
+
+.hero-paragraph {
+  font-size: clamp(15px, 1.2vw, 17px);
+  line-height: 1.55;
+  color: var(--text-2);
+  margin: 0 0 40px;
+  max-width: 580px;
+  letter-spacing: -0.005em;
+}
+
+.hero-cta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.hero-button {
+  display: inline-flex;
+  align-items: center;
+  padding: 14px 24px;
+  background: var(--text);
+  color: var(--bg-0);
+  border: 1px solid var(--text);
+  border-radius: 2px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition: background var(--motion-fast), color var(--motion-fast);
+}
+
+.hero-button:hover {
+  background: transparent;
+  color: var(--text);
+}
+
+@media (max-width: 768px) {
+  .hero {
+    padding: 120px 0 80px;
+  }
+  .hero-inner {
+    padding: 0 20px;
+  }
+  .hero-scene {
+    width: 100%;
+    opacity: 0.22;
+    -webkit-mask-image: radial-gradient(120% 90% at 70% 25%, rgba(0, 0, 0, 0.9) 25%, transparent 75%);
+    mask-image: radial-gradient(120% 90% at 70% 25%, rgba(0, 0, 0, 0.9) 25%, transparent 75%);
+  }
+}

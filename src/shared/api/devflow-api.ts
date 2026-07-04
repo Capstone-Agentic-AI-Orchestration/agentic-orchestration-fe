@@ -1,0 +1,1874 @@
+import { supabase } from "@/shared/auth/supabase-client";
+
+const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000").replace(/\/+$/, "");
+
+export type DevFlowApiErrorKind =
+  | "unauthenticated"
+  | "forbidden"
+  | "not_found"
+  | "validation"
+  | "server"
+  | "network"
+  | "unknown";
+
+export class DevFlowApiError extends Error {
+  status: number;
+  kind: DevFlowApiErrorKind;
+  details: string | null;
+  rawBody: string;
+
+  constructor(input: {
+    status: number;
+    kind: DevFlowApiErrorKind;
+    message: string;
+    details?: string | null;
+    rawBody?: string;
+  }) {
+    super(input.message);
+    this.name = "DevFlowApiError";
+    this.status = input.status;
+    this.kind = input.kind;
+    this.details = input.details ?? null;
+    this.rawBody = input.rawBody ?? "";
+  }
+}
+
+export type DevFlowProjectStatus =
+  | "PENDING"
+  | "PARSING_REQUIREMENTS"
+  | "NEGOTIATING_CONTRACT"
+  | "AWAITING_GATE_1"
+  | "GENERATING_CODE"
+  | "AWAITING_GATE_2"
+  | "COMMITTING"
+  | "DELIVERED"
+  | "FAILED";
+
+export type DevFlowUserRole = "CLIENT" | "PM" | "DEV" | "ADMIN";
+export type DevFlowProfileStatus = "ACTIVE" | "SUSPENDED";
+
+export type DevFlowInquiryStatus = "NEW" | "APPROVED" | "REJECTED";
+
+export type DevFlowScheduleEventType = "MILESTONE" | "MEETING" | "DUE_DATE" | "REMINDER" | "OTHER";
+export type DevFlowScheduleVisibility = "PRIVATE" | "TEAM" | "CLIENT";
+export type DevFlowDeveloperAvailabilityStatus = "AVAILABLE" | "LIMITED" | "UNAVAILABLE";
+
+export type DevFlowClientInviteStatus = "PENDING" | "ACCEPTED" | "REVOKED";
+
+export type DevFlowProjectKickoffStatus = "DRAFT" | "READY" | "LOCKED";
+
+export type DevFlowProjectLifecycleStage =
+  | "APPROVED"
+  | "CLIENT_ONBOARDING"
+  | "KICKOFF"
+  | "READY_FOR_ORCHESTRATION"
+  | "IN_ORCHESTRATION"
+  | "CLIENT_REVIEW"
+  | "REVISION"
+  | "DELIVERED"
+  | "FAILED";
+
+export type DevFlowArtifactReviewStatus = "PENDING" | "APPROVED" | "REVISION_REQUESTED";
+
+export type DevFlowArtifactOutputReviewStatus = "PENDING" | "APPROVED" | "REWORK_REQUESTED" | "PUBLISHED";
+export type DevFlowArtifactValidationStatus = "PENDING" | "PASSED" | "FAILED";
+
+export type DevFlowProjectDeliveryReviewStatus = "PENDING" | "ACCEPTED" | "REVISION_REQUESTED" | "REVISION_RESOLVED";
+
+export type DevFlowProjectTaskStatus = "TODO" | "IN_PROGRESS" | "IN_REVIEW" | "DONE";
+
+export type DevFlowWorkOrderAgentType = "FRONTEND" | "BACKEND" | "DATABASE" | "ARCHITECTURE" | "CONTRACT";
+
+export type DevFlowWorkOrderStatus = "DRAFT" | "READY" | "DISPATCHED" | "COMPLETED" | "FAILED" | "CANCELLED";
+
+export type DevFlowWorkOrderPriority = "LOW" | "NORMAL" | "HIGH" | "URGENT";
+
+export type DevFlowAgentProviderMode = "mock" | "llm" | "simulation";
+
+export type DevFlowProjectTaskActivityType =
+  | "TASK_CREATED"
+  | "STATUS_CHANGED"
+  | "ASSIGNEE_CHANGED"
+  | "ARTIFACT_CHANGED"
+  | "COMMENT";
+
+export type DevFlowNotificationType =
+  | "INQUIRY_SUBMITTED"
+  | "INQUIRY_APPROVED"
+  | "INQUIRY_REJECTED"
+  | "CLIENT_INVITE_ACCEPTED"
+  | "ARTIFACT_REVIEWED"
+  | "REVISION_HANDLED"
+  | "ARTIFACT_PUBLISHED"
+  | "ARTIFACT_REWORK_REQUESTED"
+  | "DELIVERY_ACCEPTED"
+  | "DELIVERY_REVISION_REQUESTED"
+  | "DELIVERY_REVISION_RESOLVED"
+  | "TASK_ASSIGNED"
+  | "TASK_STATUS_CHANGED"
+  | "TASK_COMMENTED"
+  | "WORK_ORDER_CREATED"
+  | "WORK_ORDER_DISPATCHED"
+  | "WORK_ORDER_STATUS_CHANGED"
+  | "COLLAB_MESSAGE_SENT"
+  | "COLLAB_DOCUMENT_UPLOADED"
+  | "COLLAB_DOCUMENT_REVIEWED";
+
+export type DevFlowProjectTimelineEventType =
+  | "PROJECT_CREATED"
+  | "PROJECT_UPDATED"
+  | "CLIENT_INVITE_ACCEPTED"
+  | "MEMBER_ADDED"
+  | "MEMBER_REMOVED"
+  | "ARTIFACT_SHARED"
+  | "ARTIFACT_UNSHARED"
+  | "ARTIFACT_REVIEWED"
+  | "REVISION_HANDLED"
+  | "ARTIFACT_OUTPUT_REVIEWED"
+  | "ARTIFACT_PUBLISHED"
+  | "ARTIFACT_REWORK_REQUESTED"
+  | "DELIVERY_ACCEPTED"
+  | "DELIVERY_REVISION_REQUESTED"
+  | "DELIVERY_REVISION_RESOLVED"
+  | "TASK_CREATED"
+  | "TASK_ASSIGNED"
+  | "TASK_STATUS_CHANGED"
+  | "TASK_COMMENTED"
+  | "WORK_ORDER_CREATED"
+  | "WORK_ORDER_DISPATCHED"
+  | "WORK_ORDER_STATUS_CHANGED"
+  | "NOTIFICATION_SENT"
+  | "COLLAB_CONVERSATION_CREATED"
+  | "COLLAB_MESSAGE_SENT"
+  | "COLLAB_DOCUMENT_UPLOADED"
+  | "COLLAB_DOCUMENT_REVIEWED";
+
+export type DevFlowProjectTimelineVisibility = "INTERNAL" | "TEAM" | "CLIENT";
+
+export type DevFlowCollaborationVisibility = "TEAM" | "CLIENT";
+
+export type DevFlowConversationCategory = "GENERAL" | "DELIVERY" | "CONTRACT" | "SUPPORT";
+
+export type DevFlowCollaborationDocumentKind = "REQUIREMENT" | "CONTRACT" | "DELIVERABLE" | "GENERAL";
+
+export type DevFlowCollaborationDocumentStatus =
+  | "DRAFT"
+  | "UPLOADED"
+  | "APPROVAL_REQUESTED"
+  | "APPROVED"
+  | "REVISION_REQUESTED"
+  | "ARCHIVED";
+
+export interface DevFlowAuthUser {
+  id: string;
+  email: string | null;
+  fullName: string | null;
+  role: DevFlowUserRole;
+  status?: DevFlowProfileStatus;
+}
+
+export interface DevFlowProfileSelf extends DevFlowAuthUser {
+  status: DevFlowProfileStatus;
+  preferences: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UpdateDevFlowProfileInput {
+  fullName?: string;
+  preferences?: Record<string, unknown>;
+}
+
+export interface DevFlowProfileSearchResult {
+  id: string;
+  email: string | null;
+  fullName: string | null;
+  role: DevFlowUserRole;
+  createdAt: string;
+}
+
+export interface DevFlowInquiry {
+  id: string;
+  companyName: string;
+  contactName: string;
+  email: string;
+  phone: string | null;
+  role: string | null;
+  brief: string;
+  stackKey: string;
+  budgetRange: string | null;
+  timeline: string | null;
+  status: DevFlowInquiryStatus;
+  reviewNote: string | null;
+  reviewedById: string | null;
+  reviewedAt: string | null;
+  approvedProjectId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  reviewedBy: DevFlowProfile | null;
+  clientInvite: Pick<DevFlowClientInvite, "id" | "status" | "projectId" | "email" | "acceptedAt"> | null;
+}
+
+export interface DevFlowClientInvite {
+  id: string;
+  inquiryId: string;
+  projectId: string;
+  email: string;
+  contactName: string;
+  companyName: string;
+  status: DevFlowClientInviteStatus;
+  createdById: string | null;
+  acceptedById: string | null;
+  acceptedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  project: {
+    id: string;
+    companyName: string;
+    status: DevFlowProjectStatus;
+    createdAt: string;
+  };
+}
+
+export interface DevFlowClientInviteStatusSummary {
+  email: string;
+  pending: number;
+  accepted: number;
+  latestCompanyName: string | null;
+}
+
+export interface DevFlowProjectClientInvite {
+  id: string;
+  email: string;
+  contactName: string;
+  companyName: string;
+  status: DevFlowClientInviteStatus;
+  acceptedById: string | null;
+  acceptedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DevFlowProjectKickoff {
+  id: string;
+  projectId: string;
+  scopeSummary: string | null;
+  milestones: string | null;
+  requiredDocuments: string | null;
+  techStackNotes: string | null;
+  deliveryRoles: string | null;
+  readinessNotes: string | null;
+  scopeConfirmed: boolean;
+  milestonesConfirmed: boolean;
+  documentsConfirmed: boolean;
+  techStackConfirmed: boolean;
+  rolesConfirmed: boolean;
+  clientAccessConfirmed: boolean;
+  initialTasksCreated: boolean;
+  initialWorkOrdersCreated: boolean;
+  status: DevFlowProjectKickoffStatus;
+  completedById: string | null;
+  completedAt: string | null;
+  updatedById: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DevFlowProjectSummary {
+  id: string;
+  companyName: string;
+  status: DevFlowProjectStatus;
+  createdAt: string;
+  updatedAt: string;
+  lifecycle: DevFlowProjectLifecycle;
+}
+
+export interface DevFlowProjectLifecycle {
+  stage: DevFlowProjectLifecycleStage;
+  label: string;
+  nextAction: string;
+  tone: "gray" | "blue" | "purple" | "yellow" | "green" | "red";
+  progress: number;
+  signals: {
+    clientAccepted: boolean;
+    kickoffReady: boolean;
+    orchestrationStarted: boolean;
+    clientReviewOpen: boolean;
+    revisionOpen: boolean;
+    deliveryAccepted: boolean;
+    deliveryRevisionOpen: boolean;
+    totalTasks: number;
+    openTasks: number;
+    totalWorkOrders: number;
+    activeWorkOrders: number;
+    clientVisibleArtifacts: number;
+  };
+}
+
+export interface DevFlowProfile {
+  id: string;
+  email: string | null;
+  fullName: string | null;
+  role: DevFlowUserRole;
+}
+
+export type DevFlowAdminDomainStatus = "PLANNED" | "PENDING_VERIFICATION" | "VERIFIED" | "FAILED" | "DISABLED";
+
+export interface DevFlowAdminUser extends DevFlowProfile {
+  status: DevFlowProfileStatus;
+  createdAt: string;
+  updatedAt: string;
+  memberships?: Array<{ projectId: string; role: DevFlowUserRole }>;
+  createdProjects?: Array<{ id: string }>;
+  projectCount: number;
+}
+
+export interface DevFlowAdminDomain {
+  id: string;
+  name: string;
+  type: string;
+  owner: string | null;
+  target: string | null;
+  environment: string;
+  status: DevFlowAdminDomainStatus;
+  verifiedAt: string | null;
+  createdById: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DevFlowAdminRepository {
+  projectId: string;
+  companyName: string;
+  status: DevFlowProjectStatus;
+  repoUrl: string | null;
+  runId: string | null;
+  linked: boolean;
+  updatedAt: string;
+}
+
+export interface DevFlowAdminHandoff {
+  projectId: string;
+  companyName: string;
+  projectStatus: DevFlowProjectStatus;
+  repoUrl: string | null;
+  deliveryReviewStatus: DevFlowProjectDeliveryReviewStatus;
+  clientVisibleArtifacts: number;
+  publishedArtifacts: number;
+  activeWorkOrders: number;
+  updatedAt: string;
+}
+
+export interface DevFlowAdminUsage {
+  totals: {
+    tokensConsumed: number;
+    tokenBudget: number;
+    budgetUtilization: number;
+    runCount: number;
+    eventCount: number;
+  };
+  projects: Array<{
+    projectId: string;
+    companyName: string;
+    status: DevFlowProjectStatus;
+    tokensConsumed: number;
+    tokenBudget: number;
+    retryCount: number;
+    maxRetries: number;
+  }>;
+  recentRuns: DevFlowOrchestrationRun[];
+}
+
+export interface DevFlowScheduleEvent {
+  id: string;
+  title: string;
+  description: string | null;
+  startsAt: string;
+  endsAt: string;
+  type: DevFlowScheduleEventType;
+  projectId: string | null;
+  ownerId: string;
+  visibility: DevFlowScheduleVisibility;
+  createdAt: string;
+  updatedAt: string;
+  project: Pick<DevFlowProjectSummary, "id" | "companyName" | "status"> | null;
+  owner: Pick<DevFlowProfile, "id" | "email" | "fullName" | "role">;
+}
+
+export interface CreateDevFlowScheduleEventInput {
+  title: string;
+  description?: string;
+  startsAt: string;
+  endsAt: string;
+  type?: DevFlowScheduleEventType;
+  projectId?: string | null;
+  visibility?: DevFlowScheduleVisibility;
+}
+
+export interface UpdateDevFlowScheduleEventInput extends Partial<CreateDevFlowScheduleEventInput> {}
+
+export interface DevFlowDeveloper {
+  userId: string;
+  role: "DEV";
+  displayName: string;
+  email: string | null;
+  skills: string[];
+  weeklyCapacityHours: number | null;
+  availabilityStatus: DevFlowDeveloperAvailabilityStatus;
+  notes: string | null;
+  assignedProjectCount: number;
+  openTaskCount: number;
+  activeWorkOrderCount: number;
+  projects: Array<Pick<DevFlowProjectSummary, "id" | "companyName" | "status" | "updatedAt" | "lifecycle">>;
+  updatedAt: string | null;
+}
+
+export interface UpdateDevFlowDeveloperCapacityInput {
+  skills?: string[];
+  weeklyCapacityHours?: number | null;
+  availabilityStatus?: DevFlowDeveloperAvailabilityStatus;
+  notes?: string | null;
+}
+
+export interface DevFlowPmSummary {
+  totals: {
+    projects: number;
+    pendingInvites: number;
+    openTasks: number;
+    activeWorkOrders: number;
+    recentInquiries: number;
+  };
+  projectStatusCounts: Record<string, number>;
+  recentProjects: Array<Pick<DevFlowProjectSummary, "id" | "companyName" | "status" | "updatedAt" | "lifecycle">>;
+  recentInquiries: Pick<DevFlowInquiry, "id" | "companyName" | "contactName" | "email" | "status" | "createdAt">[];
+}
+
+export interface DevFlowAdminHealth {
+  ok: boolean;
+  checkedAt: string;
+  services: {
+    database: string;
+    projects: number;
+    profiles: number;
+    runningRuns: number;
+    failedRuns: number;
+  };
+  domains: Array<{ status: DevFlowAdminDomainStatus; _count: number }>;
+}
+
+export interface DevFlowAdminAuditLog {
+  id: string;
+  actorId: string | null;
+  action: string;
+  targetType: string;
+  targetId: string | null;
+  summary: string;
+  metadata: unknown;
+  createdAt: string;
+  actor: DevFlowProfile | null;
+}
+
+export interface DevFlowPlatformSetting {
+  key: string;
+  value: unknown;
+  updatedById: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+
+export interface DevFlowProjectMember {
+  id: string;
+  projectId: string;
+  userId: string;
+  role: DevFlowUserRole;
+  createdAt: string;
+  user: DevFlowProfile;
+}
+
+export interface DevFlowGateEvent {
+  id: string;
+  projectId: string;
+  gateType: "ARCHITECTURE_REVIEW" | "CODE_REVIEW";
+  decision: "APPROVED" | "REJECTED";
+  notes: string | null;
+  decidedAt: string;
+}
+
+export interface DevFlowRunBudget {
+  id: string;
+  tokenBudget: number;
+  tokensConsumed: number;
+  retryCount: number;
+  maxRetries: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DevFlowArtifact {
+  id: string;
+  projectId: string;
+  agentType: string;
+  filePath: string;
+  content?: string;
+  clientVisible?: boolean;
+  displayName?: string | null;
+  sharedAt?: string | null;
+  reviewStatus?: DevFlowArtifactReviewStatus;
+  reviewNote?: string | null;
+  reviewedAt?: string | null;
+  reviewedById?: string | null;
+  outputReviewStatus?: DevFlowArtifactOutputReviewStatus;
+  outputReviewNote?: string | null;
+  outputReviewedAt?: string | null;
+  outputReviewedById?: string | null;
+  validationStatus?: DevFlowArtifactValidationStatus;
+  validationSummary?: string | null;
+  validationErrors?: string[] | Record<string, unknown>[] | null;
+  publishedAt?: string | null;
+  publishedById?: string | null;
+  revisionHandledAt?: string | null;
+  revisionHandledById?: string | null;
+  revisionResolutionNote?: string | null;
+  createdAt: string;
+}
+
+export interface DevFlowProjectTask {
+  id: string;
+  projectId: string;
+  artifactId: string | null;
+  title: string;
+  description: string | null;
+  status: DevFlowProjectTaskStatus;
+  assignedToId: string | null;
+  createdById: string | null;
+  createdAt: string;
+  updatedAt: string;
+  assignedTo: DevFlowProfile | null;
+  createdBy: DevFlowProfile | null;
+  artifact: {
+    id: string;
+    filePath: string;
+    displayName: string | null;
+    reviewStatus: DevFlowArtifactReviewStatus;
+    reviewNote: string | null;
+    reviewedAt: string | null;
+    revisionHandledAt: string | null;
+  } | null;
+}
+
+export interface DevFlowProjectTaskActivity {
+  id: string;
+  projectId: string;
+  taskId: string;
+  actorId: string | null;
+  type: DevFlowProjectTaskActivityType;
+  message: string | null;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+  actor: DevFlowProfile | null;
+}
+
+export interface DevFlowWorkOrder {
+  id: string;
+  projectId: string;
+  taskId: string | null;
+  artifactId: string | null;
+  title: string;
+  instructions: string | null;
+  agentType: DevFlowWorkOrderAgentType;
+  status: DevFlowWorkOrderStatus;
+  priority: DevFlowWorkOrderPriority;
+  createdById: string | null;
+  executionRunId: string | null;
+  executionAttempt: number;
+  executionStartedAt: string | null;
+  executionCompletedAt: string | null;
+  executionError: string | null;
+  lastEventAt: string | null;
+  dispatchedAt: string | null;
+  completedAt: string | null;
+  failedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  task: {
+    id: string;
+    title: string;
+    assignedToId: string | null;
+    status: DevFlowProjectTaskStatus;
+  } | null;
+  artifact: {
+    id: string;
+    filePath: string;
+    displayName: string | null;
+    reviewStatus: DevFlowArtifactReviewStatus;
+    outputReviewStatus: DevFlowArtifactOutputReviewStatus;
+    validationStatus?: DevFlowArtifactValidationStatus;
+  } | null;
+  createdBy: DevFlowProfile | null;
+}
+
+export interface DevFlowWorkOrderExecution {
+  id: string;
+  projectId: string;
+  orchestrationRunId: string | null;
+  workOrderId: string;
+  artifactId: string | null;
+  executionRunId: string;
+  attempt: number;
+  agentType: DevFlowWorkOrderAgentType;
+  status: "RUNNING" | "SUCCEEDED" | "FAILED";
+  error: string | null;
+  startedAt: string;
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  metadata: Record<string, unknown>;
+  workOrder?: {
+    id: string;
+    title: string;
+    status: DevFlowWorkOrderStatus;
+    agentType: DevFlowWorkOrderAgentType;
+    priority?: DevFlowWorkOrderPriority;
+  };
+  artifact?: {
+    id: string;
+    filePath: string;
+    displayName: string | null;
+    outputReviewStatus: DevFlowArtifactOutputReviewStatus;
+    reviewStatus: DevFlowArtifactReviewStatus;
+    validationStatus?: DevFlowArtifactValidationStatus;
+    createdAt?: string;
+  } | null;
+}
+
+export interface DevFlowOrchestrationRun {
+  id: string;
+  projectId: string;
+  runId: string;
+  providerMode: string;
+  trigger: "START" | "RERUN_READY_WORK_ORDERS" | "WORK_ORDER_DISPATCH" | "RETRY_FAILED_WORK_ORDER";
+  status: "RUNNING" | "SUCCEEDED" | "FAILED" | "CANCELLED";
+  currentNode: string | null;
+  error: string | null;
+  actorId: string | null;
+  readyWorkOrders: number;
+  completedWorkOrders: number;
+  failedWorkOrders: number;
+  completedArtifacts: number;
+  startedAt: string;
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  executions: DevFlowWorkOrderExecution[];
+  events?: DevFlowEventLog[];
+}
+
+export interface DevFlowAgentProviderCapability {
+  mode: DevFlowAgentProviderMode;
+  displayName: string;
+  active: boolean;
+  available: boolean;
+  implemented: boolean;
+  missingRequirements: string[];
+  reason: string | null;
+  provider?: string;
+  model?: string;
+  fallbackModel?: string | null;
+}
+
+export interface DevFlowGithubDeliveryStatus {
+  configured: boolean;
+  available: boolean;
+  owner: string | null;
+  ownerSource: "env" | "installation" | null;
+  missingRequirements: string[];
+  reason: string | null;
+}
+
+export interface DevFlowGithubDeliveryVerification {
+  ok: boolean;
+  status: DevFlowGithubDeliveryStatus;
+  owner: string | null;
+  installationOwner: string | null;
+  repositoriesVisible: number | null;
+  permissions: Record<string, string> | null;
+  reason: string | null;
+}
+
+export interface DevFlowLlmProviderVerification {
+  ok: boolean;
+  provider: string;
+  model: string;
+  fallbackModel: string | null;
+  baseUrl: string;
+  reason: string | null;
+  usage: {
+    inputTokens: number;
+    outputTokens: number;
+  } | null;
+}
+
+export interface DevFlowAgentProviderStatus {
+  requestedMode: DevFlowAgentProviderMode;
+  activeMode: DevFlowAgentProviderMode;
+  available: boolean;
+  fallbackMode: DevFlowAgentProviderMode | null;
+  missingRequirements: string[];
+  reason: string | null;
+  provider?: string;
+  model?: string;
+  fallbackModel?: string | null;
+  providers: DevFlowAgentProviderCapability[];
+  githubDelivery?: DevFlowGithubDeliveryStatus;
+}
+
+export interface DevFlowNotification {
+  id: string;
+  recipientId: string;
+  actorId: string | null;
+  projectId: string | null;
+  taskId: string | null;
+  artifactId: string | null;
+  type: DevFlowNotificationType;
+  title: string;
+  body: string | null;
+  metadata: Record<string, unknown>;
+  readAt: string | null;
+  createdAt: string;
+  actor: DevFlowProfile | null;
+}
+
+export interface DevFlowProjectTimelineEvent {
+  id: string;
+  projectId: string;
+  actorId: string | null;
+  taskId: string | null;
+  artifactId: string | null;
+  type: DevFlowProjectTimelineEventType;
+  visibility: DevFlowProjectTimelineVisibility;
+  title: string;
+  body: string | null;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+  actor: DevFlowProfile | null;
+}
+
+export interface DevFlowConversation {
+  id: string;
+  projectId: string;
+  title: string;
+  category: DevFlowConversationCategory;
+  visibility: DevFlowCollaborationVisibility;
+  createdById: string | null;
+  lastMessageAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: DevFlowProfile | null;
+  messages: DevFlowMessage[];
+  reads?: { lastReadAt: string }[];
+  _count: { messages: number };
+  unreadCount?: number;
+}
+
+export interface DevFlowMessage {
+  id: string;
+  projectId: string;
+  conversationId: string;
+  authorId: string | null;
+  body: string;
+  createdAt: string;
+  author: DevFlowProfile | null;
+}
+
+export interface DevFlowCollaborationDocument {
+  id: string;
+  projectId: string;
+  artifactId: string | null;
+  title: string;
+  description: string | null;
+  fileName: string | null;
+  externalUrl: string | null;
+  kind: DevFlowCollaborationDocumentKind;
+  status: DevFlowCollaborationDocumentStatus;
+  clientVisible: boolean;
+  uploadedById: string | null;
+  reviewedById: string | null;
+  reviewNote: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  uploadedBy: DevFlowProfile | null;
+  reviewedBy: DevFlowProfile | null;
+}
+
+export interface DevFlowEventLog {
+  id: string;
+  projectId: string;
+  nodeName: string;
+  eventType: string;
+  costMeta: Record<string, unknown>;
+  runTokens: number;
+  occurredAt: string;
+}
+
+export interface DevFlowProjectDeliveryReview {
+  id: string;
+  projectId: string;
+  status: DevFlowProjectDeliveryReviewStatus;
+  acceptanceNote: string | null;
+  acceptedById: string | null;
+  acceptedAt: string | null;
+  revisionNote: string | null;
+  revisionRequestedById: string | null;
+  revisionRequestedAt: string | null;
+  revisionResolvedById: string | null;
+  revisionResolvedAt: string | null;
+  resolutionNote: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DevFlowProjectDeliveryReviewInput {
+  note?: string;
+}
+
+export interface DevFlowDeliveryReadinessBlocker {
+  code: string;
+  message: string;
+  severity: "BLOCKER" | "WARNING";
+  count?: number;
+}
+
+export interface DevFlowDeliveryReadiness {
+  ready: boolean;
+  projectId: string;
+  blockers: DevFlowDeliveryReadinessBlocker[];
+  checks: {
+    acceptedInvite: boolean;
+    hasPublishedArtifacts: boolean;
+    publishedArtifactsValidated: boolean;
+    publishedArtifactsApproved: boolean;
+    requiredAgentCoverage: boolean;
+    documentsCleared: boolean;
+    workOrdersCleared: boolean;
+    revisionsCleared: boolean;
+    deliveryRevisionCleared: boolean;
+  };
+  counts: {
+    publishedArtifacts: number;
+    invalidPublishedArtifacts: number;
+    unapprovedPublishedArtifacts: number;
+    activeWorkOrders: number;
+    openDocuments: number;
+    openArtifactRevisions: number;
+    missingAgentTypes: number;
+  };
+}
+
+export interface DevFlowProjectDetail extends DevFlowProjectSummary {
+  brief: string;
+  stackKey: string;
+  runId: string | null;
+  repoUrl: string | null;
+  createdById: string | null;
+  updatedAt: string;
+  createdBy: DevFlowProfile | null;
+  members: DevFlowProjectMember[];
+  gates: DevFlowGateEvent[];
+  runBudget: DevFlowRunBudget | null;
+  kickoff: DevFlowProjectKickoff | null;
+  deliveryReview: DevFlowProjectDeliveryReview | null;
+  clientInvites: DevFlowProjectClientInvite[];
+  _count: {
+    artifacts: number;
+    eventLogs: number;
+  };
+}
+
+export interface CreateDevFlowProjectInput {
+  companyName: string;
+  brief: string;
+  stackKey: string;
+}
+
+export interface CreateDevFlowInquiryInput {
+  companyName: string;
+  contactName: string;
+  email: string;
+  phone?: string;
+  role?: string;
+  brief: string;
+  stackKey?: string;
+  budgetRange?: string;
+  timeline?: string;
+}
+
+export interface ReviewDevFlowInquiryInput {
+  reviewNote?: string;
+}
+
+export interface UpdateDevFlowProjectInput {
+  companyName?: string;
+  brief?: string;
+  stackKey?: string;
+  status?: DevFlowProjectStatus;
+  repoUrl?: string;
+}
+
+export interface UpdateDevFlowProjectKickoffInput {
+  scopeSummary?: string;
+  milestones?: string;
+  requiredDocuments?: string;
+  techStackNotes?: string;
+  deliveryRoles?: string;
+  readinessNotes?: string;
+  scopeConfirmed?: boolean;
+  milestonesConfirmed?: boolean;
+  documentsConfirmed?: boolean;
+  techStackConfirmed?: boolean;
+  rolesConfirmed?: boolean;
+  clientAccessConfirmed?: boolean;
+  initialTasksCreated?: boolean;
+  initialWorkOrdersCreated?: boolean;
+}
+
+export interface AddDevFlowProjectMemberInput {
+  email?: string;
+  userId?: string;
+  role: DevFlowUserRole;
+}
+
+export interface StartDevFlowOrchestrationResult {
+  accepted: boolean;
+  runId: string;
+}
+
+export interface DevFlowOrchestrationStatus {
+  status: string;
+  currentNode: string;
+  retryCount: number;
+  error: string | null;
+  companyName: string;
+  brief: string;
+  stackKey: string;
+  createdAt: string;
+}
+
+export interface CreateDevFlowProjectTaskInput {
+  title: string;
+  description?: string;
+  status?: DevFlowProjectTaskStatus;
+  assignedToId?: string;
+  artifactId?: string;
+}
+
+export interface UpdateDevFlowProjectTaskInput {
+  title?: string;
+  description?: string;
+  status?: DevFlowProjectTaskStatus;
+  assignedToId?: string;
+  artifactId?: string;
+}
+
+export interface AddDevFlowProjectTaskCommentInput {
+  message: string;
+}
+
+export interface CreateDevFlowWorkOrderInput {
+  title: string;
+  instructions?: string;
+  agentType: DevFlowWorkOrderAgentType;
+  priority?: DevFlowWorkOrderPriority;
+  taskId?: string;
+  artifactId?: string;
+}
+
+export interface UpdateDevFlowWorkOrderInput {
+  title?: string;
+  instructions?: string;
+  agentType?: DevFlowWorkOrderAgentType;
+  priority?: DevFlowWorkOrderPriority;
+  status?: DevFlowWorkOrderStatus;
+  taskId?: string;
+  artifactId?: string;
+}
+
+export interface CreateDevFlowConversationInput {
+  title: string;
+  category?: DevFlowConversationCategory;
+  visibility?: DevFlowCollaborationVisibility;
+  message?: string;
+}
+
+export interface CreateDevFlowMessageInput {
+  body: string;
+}
+
+export interface CreateDevFlowCollaborationDocumentInput {
+  title: string;
+  description?: string;
+  fileName?: string;
+  externalUrl?: string;
+  artifactId?: string;
+  kind?: DevFlowCollaborationDocumentKind;
+  status?: DevFlowCollaborationDocumentStatus;
+  clientVisible?: boolean;
+}
+
+export interface UpdateDevFlowCollaborationDocumentInput extends Partial<CreateDevFlowCollaborationDocumentInput> {}
+
+export interface ReviewDevFlowCollaborationDocumentInput {
+  status: Extract<DevFlowCollaborationDocumentStatus, "APPROVED" | "REVISION_REQUESTED">;
+  reviewNote?: string;
+}
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15_000);
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}${path}`, {
+      signal: controller.signal,
+      ...init,
+      headers: {
+        "Content-Type": "application/json",
+        ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        ...init?.headers,
+      },
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new DevFlowApiError({
+        status: 0,
+        kind: "network",
+        message: "The DevFlow API did not respond within 15 seconds. Check that the backend is running and try again.",
+        details: "Request timed out",
+      });
+    }
+    throw new DevFlowApiError({
+      status: 0,
+      kind: "network",
+      message: "Cannot reach the DevFlow API. Check that the backend is running and try again.",
+      details: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  clearTimeout(timeoutId);
+
+  if (!response.ok) {
+    const rawBody = await response.text().catch(() => "");
+    const parsed = parseApiErrorBody(rawBody);
+    throw new DevFlowApiError({
+      status: response.status,
+      kind: kindForStatus(response.status),
+      message: messageForStatus(response.status, parsed.message),
+      details: parsed.message,
+      rawBody,
+    });
+  }
+
+  return response.json() as Promise<T>;
+}
+
+function kindForStatus(status: number): DevFlowApiErrorKind {
+  if (status === 401) return "unauthenticated";
+  if (status === 403) return "forbidden";
+  if (status === 404) return "not_found";
+  if (status === 400 || status === 422) return "validation";
+  if (status >= 500) return "server";
+  return "unknown";
+}
+
+function messageForStatus(status: number, fallback: string): string {
+  if (status === 401) return "Your session is missing or expired. Sign in again to continue.";
+  if (status === 403) return "You do not have access to this workspace or action.";
+  if (status === 404) return "This record is unavailable, deleted, or not assigned to your account.";
+  if (status >= 500) return "The DevFlow API hit a server error. Try again after checking the backend logs.";
+  return fallback || `DevFlow API request failed with ${status}`;
+}
+
+function parseApiErrorBody(rawBody: string): { message: string } {
+  if (!rawBody) return { message: "" };
+
+  try {
+    const parsed = JSON.parse(rawBody) as { message?: unknown; error?: unknown };
+    if (Array.isArray(parsed.message)) return { message: parsed.message.join(" ") };
+    if (typeof parsed.message === "string") return { message: parsed.message };
+    if (typeof parsed.error === "string") return { message: parsed.error };
+  } catch {
+    return { message: rawBody };
+  }
+
+  return { message: rawBody };
+}
+
+function fileNameFromDisposition(disposition: string | null): string | null {
+  if (!disposition) return null;
+  const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8Match?.[1]) return decodeURIComponent(utf8Match[1]);
+  const match = disposition.match(/filename="?([^";]+)"?/i);
+  return match?.[1] || null;
+}
+
+export function listDevFlowProjects(): Promise<DevFlowProjectSummary[]> {
+  return request<DevFlowProjectSummary[]>("/projects");
+}
+
+export function createDevFlowInquiry(input: CreateDevFlowInquiryInput): Promise<DevFlowInquiry> {
+  return request<DevFlowInquiry>("/inquiries", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function listDevFlowInquiries(status?: DevFlowInquiryStatus): Promise<DevFlowInquiry[]> {
+  const query = status ? `?status=${encodeURIComponent(status)}` : "";
+  return request<DevFlowInquiry[]>(`/inquiries${query}`);
+}
+
+export function getDevFlowInquiry(id: string): Promise<DevFlowInquiry> {
+  return request<DevFlowInquiry>(`/inquiries/${id}`);
+}
+
+export function getDevFlowClientInviteStatus(email: string): Promise<DevFlowClientInviteStatusSummary> {
+  return request<DevFlowClientInviteStatusSummary>(`/client-invites/status?email=${encodeURIComponent(email)}`);
+}
+
+export function getMyDevFlowClientInvites(): Promise<DevFlowClientInvite[]> {
+  return request<DevFlowClientInvite[]>("/client-invites/me");
+}
+
+export function acceptDevFlowClientInvites(): Promise<{ accepted: DevFlowClientInvite[] }> {
+  return request<{ accepted: DevFlowClientInvite[] }>("/client-invites/accept", {
+    method: "POST",
+  });
+}
+
+export function approveDevFlowInquiry(
+  id: string,
+  input: ReviewDevFlowInquiryInput = {},
+): Promise<DevFlowInquiry> {
+  return request<DevFlowInquiry>(`/inquiries/${id}/approve`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function rejectDevFlowInquiry(
+  id: string,
+  input: ReviewDevFlowInquiryInput = {},
+): Promise<DevFlowInquiry> {
+  return request<DevFlowInquiry>(`/inquiries/${id}/reject`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function listDevFlowProjectDetails(): Promise<DevFlowProjectDetail[]> {
+  return request<DevFlowProjectDetail[]>("/projects/details");
+}
+
+export function getDevFlowProject(projectId: string): Promise<DevFlowProjectDetail> {
+  return request<DevFlowProjectDetail>(`/projects/${projectId}`);
+}
+
+export function getDevFlowProjectKickoff(projectId: string): Promise<DevFlowProjectKickoff> {
+  return request<DevFlowProjectKickoff>(`/projects/${projectId}/kickoff`);
+}
+
+export function updateDevFlowProjectKickoff(
+  projectId: string,
+  input: UpdateDevFlowProjectKickoffInput,
+): Promise<DevFlowProjectKickoff> {
+  return request<DevFlowProjectKickoff>(`/projects/${projectId}/kickoff`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function createDevFlowKickoffTasks(
+  projectId: string,
+): Promise<{ tasks: DevFlowProjectTask[]; kickoff: DevFlowProjectKickoff }> {
+  return request<{ tasks: DevFlowProjectTask[]; kickoff: DevFlowProjectKickoff }>(`/projects/${projectId}/kickoff/tasks`, {
+    method: "POST",
+  });
+}
+
+export function createDevFlowKickoffWorkOrders(
+  projectId: string,
+): Promise<{ workOrders: DevFlowWorkOrder[]; kickoff: DevFlowProjectKickoff }> {
+  return request<{ workOrders: DevFlowWorkOrder[]; kickoff: DevFlowProjectKickoff }>(`/projects/${projectId}/kickoff/work-orders`, {
+    method: "POST",
+  });
+}
+
+export function getDevFlowProjectArtifacts(projectId: string): Promise<DevFlowArtifact[]> {
+  return request<DevFlowArtifact[]>(`/projects/${projectId}/artifacts`);
+}
+
+export function getDevFlowProjectArtifact(
+  projectId: string,
+  artifactId: string,
+): Promise<DevFlowArtifact> {
+  return request<DevFlowArtifact>(`/projects/${projectId}/artifacts/${artifactId}`);
+}
+
+export function updateDevFlowArtifactSharing(
+  projectId: string,
+  artifactId: string,
+  input: { clientVisible: boolean; displayName?: string },
+): Promise<DevFlowArtifact> {
+  return request<DevFlowArtifact>(`/projects/${projectId}/artifacts/${artifactId}/share`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function reviewDevFlowArtifact(
+  projectId: string,
+  artifactId: string,
+  input: { reviewStatus: Exclude<DevFlowArtifactReviewStatus, "PENDING">; reviewNote?: string },
+): Promise<DevFlowArtifact> {
+  return request<DevFlowArtifact>(`/projects/${projectId}/artifacts/${artifactId}/review`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function handleDevFlowArtifactRevision(
+  projectId: string,
+  artifactId: string,
+  input: { resolutionNote?: string },
+): Promise<DevFlowArtifact> {
+  return request<DevFlowArtifact>(`/projects/${projectId}/artifacts/${artifactId}/revision`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function reviewDevFlowArtifactOutput(
+  projectId: string,
+  artifactId: string,
+  input: { status: Exclude<DevFlowArtifactOutputReviewStatus, "PENDING" | "PUBLISHED">; note?: string; assignedToId?: string },
+): Promise<DevFlowArtifact> {
+  return request<DevFlowArtifact>(`/projects/${projectId}/artifacts/${artifactId}/output-review`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function publishDevFlowArtifactOutput(
+  projectId: string,
+  artifactId: string,
+  input: { displayName?: string } = {},
+): Promise<DevFlowArtifact> {
+  return request<DevFlowArtifact>(`/projects/${projectId}/artifacts/${artifactId}/publish`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function getDevFlowProjectDeliveryReview(projectId: string): Promise<DevFlowProjectDeliveryReview | null> {
+  return request<DevFlowProjectDeliveryReview | null>(`/projects/${projectId}/delivery-review`);
+}
+
+export function getDevFlowDeliveryReadiness(projectId: string): Promise<DevFlowDeliveryReadiness> {
+  return request<DevFlowDeliveryReadiness>(`/projects/${projectId}/delivery-readiness`);
+}
+
+export function acceptDevFlowProjectDelivery(
+  projectId: string,
+  input: DevFlowProjectDeliveryReviewInput = {},
+): Promise<DevFlowProjectDeliveryReview> {
+  return request<DevFlowProjectDeliveryReview>(`/projects/${projectId}/delivery-review/accept`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function requestDevFlowProjectDeliveryRevision(
+  projectId: string,
+  input: DevFlowProjectDeliveryReviewInput,
+): Promise<DevFlowProjectDeliveryReview> {
+  return request<DevFlowProjectDeliveryReview>(`/projects/${projectId}/delivery-review/revision`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function resolveDevFlowProjectDeliveryRevision(
+  projectId: string,
+  input: DevFlowProjectDeliveryReviewInput = {},
+): Promise<DevFlowProjectDeliveryReview> {
+  return request<DevFlowProjectDeliveryReview>(`/projects/${projectId}/delivery-review/resolve`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function getDevFlowProjectTasks(projectId: string): Promise<DevFlowProjectTask[]> {
+  return request<DevFlowProjectTask[]>(`/projects/${projectId}/tasks`);
+}
+
+export function createDevFlowProjectTask(
+  projectId: string,
+  input: CreateDevFlowProjectTaskInput,
+): Promise<DevFlowProjectTask> {
+  return request<DevFlowProjectTask>(`/projects/${projectId}/tasks`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateDevFlowProjectTask(
+  projectId: string,
+  taskId: string,
+  input: UpdateDevFlowProjectTaskInput,
+): Promise<DevFlowProjectTask> {
+  return request<DevFlowProjectTask>(`/projects/${projectId}/tasks/${taskId}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function getDevFlowProjectTaskActivity(
+  projectId: string,
+  taskId: string,
+): Promise<DevFlowProjectTaskActivity[]> {
+  return request<DevFlowProjectTaskActivity[]>(`/projects/${projectId}/tasks/${taskId}/activity`);
+}
+
+export function addDevFlowProjectTaskComment(
+  projectId: string,
+  taskId: string,
+  input: AddDevFlowProjectTaskCommentInput,
+): Promise<DevFlowProjectTaskActivity> {
+  return request<DevFlowProjectTaskActivity>(`/projects/${projectId}/tasks/${taskId}/comments`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function getDevFlowProjectWorkOrders(projectId: string): Promise<DevFlowWorkOrder[]> {
+  return request<DevFlowWorkOrder[]>(`/projects/${projectId}/work-orders`);
+}
+
+export function createDevFlowWorkOrder(
+  projectId: string,
+  input: CreateDevFlowWorkOrderInput,
+): Promise<DevFlowWorkOrder> {
+  return request<DevFlowWorkOrder>(`/projects/${projectId}/work-orders`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateDevFlowWorkOrder(
+  projectId: string,
+  workOrderId: string,
+  input: UpdateDevFlowWorkOrderInput,
+): Promise<DevFlowWorkOrder> {
+  return request<DevFlowWorkOrder>(`/projects/${projectId}/work-orders/${workOrderId}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function dispatchDevFlowWorkOrder(
+  projectId: string,
+  workOrderId: string,
+): Promise<DevFlowWorkOrder> {
+  return request<DevFlowWorkOrder>(`/projects/${projectId}/work-orders/${workOrderId}/dispatch`, {
+    method: "POST",
+  });
+}
+
+export function retryDevFlowWorkOrder(
+  projectId: string,
+  workOrderId: string,
+): Promise<DevFlowWorkOrder> {
+  return request<DevFlowWorkOrder>(`/projects/${projectId}/work-orders/${workOrderId}/retry`, {
+    method: "POST",
+  });
+}
+
+export function getDevFlowNotifications(): Promise<DevFlowNotification[]> {
+  return request<DevFlowNotification[]>("/notifications");
+}
+
+export function markDevFlowNotificationRead(id: string): Promise<DevFlowNotification> {
+  return request<DevFlowNotification>(`/notifications/${id}/read`, {
+    method: "PATCH",
+  });
+}
+
+export function markAllDevFlowNotificationsRead(): Promise<{ updated: number }> {
+  return request<{ updated: number }>("/notifications/read-all", {
+    method: "PATCH",
+  });
+}
+
+export function getDevFlowProjectEvents(projectId: string): Promise<DevFlowEventLog[]> {
+  return request<DevFlowEventLog[]>(`/projects/${projectId}/events`);
+}
+
+export function getDevFlowProjectTimeline(projectId: string): Promise<DevFlowProjectTimelineEvent[]> {
+  return request<DevFlowProjectTimelineEvent[]>(`/projects/${projectId}/timeline`);
+}
+
+export function getDevFlowOrchestrationStatus(projectId: string): Promise<DevFlowOrchestrationStatus> {
+  return request<DevFlowOrchestrationStatus>(`/projects/${projectId}/orchestration/status`);
+}
+
+export function getDevFlowOrchestrationRuns(projectId: string): Promise<DevFlowOrchestrationRun[]> {
+  return request<DevFlowOrchestrationRun[]>(`/projects/${projectId}/orchestration/runs`);
+}
+
+export function getDevFlowOrchestrationRun(projectId: string, runId: string): Promise<DevFlowOrchestrationRun> {
+  return request<DevFlowOrchestrationRun>(`/projects/${projectId}/orchestration/runs/${runId}`);
+}
+
+export function getDevFlowOrchestrationProviderStatus(projectId: string): Promise<DevFlowAgentProviderStatus> {
+  return request<DevFlowAgentProviderStatus>(`/projects/${projectId}/orchestration/provider`);
+}
+
+export function verifyDevFlowGithubDelivery(projectId: string): Promise<DevFlowGithubDeliveryVerification> {
+  return request<DevFlowGithubDeliveryVerification>(`/projects/${projectId}/orchestration/github-delivery/verify`, {
+    method: "POST",
+  });
+}
+
+export function verifyDevFlowLlmProvider(projectId: string): Promise<DevFlowLlmProviderVerification> {
+  return request<DevFlowLlmProviderVerification>(`/projects/${projectId}/orchestration/llm-provider/verify`, {
+    method: "POST",
+  });
+}
+
+export function getDevFlowConversations(projectId: string): Promise<DevFlowConversation[]> {
+  return request<DevFlowConversation[]>(`/projects/${projectId}/conversations`);
+}
+
+export function createDevFlowConversation(
+  projectId: string,
+  input: CreateDevFlowConversationInput,
+): Promise<DevFlowConversation> {
+  return request<DevFlowConversation>(`/projects/${projectId}/conversations`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function getDevFlowConversationMessages(
+  projectId: string,
+  conversationId: string,
+): Promise<DevFlowMessage[]> {
+  return request<DevFlowMessage[]>(`/projects/${projectId}/conversations/${conversationId}/messages`);
+}
+
+export function createDevFlowMessage(
+  projectId: string,
+  conversationId: string,
+  input: CreateDevFlowMessageInput,
+): Promise<DevFlowMessage> {
+  return request<DevFlowMessage>(`/projects/${projectId}/conversations/${conversationId}/messages`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function markDevFlowConversationRead(
+  projectId: string,
+  conversationId: string,
+): Promise<{ read: true; lastReadAt: string }> {
+  return request<{ read: true; lastReadAt: string }>(`/projects/${projectId}/conversations/${conversationId}/read`, {
+    method: "PATCH",
+  });
+}
+
+export function getDevFlowCollaborationDocuments(projectId: string): Promise<DevFlowCollaborationDocument[]> {
+  return request<DevFlowCollaborationDocument[]>(`/projects/${projectId}/documents`);
+}
+
+export function createDevFlowCollaborationDocument(
+  projectId: string,
+  input: CreateDevFlowCollaborationDocumentInput,
+): Promise<DevFlowCollaborationDocument> {
+  return request<DevFlowCollaborationDocument>(`/projects/${projectId}/documents`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateDevFlowCollaborationDocument(
+  projectId: string,
+  documentId: string,
+  input: UpdateDevFlowCollaborationDocumentInput,
+): Promise<DevFlowCollaborationDocument> {
+  return request<DevFlowCollaborationDocument>(`/projects/${projectId}/documents/${documentId}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function reviewDevFlowCollaborationDocument(
+  projectId: string,
+  documentId: string,
+  input: ReviewDevFlowCollaborationDocumentInput,
+): Promise<DevFlowCollaborationDocument> {
+  return request<DevFlowCollaborationDocument>(`/projects/${projectId}/documents/${documentId}/review`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function getCurrentDevFlowUser(): Promise<DevFlowAuthUser> {
+  return request<DevFlowAuthUser>("/auth/me");
+}
+
+export function getCurrentDevFlowProfile(): Promise<DevFlowProfileSelf> {
+  return request<DevFlowProfileSelf>("/profiles/me");
+}
+
+export function updateCurrentDevFlowProfile(input: UpdateDevFlowProfileInput): Promise<DevFlowProfileSelf> {
+  return request<DevFlowProfileSelf>("/profiles/me", {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function searchDevFlowProfiles(input: {
+  q?: string;
+  roles?: DevFlowUserRole[];
+  limit?: number;
+}): Promise<DevFlowProfileSearchResult[]> {
+  const params = new URLSearchParams();
+  if (input.q) params.set("q", input.q);
+  if (input.roles?.length) params.set("roles", input.roles.join(","));
+  if (input.limit) params.set("limit", String(input.limit));
+
+  const query = params.toString();
+  return request<DevFlowProfileSearchResult[]>(`/profiles${query ? `?${query}` : ""}`);
+}
+
+export function listDevFlowScheduleEvents(): Promise<DevFlowScheduleEvent[]> {
+  return request<DevFlowScheduleEvent[]>("/schedule/events");
+}
+
+export function createDevFlowScheduleEvent(input: CreateDevFlowScheduleEventInput): Promise<DevFlowScheduleEvent> {
+  return request<DevFlowScheduleEvent>("/schedule/events", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateDevFlowScheduleEvent(
+  id: string,
+  input: UpdateDevFlowScheduleEventInput,
+): Promise<DevFlowScheduleEvent> {
+  return request<DevFlowScheduleEvent>(`/schedule/events/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteDevFlowScheduleEvent(id: string): Promise<{ deleted: true }> {
+  return request<{ deleted: true }>(`/schedule/events/${id}`, { method: "DELETE" });
+}
+
+export function getDevFlowPmSummary(): Promise<DevFlowPmSummary> {
+  return request<DevFlowPmSummary>("/reports/pm-summary");
+}
+
+export function listDevFlowDevelopers(): Promise<DevFlowDeveloper[]> {
+  return request<DevFlowDeveloper[]>("/developers");
+}
+
+export function getDevFlowDeveloper(id: string): Promise<DevFlowDeveloper> {
+  return request<DevFlowDeveloper>(`/developers/${id}`);
+}
+
+export function updateDevFlowDeveloperCapacity(input: UpdateDevFlowDeveloperCapacityInput): Promise<DevFlowDeveloper> {
+  return request<DevFlowDeveloper>("/developers/me/capacity", {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function downloadDevFlowProjectArtifact(
+  projectId: string,
+  artifactId: string,
+  fallbackFileName = "artifact",
+): Promise<void> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}/projects/${projectId}/artifacts/${artifactId}/download`, {
+      headers: {
+        ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+      },
+    });
+  } catch (error) {
+    throw new DevFlowApiError({
+      status: 0,
+      kind: "network",
+      message: "Cannot reach the DevFlow API. Check that the backend is running and try again.",
+      details: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  if (!response.ok) {
+    const rawBody = await response.text().catch(() => "");
+    const parsed = parseApiErrorBody(rawBody);
+    throw new DevFlowApiError({
+      status: response.status,
+      kind: kindForStatus(response.status),
+      message: messageForStatus(response.status, parsed.message),
+      details: parsed.message,
+      rawBody,
+    });
+  }
+
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileNameFromDisposition(response.headers.get("content-disposition")) || fallbackFileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+export function listDevFlowAdminUsers(input: {
+  q?: string;
+  role?: DevFlowUserRole | "ALL";
+} = {}): Promise<DevFlowAdminUser[]> {
+  const params = new URLSearchParams();
+  if (input.q) params.set("q", input.q);
+  if (input.role && input.role !== "ALL") params.set("role", input.role);
+  const query = params.toString();
+  return request<DevFlowAdminUser[]>(`/admin/users${query ? `?${query}` : ""}`);
+}
+
+export function updateDevFlowAdminUserRole(id: string, role: DevFlowUserRole): Promise<DevFlowAdminUser> {
+  return request<DevFlowAdminUser>(`/admin/users/${id}/role`, {
+    method: "PATCH",
+    body: JSON.stringify({ role }),
+  });
+}
+
+export function updateDevFlowAdminUserStatus(id: string, status: DevFlowProfileStatus): Promise<DevFlowAdminUser> {
+  return request<DevFlowAdminUser>(`/admin/users/${id}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
+}
+
+export function listDevFlowAdminDomains(): Promise<DevFlowAdminDomain[]> {
+  return request<DevFlowAdminDomain[]>("/admin/domains");
+}
+
+export function createDevFlowAdminDomain(input: {
+  name: string;
+  type: string;
+  owner?: string;
+  target?: string;
+  environment?: string;
+}): Promise<DevFlowAdminDomain> {
+  return request<DevFlowAdminDomain>("/admin/domains", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateDevFlowAdminDomain(
+  id: string,
+  input: Partial<Pick<DevFlowAdminDomain, "type" | "owner" | "target" | "environment" | "status">>,
+): Promise<DevFlowAdminDomain> {
+  return request<DevFlowAdminDomain>(`/admin/domains/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function verifyDevFlowAdminDomain(id: string): Promise<DevFlowAdminDomain> {
+  return request<DevFlowAdminDomain>(`/admin/domains/${id}/verify`, { method: "POST" });
+}
+
+export function deleteDevFlowAdminDomain(id: string): Promise<{ deleted: true }> {
+  return request<{ deleted: true }>(`/admin/domains/${id}`, { method: "DELETE" });
+}
+
+export function listDevFlowAdminRepositories(): Promise<DevFlowAdminRepository[]> {
+  return request<DevFlowAdminRepository[]>("/admin/repositories");
+}
+
+export function linkDevFlowAdminRepository(projectId: string, repoUrl: string): Promise<DevFlowAdminRepository> {
+  return request<DevFlowAdminRepository>(`/admin/projects/${projectId}/repository`, {
+    method: "PATCH",
+    body: JSON.stringify({ repoUrl }),
+  });
+}
+
+export function createDevFlowAdminRepository(projectId: string): Promise<{ repoUrl: string }> {
+  return request<{ repoUrl: string }>(`/admin/projects/${projectId}/repository/create`, {
+    method: "POST",
+  });
+}
+
+export function listDevFlowAdminHandoffs(): Promise<DevFlowAdminHandoff[]> {
+  return request<DevFlowAdminHandoff[]>("/admin/handoffs");
+}
+
+export function overrideDevFlowAdminHandoff(
+  projectId: string,
+  input: { note: string; markReady?: boolean },
+): Promise<DevFlowProjectSummary> {
+  return request<DevFlowProjectSummary>(`/admin/projects/${projectId}/handoff/override`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function getDevFlowAdminUsage(): Promise<DevFlowAdminUsage> {
+  return request<DevFlowAdminUsage>("/admin/usage");
+}
+
+export function getDevFlowAdminHealth(): Promise<DevFlowAdminHealth> {
+  return request<DevFlowAdminHealth>("/admin/health");
+}
+
+export function getDevFlowAdminAuditLogs(limit = 100): Promise<DevFlowAdminAuditLog[]> {
+  return request<DevFlowAdminAuditLog[]>(`/admin/audit-logs?limit=${limit}`);
+}
+
+export function getDevFlowPlatformSettings(): Promise<DevFlowPlatformSetting[]> {
+  return request<DevFlowPlatformSetting[]>("/admin/settings");
+}
+
+export function updateDevFlowPlatformSetting(key: string, value: Record<string, unknown>): Promise<DevFlowPlatformSetting> {
+  return request<DevFlowPlatformSetting>(`/admin/settings/${key}`, {
+    method: "PATCH",
+    body: JSON.stringify({ value }),
+  });
+}
+
+export function createDevFlowProject(input: CreateDevFlowProjectInput): Promise<DevFlowProjectSummary> {
+  return request<DevFlowProjectSummary>("/projects", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export type DevFlowAutoAnalyzeResult = {
+  enhancedBrief: string;
+  suggestedFeatures: string[];
+  suggestedTechStack: {
+    frontend: string;
+    backend: string;
+    database: string;
+    styling: string;
+  };
+  complexity: "simple" | "medium" | "complex";
+  estimatedFiles: number;
+};
+
+export function autoAnalyzeDevFlowBrief(input: {
+  companyName: string;
+  brief: string;
+  stackKey: string;
+}): Promise<DevFlowAutoAnalyzeResult> {
+  return request<DevFlowAutoAnalyzeResult>("/projects/auto-analyze", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateDevFlowProject(
+  projectId: string,
+  input: UpdateDevFlowProjectInput,
+): Promise<DevFlowProjectDetail> {
+  return request<DevFlowProjectDetail>(`/projects/${projectId}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function addDevFlowProjectMember(
+  projectId: string,
+  input: AddDevFlowProjectMemberInput,
+): Promise<DevFlowProjectDetail> {
+  return request<DevFlowProjectDetail>(`/projects/${projectId}/members`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function removeDevFlowProjectMember(
+  projectId: string,
+  userId: string,
+): Promise<DevFlowProjectDetail> {
+  return request<DevFlowProjectDetail>(`/projects/${projectId}/members/${userId}`, {
+    method: "DELETE",
+  });
+}
+
+export function startDevFlowOrchestration(projectId: string): Promise<StartDevFlowOrchestrationResult> {
+  return request<StartDevFlowOrchestrationResult>(`/projects/${projectId}/orchestration/start`, {
+    method: "POST",
+  });
+}
+
+export function rerunReadyDevFlowWorkOrders(projectId: string): Promise<StartDevFlowOrchestrationResult> {
+  return request<StartDevFlowOrchestrationResult>(`/projects/${projectId}/orchestration/rerun-ready`, {
+    method: "POST",
+  });
+}
+
+export type DevFlowOrchestrationControlAction =
+  | "pause"
+  | "resume"
+  | "cancel"
+  | "retry_node"
+  | "skip_node"
+  | "modify_params";
+
+export interface DevFlowOrchestrationControlResult {
+  accepted: boolean;
+  action: DevFlowOrchestrationControlAction;
+  status: string;
+}
+
+/** Mid-run control (Phase 2): pause/resume/cancel/retry_node/skip_node/modify_params. */
+export function controlDevFlowOrchestration(
+  projectId: string,
+  action: DevFlowOrchestrationControlAction,
+  options?: { nodeId?: string; params?: Record<string, unknown> },
+): Promise<DevFlowOrchestrationControlResult> {
+  return request<DevFlowOrchestrationControlResult>(`/projects/${projectId}/orchestration/control`, {
+    method: "POST",
+    body: JSON.stringify({ action, ...options }),
+  });
+}
+
+export function approveDevFlowGate1(projectId: string, approved: boolean, notes?: string): Promise<unknown> {
+  return request(`/projects/${projectId}/gates/architecture`, {
+    method: "POST",
+    body: JSON.stringify({ approved, notes }),
+  });
+}
+
+export function approveDevFlowGate2(projectId: string, approved: boolean, notes?: string): Promise<unknown> {
+  return request(`/projects/${projectId}/gates/code`, {
+    method: "POST",
+    body: JSON.stringify({ approved, notes }),
+  });
+}

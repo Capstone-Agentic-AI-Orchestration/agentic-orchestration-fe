@@ -1,0 +1,258 @@
+/* LoadingScreen */
+
+.loading-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: var(--bg-0);
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  transform-origin: center center;
+  overflow: hidden;
+  animation: loading-zoom 2.4s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+  will-change: transform, opacity, filter;
+}
+
+.loading-screen.is-reduced {
+  animation: loading-zoom-reduced 0.9s ease-out forwards;
+}
+
+/* Top progress bar — always visible, scans left to right */
+.loading-screen-progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 2px;
+  width: 100%;
+  background: var(--border-soft);
+  overflow: hidden;
+  z-index: 1;
+}
+
+.loading-screen-progress::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  background: var(--text);
+  transform-origin: left center;
+  animation: loading-progress 2.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.loading-screen.is-reduced .loading-screen-progress::after {
+  animation: loading-progress 0.9s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.loading-screen-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  width: min(420px, 80vw);
+  text-align: center;
+  transform-origin: center center;
+  animation: loading-inner-zoom 2.4s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+  will-change: transform, opacity;
+}
+
+.loading-screen.is-reduced .loading-screen-inner {
+  animation: loading-inner-zoom-reduced 0.9s ease-out forwards;
+}
+
+/* Mark — large, prominent */
+.loading-screen-mark {
+  font-size: 72px;
+  line-height: 1;
+  color: var(--text);
+  font-weight: 300;
+  letter-spacing: -0.05em;
+  transform-origin: center center;
+  animation: loading-mark-in 2.4s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+  will-change: transform, opacity;
+}
+
+.loading-screen.is-reduced .loading-screen-mark {
+  animation: loading-mark-in-reduced 0.9s ease-out forwards;
+}
+
+.loading-screen-word {
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: 16px;
+  letter-spacing: 0.16em;
+  text-transform: lowercase;
+  color: var(--text);
+  transform-origin: center center;
+  animation: loading-word-in 2.4s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+  will-change: transform, opacity;
+}
+
+.loading-screen.is-reduced .loading-screen-word {
+  animation: loading-word-in-reduced 0.9s ease-out forwards;
+}
+
+.loading-screen-hairline-wrap {
+  width: 100%;
+  height: 1px;
+  background: var(--border-soft);
+  position: relative;
+  overflow: hidden;
+  margin-top: 4px;
+  transform-origin: center center;
+  will-change: transform;
+}
+
+.loading-screen-hairline {
+  position: absolute;
+  inset: 0;
+  background: var(--text);
+  transform-origin: left center;
+  animation: loading-hairline 2.4s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+  will-change: transform;
+}
+
+.loading-screen.is-reduced .loading-screen-hairline {
+  animation: loading-hairline-reduced 0.9s ease-out forwards;
+}
+
+.loading-screen-meta {
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-top: 4px;
+  transform-origin: center center;
+  animation: loading-meta-in 2.4s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+  will-change: opacity, transform;
+}
+
+.loading-screen.is-reduced .loading-screen-meta {
+  animation: loading-meta-in-reduced 0.9s ease-out forwards;
+}
+
+/* === Keyframes === */
+
+@keyframes loading-progress {
+  0% { transform: scaleX(0); }
+  46% { transform: scaleX(0.95); }
+  100% { transform: scaleX(1); }
+}
+
+@keyframes loading-zoom {
+  0%, 46% {
+    transform: scale(1);
+    filter: blur(0);
+    opacity: 1;
+  }
+  85% {
+    transform: scale(7);
+    filter: blur(12px);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(7);
+    filter: blur(12px);
+    opacity: 0;
+  }
+}
+
+@keyframes loading-inner-zoom {
+  0%, 46% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  85% {
+    transform: scale(0.85);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(0.85);
+    opacity: 0;
+  }
+}
+
+@keyframes loading-mark-in {
+  0%, 8% { opacity: 0; transform: translateY(16px) scale(0.94); }
+  21% { opacity: 1; transform: translateY(0) scale(1); }
+  46% { opacity: 1; transform: translateY(0) scale(1); }
+  85% { opacity: 0; transform: translateY(-16px) scale(0.5); }
+  100% { opacity: 0; transform: translateY(-16px) scale(0.5); }
+}
+
+@keyframes loading-word-in {
+  0%, 17% { opacity: 0; transform: translateY(10px); }
+  29% { opacity: 1; transform: translateY(0); }
+  46% { opacity: 1; transform: translateY(0); }
+  85% { opacity: 0; transform: translateY(-16px) scale(0.5); }
+  100% { opacity: 0; transform: translateY(-16px) scale(0.5); }
+}
+
+@keyframes loading-hairline {
+  0%, 25% { transform: scaleX(0); }
+  46% { transform: scaleX(1); }
+  85% { transform: scaleX(1) scaleY(0.5); opacity: 0; }
+  100% { transform: scaleX(1) scaleY(0.5); opacity: 0; }
+}
+
+@keyframes loading-meta-in {
+  0%, 38% { opacity: 0; transform: translateY(0); }
+  54% { opacity: 1; transform: translateY(0); }
+  75% { opacity: 1; transform: translateY(0); }
+  85% { opacity: 0; transform: translateY(-4px); }
+  100% { opacity: 0; transform: translateY(-4px); }
+}
+
+/* === Reduced motion keyframes (faster, no zoom) === */
+
+@keyframes loading-zoom-reduced {
+  0% { opacity: 1; }
+  70% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes loading-inner-zoom-reduced {
+  0% { opacity: 1; transform: scale(1); }
+  70% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1); }
+}
+
+@keyframes loading-mark-in-reduced {
+  0% { opacity: 0; }
+  20% { opacity: 1; }
+  70% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes loading-word-in-reduced {
+  0%, 10% { opacity: 0; }
+  30% { opacity: 1; }
+  70% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes loading-hairline-reduced {
+  0%, 15% { transform: scaleX(0); }
+  60% { transform: scaleX(1); }
+  100% { transform: scaleX(1); opacity: 0; }
+}
+
+@keyframes loading-meta-in-reduced {
+  0%, 30% { opacity: 0; }
+  60% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@media (max-width: 768px) {
+  .loading-screen-mark {
+    font-size: 56px;
+  }
+  .loading-screen-word {
+    font-size: 14px;
+  }
+  .loading-screen-meta {
+    font-size: 10px;
+  }
+}

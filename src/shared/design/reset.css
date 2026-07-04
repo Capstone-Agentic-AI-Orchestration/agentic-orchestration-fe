@@ -1,0 +1,112 @@
+/* DevFlow — Minimal CSS Reset */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  min-height: 100vh;
+  line-height: 1.55;
+  font-family: "Geist", system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "cv11", "ss01", "ss03";
+  letter-spacing: -0.01em;
+  overflow-x: hidden;
+}
+
+img,
+picture,
+video,
+canvas,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+input,
+button,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  outline: 0;
+}
+
+button {
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+ul,
+ol {
+  list-style: none;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  overflow-wrap: break-word;
+}
+
+p {
+  overflow-wrap: break-word;
+}
+
+table {
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+/* Reduced motion: disable all transitions and animations */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Focus visible — only show for keyboard navigation */
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid rgba(250, 250, 250, 0.5);
+  outline-offset: 2px;
+}
+
+/* Selection */
+::selection {
+  background: rgba(250, 250, 250, 0.15);
+  color: #FAFAFA;
+}

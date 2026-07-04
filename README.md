@@ -1,55 +1,79 @@
-# Call_Template_Single (Next.js)
+# DevFlow Frontend
 
-Minimal Next.js + TypeScript project that **calls reusable CI/CD workflows** from the `CICD-Fe_Single-test` repository.
+`devlow-frontend` is the Next.js app for the migrated DevFlow product. It is wired to `devflow-be` for PM, DEV, and CLIENT workspaces through Supabase Auth and the NestJS REST API.
 
-## Local Commands
+## Runtime Shape
 
-```bash
+- Next.js app router provides role workspaces under `/pm`, `/dev`, `/client`, and `/admin`.
+- `RequireAuth` protects each workspace by backend role:
+  - PM routes allow `PM` and `ADMIN`.
+  - DEV routes allow `DEV` and `ADMIN`.
+  - CLIENT routes allow `CLIENT` and `ADMIN`.
+  - ADMIN routes allow `ADMIN`.
+- Supabase owns browser sessions.
+- `NEXT_PUBLIC_API_URL` points at the NestJS backend, usually `http://localhost:4000` in local development.
+
+## Setup
+
+```powershell
 npm install
+Copy-Item .env.example .env.local
 npm run dev
-npm run test
-npm run lint
+```
+
+The frontend expects the backend to be running separately:
+
+```powershell
+cd ..\devflow-be
+npm run start
+```
+
+## Environment
+
+Only publishable browser-safe values belong in `.env.local`.
+
+```env
+NEXT_PUBLIC_API_URL="http://localhost:4000"
+NEXT_PUBLIC_SUPABASE_URL="https://your-project-ref.supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="your-supabase-publishable-or-anon-key"
+NEXT_PUBLIC_AUTH_REDIRECT_PATH="/client/sign-in"
+```
+
+Do not put `SUPABASE_SERVICE_ROLE_KEY`, database URLs, GitHub private keys, or server model keys in this frontend app.
+
+GitHub login is handled through Supabase Auth. Configure GitHub in the Supabase dashboard and add `/client/sign-in` for local, production, and preview redirect URLs. The backend still owns final role access through `GET /auth/me`.
+
+## Verification
+
+```powershell
+npm run typecheck
 npm run build
 ```
 
-## CI/CD Setup Require
+For persona verification, run the backend seed and smoke scripts from `devflow-be` after the API is running:
 
-This repository does **not** contain its own workflow definitions.  
-Instead, `.github/workflows/master-pipeline-fe-single.yml` calls the reusable workflows hosted in `CICD-Fe_Single-test`.
+```powershell
+cd ..\devflow-be
+npm run seed:demo
+npm run seed:demo:check
+npm run seed:demo:smoke
+```
 
-### 1) Required Branches
+## Live Backend Areas
 
-- `test`
-- `uat`
-- `main`
+These areas are backed by `devflow-be` and Supabase data:
 
-### 2) Required Repository Secrets
+- PM project list/detail, project members, kickoff, tasks, work orders, artifact handoff, collaboration, inquiries, notifications, client/team directories.
+- DEV assigned projects, tasks, work orders, artifact views, team messages, notifications.
+- CLIENT assigned projects, dashboard, product/delivery review, shared artifacts, documents, conversations, notifications, invite-aware signup/sign-in.
 
-- `VERCEL_TOKEN`
-- `VERCEL_ORG_ID`
-- A secret that stores your Vercel Project ID (for example: `VERCEL_PROJECT_ID_FE_SINGLE`)
+## Pending Or Demo Areas
 
-For PR auto-creation jobs, also provide one of:
+The orchestrator remains the final major integration target. Some route surfaces intentionally show backend-pending states until their backend modules exist:
 
-- `GH_PR_TOKEN` (preferred), or
-- `GHPR_TOKEN` (legacy)
+- PM calendar, AI usage, reports, and profile detail drilldowns.
+- DEV folders, GitHub sync, calendar, and IDE telemetry.
+- Scheduling and production deployment status on CLIENT product handoff.
+- ADMIN console. It still uses isolated demo data in `src/features/admin/shared/model/admin.mock.ts`.
 
-### 3) Required Repository Variable
-
-- `FE_SINGLE_SYSTEM_JSON`
-  - A JSON object (or one-item array) with keys: `name`, `dir`, `image`, `vercel_project_secret`.
-  - Example: `{"name":"Frontend-Root","dir":".","image":"fe-single-web","vercel_project_secret":"VERCEL_PROJECT_ID_FE_SINGLE"}`
-
-### 4) Update Workflow Reference
-
-In `.github/workflows/master-pipeline-fe-single.yml`, replace `OWNER/CICD-Fe_Single-test` with the actual GitHub owner/org and repo name where the reusable workflows are hosted.
-
-### 5) Vercel Project Settings
-
-- Link this repository to a Vercel project.
-- Set Vercel Root Directory to `.` for this single frontend setup.
-
-## Notes
-
-- Unit tests generate `coverage/coverage-summary.json` for the test workflow.
-- `Dockerfile` is included so the existing Docker build workflow on `main` can run.
+Legacy mock datasets are isolated under `src/features/*/shared/model/*.mock.ts`. PM, DEV, and CLIENT production flows should use `src/shared/api/devflow-api.ts` and shared hooks instead.
