@@ -1,6 +1,6 @@
-# DevFlow Frontend
+# Agentic Orchestration Frontend
 
-`devlow-frontend` is the Next.js app for the migrated DevFlow product. It is wired to `devflow-be` for PM, DEV, and CLIENT workspaces through Supabase Auth and the NestJS REST API.
+`agentic-orchestration-fe` is the Next.js app for the migrated orchestration product. It is wired to `agentic-orchestration-be` for PM, DEV, and CLIENT workspaces through Supabase Auth and the NestJS REST API.
 
 ## Runtime Shape
 
@@ -11,7 +11,9 @@
   - CLIENT routes allow `CLIENT` and `ADMIN`.
   - ADMIN routes allow `ADMIN`.
 - Supabase owns browser sessions.
-- `NEXT_PUBLIC_API_URL` points at the NestJS backend, usually `http://localhost:4000` in local development.
+- `NEXT_PUBLIC_API_URL` points at the NestJS backend origin, usually `http://localhost:4000` in local development.
+- `NEXT_PUBLIC_SOCKET_URL` points at the backend origin for Socket.IO, usually `http://localhost:4000` in local development.
+- The frontend dev server runs on `http://localhost:3001` so it does not collide with the backend's default `PORT=4000`.
 
 ## Setup
 
@@ -24,8 +26,8 @@ npm run dev
 The frontend expects the backend to be running separately:
 
 ```powershell
-cd ..\devflow-be
-npm run start
+cd ..\agentic-orchestration-be
+npm run start:dev
 ```
 
 ## Environment
@@ -34,6 +36,7 @@ Only publishable browser-safe values belong in `.env.local`.
 
 ```env
 NEXT_PUBLIC_API_URL="http://localhost:4000"
+NEXT_PUBLIC_SOCKET_URL="http://localhost:4000"
 NEXT_PUBLIC_SUPABASE_URL="https://your-project-ref.supabase.co"
 NEXT_PUBLIC_SUPABASE_ANON_KEY="your-supabase-publishable-or-anon-key"
 NEXT_PUBLIC_AUTH_REDIRECT_PATH="/client/sign-in"
@@ -50,18 +53,11 @@ npm run typecheck
 npm run build
 ```
 
-For persona verification, run the backend seed and smoke scripts from `devflow-be` after the API is running:
-
-```powershell
-cd ..\devflow-be
-npm run seed:demo
-npm run seed:demo:check
-npm run seed:demo:smoke
-```
+Persona seed and smoke scripts from the legacy backend still need to be migrated into `agentic-orchestration-be` before those flows can be verified end to end.
 
 ## Live Backend Areas
 
-These areas are backed by `devflow-be` and Supabase data:
+These areas are frontend-wired for `agentic-orchestration-be` and Supabase data:
 
 - PM project list/detail, project members, kickoff, tasks, work orders, artifact handoff, collaboration, inquiries, notifications, client/team directories.
 - DEV assigned projects, tasks, work orders, artifact views, team messages, notifications.

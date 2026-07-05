@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { join } from 'node:path';
 import process from 'node:process';
 import { chromium, firefox, webkit } from 'playwright';
 
@@ -70,12 +71,12 @@ async function main() {
   const browserName = resolveBrowser(process.env.E2E_BROWSER || 'chromium');
   const isExternalTarget = Boolean(process.env.E2E_BASE_URL);
   const waitTimeoutMs = isExternalTarget ? 120_000 : 45_000;
+  const nextBin = join(process.cwd(), 'node_modules', 'next', 'dist', 'bin', 'next');
 
   const app = isExternalTarget
     ? null
-    : spawn('npm', ['run', 'dev', '--', '--hostname', '127.0.0.1', '--port', port], {
+    : spawn(process.execPath, [nextBin, 'dev', '--hostname', '127.0.0.1', '--port', port], {
         stdio: 'inherit',
-        shell: process.platform === 'win32',
         env: process.env,
       });
 

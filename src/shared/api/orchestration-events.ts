@@ -1,8 +1,8 @@
 /**
- * DevFlow orchestration streaming protocol — FRONTEND MIRROR.
+ * Agentic Orchestration streaming protocol — FRONTEND MIRROR.
  *
  * Verbatim mirror of the canonical backend contract at:
- *   devflow-backend/src/orchestration/streaming/protocol.ts
+ *   agentic-orchestration-be/apps/api/src/orchestration/streaming/protocol.ts
  *
  * Keep this file in sync by hand (the packages are not a shared workspace).
  * The parity test (orchestration-events.test.ts) pins ORCHESTRATION_EVENT_TYPES

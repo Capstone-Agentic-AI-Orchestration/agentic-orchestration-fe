@@ -8,7 +8,11 @@ import {
   type OrchestrationEvent,
 } from '@/shared/api/orchestration-events';
 
-const SOCKET_URL = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000').replace(/\/+$/, '');
+const SOCKET_URL = (
+  process.env.NEXT_PUBLIC_SOCKET_URL ??
+  process.env.NEXT_PUBLIC_API_ORIGIN ??
+  'http://localhost:4000'
+).replace(/\/+$/, '');
 const POLL_INTERVAL_MS = 30_000;
 const RECONNECT_WAIT_MS = 10_000;
 
