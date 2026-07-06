@@ -1,6 +1,7 @@
 "use client";
 
 import { Badge, Button } from "@/shared/components/ui";
+import { StatusExplainer } from "@/shared/components/journey";
 import { IconAlertTriangle, IconCheckCircle, IconCpu, IconRefresh } from "@/shared/components/icons";
 import type { DevFlowAgentProviderStatus, DevFlowGithubDeliveryVerification, DevFlowLlmProviderVerification } from "@/shared/api/devflow-api";
 
@@ -38,6 +39,18 @@ export function OrchestrationProviderStatusPanel({
   const tone = loading ? "gray" : error ? "red" : available ? "green" : "amber";
   const label = loading ? "Checking" : error ? "Unavailable" : available ? "Available" : "Blocked";
   const activeProvider = status?.providers.find((provider) => provider.active);
+  const engine = status?.llmEngine ?? {
+    requestedEngine: status?.requestedEngine,
+    activeEngine: status?.activeEngine,
+    fallbackReason: status?.fallbackReason,
+    eveServiceConfigured: status?.eveServiceConfigured,
+    model: status?.engineModel,
+  };
+  const engineFallback = Boolean(engine?.fallbackReason);
+  const engineLabel = engine?.activeEngine ? engineLabelFor(engine.activeEngine) : "Unknown";
+  const requestedEngineLabel = engine?.requestedEngine ? engineLabelFor(engine.requestedEngine) : "Unknown";
+  const eveRequested = engine?.requestedEngine === "eve";
+  const eveUnavailable = eveRequested && !engine?.eveServiceConfigured;
 
   return (
     <div
@@ -62,7 +75,7 @@ export function OrchestrationProviderStatusPanel({
                 ? "Checking backend provider capability..."
                 : error
                   ? error
-                  : status?.reason || `${providerLabel(status?.activeMode)} is ready for orchestration.`}
+                  : status?.reason || `${providerLabel(status?.activeMode)} is ready for orchestration via ${engineLabel}.`}
             </div>
           </div>
         </div>
@@ -77,7 +90,7 @@ export function OrchestrationProviderStatusPanel({
               style={undefined}
               disabled={llmVerificationLoading || status?.activeMode !== "llm" || !available}
             >
-              {llmVerificationLoading ? "Verifying..." : "Verify LLM"}
+              {llmVerificationLoading ? "Verifying..." : "Verify Engine"}
             </Button>
           )}
           <Badge tone={tone} style={undefined}>{label}</Badge>
@@ -99,7 +112,7 @@ export function OrchestrationProviderStatusPanel({
             <div style={{ minWidth: 0 }}>
               <div style={{ fontSize: 12, fontWeight: 800 }}>LLM live verification</div>
               <div style={{ color: "var(--text-3)", fontSize: 11.5, marginTop: 2, overflowWrap: "anywhere" }}>
-                {llmVerificationError || llmVerification?.reason || "Selected graph LLM provider responded to a minimal JSON request."}
+                {llmVerificationError || llmVerification?.reason || "Selected orchestration engine responded to a minimal JSON request."}
               </div>
             </div>
             <Badge tone={llmVerification?.ok ? "green" : "amber"} style={undefined}>{llmVerification?.ok ? "Verified" : "Check failed"}</Badge>
@@ -114,12 +127,45 @@ export function OrchestrationProviderStatusPanel({
         </div>
       )}
 
+      {eveRequested && (
+        <StatusExplainer
+          tone={eveUnavailable ? "danger" : engineFallback ? "warning" : available ? "success" : "warning"}
+          title={eveUnavailable ? "Eve service unavailable" : engineFallback ? "Eve fallback active" : "Eve engine selected"}
+          body={
+            eveUnavailable
+              ? "The backend is configured to request Eve, but no Eve service URL is available for real Eve execution."
+              : engineFallback
+                ? engine?.fallbackReason || "The backend is using a fallback engine until Eve is available."
+                : `Orchestration will route model turns through ${engineLabel}${engine?.model ? ` using ${engine.model}` : ""}.`
+          }
+          items={eveUnavailable ? ["Set EVE_SERVICE_URL for real Eve sessions.", "Keep the fallback visible until the service is reachable."] : []}
+        />
+      )}
+
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 10 }}>
         <ProviderMiniFact label="Requested" value={providerLabel(status?.requestedMode)} />
         <ProviderMiniFact label="Active" value={providerLabel(status?.activeMode)} />
+        <ProviderMiniFact label="Engine" value={`${requestedEngineLabel} -> ${engineLabel}`} />
+        <ProviderMiniFact label="Model" value={engine?.model || status?.model || "Unknown"} />
         <ProviderMiniFact label="Fallback" value={status?.fallbackMode ? providerLabel(status.fallbackMode) : "None"} />
         <ProviderMiniFact label="Adapter" value={activeProvider?.implemented ? "Implemented" : activeProvider ? "Pending" : "Unknown"} />
       </div>
+
+      {engineFallback && (
+        <div
+          style={{
+            padding: 10,
+            border: "1px solid rgba(245,158,11,.28)",
+            background: "rgba(245,158,11,.08)",
+            borderRadius: 8,
+            color: "var(--text-2)",
+            fontSize: 11.5,
+            overflowWrap: "anywhere",
+          }}
+        >
+          {engine?.fallbackReason}
+        </div>
+      )}
 
       {githubDelivery && (
         <div
@@ -249,5 +295,13 @@ function providerLabel(mode?: string | null) {
   if (!mode) return "Unknown";
   if (mode === "llm") return "LLM";
   if (mode === "mock") return "Mock";
+  if (mode === "simulation") return "Simulation";
   return mode;
+}
+
+function engineLabelFor(engine?: string | null) {
+  if (!engine) return "Unknown";
+  if (engine === "eve") return "Eve";
+  if (engine === "graph") return "Graph";
+  return engine;
 }

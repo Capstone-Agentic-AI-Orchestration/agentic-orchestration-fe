@@ -2,6 +2,7 @@
 
 .hero {
   position: relative;
+  min-height: 100dvh;
   padding: 160px 0 120px;
   border-bottom: 1px solid var(--border-soft);
   background: var(--bg-0);
@@ -21,30 +22,548 @@
   will-change: transform;
 }
 
-/* WebGL agent graph — right-side layer, faded toward the headline */
+/* Animated build panels: right-side layer, faded toward the headline */
 .hero-scene {
   position: absolute;
   top: 0;
   right: 0;
   bottom: 0;
-  width: min(64%, 900px);
+  width: min(58%, 820px);
   z-index: 0;
   pointer-events: none;
-  opacity: 0.9;
-  -webkit-mask-image: radial-gradient(130% 110% at 85% 50%, #000 45%, rgba(0, 0, 0, 0.5) 65%, transparent 85%);
-  mask-image: radial-gradient(130% 110% at 85% 50%, #000 45%, rgba(0, 0, 0, 0.5) 65%, transparent 85%);
+  opacity: 1;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 22%, #000 100%);
+  mask-image: linear-gradient(90deg, transparent 0%, #000 22%, #000 100%);
 }
-.hero-scene canvas {
+
+.hero-live-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  font-family: "Geist Mono", ui-monospace, monospace;
+  color: var(--text);
+}
+
+.hero-command-card,
+.hero-agent-stack,
+.hero-output-grid {
+  position: absolute;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: rgba(10, 10, 10, 0.74);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transform: translateZ(0);
+}
+
+.hero-signal-field {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.hero-signal-field::before {
+  content: "";
+  position: absolute;
+  inset: 74px 44px 86px 76px;
+  border: 1px solid rgba(255, 255, 255, 0.035);
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 88px 88px;
+  animation: heroFieldDrift 14s linear infinite;
+}
+
+.hero-signal-packet {
+  position: absolute;
+  left: var(--packet-x);
+  top: var(--packet-y);
+  width: 5px;
+  height: 5px;
+  border: 1px solid rgba(250, 250, 250, 0.65);
+  background: rgba(250, 250, 250, 0.2);
+  transform: translate3d(0, 0, 0);
+  animation: heroPacket 4.4s ease-in-out infinite;
+  animation-delay: var(--packet-delay);
+}
+
+.hero-connector {
+  position: absolute;
+  z-index: 1;
+  height: 1px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.07);
+  transform-origin: left center;
+}
+
+.hero-connector::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 42%;
+  background: linear-gradient(90deg, transparent, rgba(250, 250, 250, 0.8), transparent);
+  transform: translateX(-120%);
+  animation: heroConnectorFlow 2.9s ease-in-out infinite;
+}
+
+.hero-connector-a {
+  top: 282px;
+  right: 316px;
+  width: 184px;
+  transform: rotate(16deg);
+}
+
+.hero-connector-b {
+  top: 338px;
+  right: 236px;
+  width: 148px;
+  transform: rotate(76deg);
+}
+
+.hero-connector-c {
+  top: 555px;
+  right: 280px;
+  width: 168px;
+  transform: rotate(-14deg);
+}
+
+.hero-connector-b::after {
+  animation-delay: 0.75s;
+}
+
+.hero-connector-c::after {
+  animation-delay: 1.45s;
+}
+
+.hero-command-card {
+  z-index: 2;
+  top: 150px;
+  right: clamp(96px, 10vw, 180px);
+  width: min(360px, 38vw);
+  padding: 16px;
+  animation:
+    heroPanelFloat 8s ease-in-out infinite,
+    heroTerminalWake 5.4s ease-in-out infinite;
+}
+
+.hero-command-card::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  border: 1px solid transparent;
+  background:
+    linear-gradient(rgba(10, 10, 10, 0), rgba(10, 10, 10, 0)) padding-box,
+    linear-gradient(90deg, transparent, rgba(250, 250, 250, 0.34), transparent) border-box;
+  opacity: 0;
+  pointer-events: none;
+  animation: heroTerminalBorder 5.4s ease-in-out infinite;
+}
+
+.hero-command-card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 92px;
+  border-radius: inherit;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.04) 50%, transparent 100%);
+  transform: translateX(-110px);
+  animation: heroPanelScan 5.6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.hero-command-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+  color: var(--text-3);
+  font-size: 11px;
+  line-height: 1;
+}
+
+.hero-command-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hero-status-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--text-3);
+  box-shadow: 0 0 0 rgba(250, 250, 250, 0);
+  animation: heroStatusDot 1.6s ease-in-out infinite;
+}
+
+.hero-command-card p {
+  margin: 0;
+  max-width: 34ch;
+  color: var(--text-2);
+  font-family: "Geist", system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  letter-spacing: -0.005em;
+}
+
+.hero-command-log {
+  display: grid;
+  gap: 5px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.hero-log-line {
+  position: relative;
+  overflow: hidden;
+  color: var(--text-3);
+  font-size: 10.5px;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  opacity: 0.35;
+  animation: heroLogLine 3.4s ease-in-out infinite;
+  animation-delay: var(--line-delay);
+}
+
+.hero-log-line::before {
+  content: "$ ";
+  color: var(--text-4);
+}
+
+.hero-command-input {
+  display: flex;
+  align-items: center;
+  min-height: 18px;
+  margin-top: 12px;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 10.5px;
+  line-height: 1;
+  letter-spacing: 0.02em;
+}
+
+.hero-command-prompt {
+  margin-right: 6px;
+  color: var(--text-4);
+}
+
+.hero-command-typed {
+  display: inline-block;
+  width: 0;
+  max-width: 34ch;
+  overflow: hidden;
+  white-space: nowrap;
+  animation: heroTypeCommand 5.4s steps(34, end) infinite;
+}
+
+.hero-command-insert {
+  flex: 0 0 auto;
+  width: 7px;
+  height: 15px;
+  margin-left: 2px;
+  background: var(--text);
+  box-shadow: 0 0 16px rgba(250, 250, 250, 0.32);
+  animation:
+    heroCaret 0.92s steps(2, start) infinite,
+    heroCaretNudge 5.4s steps(33, end) infinite;
+}
+
+.hero-agent-stack {
+  z-index: 2;
+  right: clamp(88px, 8vw, 160px);
+  top: 360px;
+  width: min(430px, 44vw);
+  padding: 6px;
+  display: grid;
+  gap: 4px;
+  animation: heroStackBreathe 7s ease-in-out infinite;
+}
+
+.hero-agent-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(96px, 0.9fr) minmax(96px, 1fr) 42px;
+  align-items: center;
+  min-height: 42px;
+  padding: 0 10px 0 12px;
+  overflow: hidden;
+  border: 1px solid var(--border-soft);
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.025);
+  animation: heroAgentWake 4.8s ease-in-out infinite;
+  animation-delay: var(--agent-delay);
+}
+
+.hero-agent-row::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+  transform: translateX(-120%);
+  animation: heroScan 3.6s linear infinite;
+  animation-delay: var(--agent-delay);
+}
+
+.hero-agent-row::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--text);
+  opacity: 0;
+  transform: scaleY(0.25);
+  transform-origin: center;
+  animation: heroAgentRail 4.8s ease-in-out infinite;
+  animation-delay: var(--agent-delay);
+}
+
+.hero-agent-label,
+.hero-agent-value,
+.hero-agent-signal {
+  position: relative;
+  z-index: 1;
+}
+
+.hero-agent-label {
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.hero-agent-value {
+  color: var(--text-3);
+  font-size: 11px;
+  text-align: right;
+}
+
+.hero-agent-signal {
+  justify-self: end;
+  width: 28px;
+  height: 2px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.hero-agent-signal::after {
+  content: "";
   display: block;
-  width: 100% !important;
-  height: 100% !important;
+  width: 10px;
+  height: 100%;
+  background: var(--text);
+  transform: translateX(-12px);
+  animation: heroSignal 1.8s ease-in-out infinite;
+  animation-delay: var(--agent-delay);
+}
+
+.hero-output-grid {
+  z-index: 2;
+  right: clamp(180px, 22vw, 360px);
+  top: 600px;
+  display: flex;
+  gap: 6px;
+  padding: 8px;
+  animation: heroOutputDrift 7.6s ease-in-out infinite;
+}
+
+.hero-output-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--border-soft);
+  border-radius: 2px;
+  color: var(--text-2);
+  background: rgba(255, 255, 255, 0.035);
+  font-size: 10.5px;
+  white-space: nowrap;
+  animation: heroChipPulse 3.2s ease-in-out infinite;
+  animation-delay: var(--output-delay);
+}
+
+.hero-output-chip::before {
+  content: "";
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.35;
+  transform: scale(0.8);
+  animation: heroOutputMark 3.2s ease-in-out infinite;
+  animation-delay: var(--output-delay);
+}
+
+@keyframes heroFieldDrift {
+  0% { background-position: 0 0, 0 0; opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { background-position: 88px 88px, 88px 88px; opacity: 0.6; }
+}
+
+@keyframes heroPacket {
+  0%, 100% {
+    opacity: 0.16;
+    transform: translate3d(0, 0, 0) scale(0.8);
+  }
+  38% {
+    opacity: 0.9;
+    transform: translate3d(18px, -12px, 0) scale(1.15);
+  }
+  70% {
+    opacity: 0.35;
+    transform: translate3d(46px, 10px, 0) scale(0.9);
+  }
+}
+
+@keyframes heroConnectorFlow {
+  0% { transform: translateX(-120%); opacity: 0; }
+  18% { opacity: 1; }
+  72%, 100% { transform: translateX(260%); opacity: 0; }
+}
+
+@keyframes heroPanelFloat {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(0, -10px, 0); }
+}
+
+@keyframes heroTerminalWake {
+  0%, 100% { box-shadow: 0 24px 70px rgba(0, 0, 0, 0.35); }
+  14%, 78% { box-shadow: 0 24px 70px rgba(0, 0, 0, 0.35), 0 0 34px rgba(250, 250, 250, 0.035); }
+}
+
+@keyframes heroTerminalBorder {
+  0%, 10%, 86%, 100% { opacity: 0; }
+  18%, 68% { opacity: 1; }
+}
+
+@keyframes heroPanelScan {
+  0%, 56% { transform: translateX(-110px); opacity: 0; }
+  68% { opacity: 1; }
+  100% { transform: translateX(382px); opacity: 0; }
+}
+
+@keyframes heroStatusDot {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(0.72);
+    box-shadow: 0 0 0 rgba(250, 250, 250, 0);
+  }
+  42% {
+    opacity: 1;
+    transform: scale(1);
+    box-shadow: 0 0 18px rgba(250, 250, 250, 0.28);
+  }
+}
+
+@keyframes heroLogLine {
+  0%, 100% {
+    color: var(--text-3);
+    opacity: 0.35;
+    transform: translateX(0);
+  }
+  40%, 58% {
+    color: var(--text);
+    opacity: 1;
+    transform: translateX(3px);
+  }
+}
+
+@keyframes heroTypeCommand {
+  0%, 7% { width: 0; opacity: 0.7; }
+  46%, 72% { width: 34ch; opacity: 1; }
+  86%, 100% { width: 0; opacity: 0.65; }
+}
+
+@keyframes heroCaretNudge {
+  0%, 7% { transform: translateX(0); }
+  46%, 72% { transform: translateX(0); }
+  86%, 100% { transform: translateX(0); }
+}
+
+@keyframes heroScan {
+  0% { transform: translateX(-120%); }
+  55%, 100% { transform: translateX(120%); }
+}
+
+@keyframes heroStackBreathe {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(0, 8px, 0); }
+}
+
+@keyframes heroAgentWake {
+  0%, 100% {
+    border-color: var(--border-soft);
+    background: rgba(255, 255, 255, 0.025);
+  }
+  42%, 58% {
+    border-color: rgba(250, 250, 250, 0.22);
+    background: rgba(255, 255, 255, 0.055);
+  }
+}
+
+@keyframes heroAgentRail {
+  0%, 100% {
+    opacity: 0;
+    transform: scaleY(0.25);
+  }
+  42%, 58% {
+    opacity: 0.72;
+    transform: scaleY(1);
+  }
+}
+
+@keyframes heroSignal {
+  0% { transform: translateX(-12px); opacity: 0.35; }
+  45% { opacity: 1; }
+  100% { transform: translateX(32px); opacity: 0.35; }
+}
+
+@keyframes heroChipPulse {
+  0%, 100% {
+    border-color: var(--border-soft);
+    color: var(--text-2);
+  }
+  45% {
+    border-color: var(--border-strong);
+    color: var(--text);
+  }
+}
+
+@keyframes heroOutputDrift {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(-8px, 5px, 0); }
+}
+
+@keyframes heroOutputMark {
+  0%, 100% {
+    opacity: 0.28;
+    transform: scale(0.75);
+  }
+  45% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+@keyframes heroCaret {
+  0%, 45% { opacity: 1; }
+  46%, 100% { opacity: 0; }
 }
 
 .hero-inner {
   position: relative;
-  max-width: 1100px;
+  max-width: 1360px;
   margin: 0 auto;
-  padding: 0 32px;
+  padding: 0 48px;
   z-index: 1;
 }
 
@@ -55,7 +574,7 @@
   letter-spacing: -0.045em;
   color: var(--text);
   margin: 0 0 24px;
-  max-width: 900px;
+  max-width: 720px;
 }
 
 .hero-paragraph {
@@ -96,15 +615,40 @@
 
 @media (max-width: 768px) {
   .hero {
+    min-height: 100dvh;
     padding: 120px 0 80px;
   }
   .hero-inner {
     padding: 0 20px;
   }
   .hero-scene {
-    width: 100%;
-    opacity: 0.22;
-    -webkit-mask-image: radial-gradient(120% 90% at 70% 25%, rgba(0, 0, 0, 0.9) 25%, transparent 75%);
-    mask-image: radial-gradient(120% 90% at 70% 25%, rgba(0, 0, 0, 0.9) 25%, transparent 75%);
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-signal-field::before,
+  .hero-signal-packet,
+  .hero-connector::after,
+  .hero-command-card,
+  .hero-command-card::before,
+  .hero-command-card::after,
+  .hero-status-dot,
+  .hero-log-line,
+  .hero-command-typed,
+  .hero-command-insert,
+  .hero-agent-stack,
+  .hero-agent-row,
+  .hero-agent-row::before,
+  .hero-agent-row::after,
+  .hero-agent-signal::after,
+  .hero-output-grid,
+  .hero-output-chip,
+  .hero-output-chip::before {
+    animation: none;
+  }
+
+  .hero-command-typed {
+    width: auto;
   }
 }

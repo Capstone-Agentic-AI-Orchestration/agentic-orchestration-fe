@@ -12,6 +12,8 @@ import { Badge, Button, Card, Field, Input, Modal, Select, Tabs, Textarea } from
 import { DevFlowProjectTimeline } from "@/shared/components/project-timeline/devflow-project-timeline";
 import { OrchestrationProviderStatusPanel } from "@/shared/components/orchestration/orchestration-provider-status-panel";
 import { OrchestrationLiveVisualizer } from "@/shared/components/orchestration/orchestration-live-visualizer";
+import { BlockingIssuePanel, GuidedActionPanel } from "@/shared/components/journey";
+import { makeProjectJourneyContext } from "@/shared/journey";
 import {
   IconActivity,
   IconAlertTriangle,
@@ -251,7 +253,6 @@ function BackendProjectDetail({ project, onBack }) {
   const orchestrationBlockers = orchestrationReadinessBlockers(detail, outputs.workOrders, outputs.loading);
   const providerActionBlocked = provider.loading || provider.error || (provider.status && !provider.status.available);
   const canStartOrchestration = orchestrationBlockers.length === 0 && !detail.runId && !starting && !providerActionBlocked;
-
   const refreshOrchestrationRuns = async (quiet = false) => {
     if (!quiet) setOrchestrationRunsLoading(true);
     setOrchestrationRunsError("");
@@ -536,6 +537,21 @@ function BackendProjectDetail({ project, onBack }) {
       setOrchestrationAction("");
     }
   };
+  const projectJourney = makeProjectJourneyContext({
+    role: "pm",
+    project: detail,
+    providerStatus: provider.status,
+    providerError: provider.error,
+    loading: outputs.loading || provider.loading,
+    pendingActions: outputs.tasks.filter((task) => task.status !== "DONE").length + outputs.workOrders.filter((workOrder) => ["READY", "RUNNING", "FAILED"].includes(workOrder.status)).length,
+    blockers: orchestrationBlockers,
+    primaryAction: {
+      label: canStartOrchestration ? "Start build run" : detail.runId ? "Open build run" : "Resolve blockers",
+      onClick: canStartOrchestration ? startRun : () => setTab("build"),
+      disabled: starting,
+    },
+    secondaryAction: { label: "Guided wizard", href: `/pm/orchestrate/${detail.id}/brief`, variant: "secondary", icon: <IconWorkflow size={13} /> },
+  });
 
   return (
     <div data-screen-label={`PM - Backend Project - ${detail.id}`}>
@@ -588,6 +604,9 @@ function BackendProjectDetail({ project, onBack }) {
         onRejectGate2={() => approveGate("code", false)}
         onCreateRepo={handleCreateRepo}
       />
+
+      <GuidedActionPanel context={projectJourney} />
+      <BlockingIssuePanel issues={projectJourney.blockers} />
 
       {error && (
         <Card style={{ padding: 14, marginBottom: 16, color: "#FCA5A5", border: "1px solid rgba(239,68,68,.30)" }}>

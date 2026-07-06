@@ -48,7 +48,7 @@ export function Gate1Step({ ctx }: { ctx: OrchestratorWizardContextValue }) {
       <div className="wizard-step-section">
         <h3 className="wizard-step-section-title">
           <IconShield size={16} />
-          Gate 1: Architecture Review
+          Plan review
         </h3>
         <p className="wizard-step-section-desc">
           Review the project contract — requirements, file manifest, and acceptance criteria — before
@@ -60,7 +60,7 @@ export function Gate1Step({ ctx }: { ctx: OrchestratorWizardContextValue }) {
         <div className="wizard-info-banner info">
           <IconAlertTriangle size={16} />
           <span>
-            This gate is not currently awaiting review (status: {projectStatus?.replace(/_/g, " ")}).
+            This plan review is not currently awaiting approval (status: {projectStatus?.replace(/_/g, " ")}).
             You can still review the contract below.
           </span>
         </div>
@@ -161,12 +161,12 @@ export function Gate1Step({ ctx }: { ctx: OrchestratorWizardContextValue }) {
             rows={3}
             value={notes}
             onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNotes(e.target.value)}
-            placeholder="Add any feedback or conditions for this gate approval…"
+            placeholder="Add any feedback or conditions for this plan approval…"
           />
           <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
             <Button variant="primary" onClick={() => handleApprove(true)} disabled={acting}>
               <IconCheck size={14} />
-              {acting ? "Approving…" : "Approve & Start Code Generation"}
+              {acting ? "Approving…" : "Approve plan and start build"}
             </Button>
             <Button variant="danger" onClick={() => handleApprove(false)} disabled={acting}>
               <IconClose size={14} />
@@ -179,7 +179,7 @@ export function Gate1Step({ ctx }: { ctx: OrchestratorWizardContextValue }) {
       <OrchestratorStepNav
         projectId={projectId}
         currentStep="gate-1"
-        nextLabel="Continue to Gate 2"
+        nextLabel="Continue to build review"
         nextDisabled={!isAwaiting || acting}
         onComplete={() => handleApprove(true)}
       />

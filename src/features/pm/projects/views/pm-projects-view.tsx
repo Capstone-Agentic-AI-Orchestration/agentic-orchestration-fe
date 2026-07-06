@@ -35,6 +35,8 @@ import {
   getStageProgress,
   type LifecycleStageId,
 } from "@/shared/components/project-lifecycle/project-lifecycle-indicator";
+import { GuidedActionPanel, RoleEmptyState } from "@/shared/components/journey";
+import { makeProjectJourneyContext, humanizeJourneyTerm } from "@/shared/journey";
 
 const FILTERS = [
   { id: "all", label: "All" },
@@ -76,17 +78,17 @@ function orchestrateRoute(project): string {
 function attentionMeta(project) {
   switch (project.status) {
     case "AWAITING_GATE_1":
-      return { label: "Gate 1 — architecture review", cta: "Review contract", tone: "amber", icon: <IconShield size={15} />, color: "#FBBF24" };
+      return { label: "Plan review - architecture", cta: "Review plan", tone: "amber", icon: <IconShield size={15} />, color: "#FBBF24" };
     case "AWAITING_GATE_2":
-      return { label: "Gate 2 — code review", cta: "Review code", tone: "purple", icon: <IconCode size={15} />, color: "#A78BFA" };
+      return { label: "Build review - code", cta: "Review build", tone: "purple", icon: <IconCode size={15} />, color: "#A78BFA" };
     default:
       return { label: "Run blocked", cta: "Resume run", tone: "red", icon: <IconAlertTriangle size={15} />, color: "#FCA5A5" };
   }
 }
 
 function nextAction(stageId: LifecycleStageId, project): string {
-  if (project.status === "AWAITING_GATE_1") return "Review Gate 1";
-  if (project.status === "AWAITING_GATE_2") return "Review Gate 2";
+  if (project.status === "AWAITING_GATE_1") return "Review the plan";
+  if (project.status === "AWAITING_GATE_2") return "Review the build";
   if (project.status === "FAILED") return "Resume run";
   if (project.status === "GENERATING_CODE") return "Monitor build";
   if (project.status === "PARSING_REQUIREMENTS" || project.status === "NEGOTIATING_CONTRACT") return "Monitor run";
@@ -212,6 +214,19 @@ export function PMProjectsView() {
   const openProject = (id: string) => router.push(`/pm/project/${id}`);
   const hasNoProjects = !loadingBackend && !apiError && backendProjects.length === 0;
   const canCreate = form.companyName.trim().length > 0 && form.brief.trim().length >= 10;
+  const featuredProject = attentionProjects[0] || backendProjects[0] || null;
+  const hubJourney = makeProjectJourneyContext({
+    role: "pm",
+    project: featuredProject,
+    loading: loadingBackend,
+    totalProjects: backendProjects.length,
+    activeCount: backendProjects.filter((project) => mapProjectStatusToLifecycleStage(project.status, project.kickoffStatus) !== "delivered" && project.status !== "FAILED").length,
+    blockers: apiError ? [{ title: "Projects could not load", description: apiError, severity: "critical" }] : [],
+    primaryAction: featuredProject
+      ? { label: humanizeJourneyTerm(nextAction(mapProjectStatusToLifecycleStage(featuredProject.status, featuredProject.kickoffStatus), featuredProject)), href: orchestrateRoute(featuredProject) }
+      : { label: "Create project", onClick: () => { resetModal(); setNewProjectOpen(true); } },
+    secondaryAction: { label: "Refresh", onClick: refreshBackendProjects, variant: "secondary", icon: <IconRefresh size={13} /> },
+  });
 
   return (
     <div data-screen-label="PM - Projects">
@@ -221,8 +236,13 @@ export function PMProjectsView() {
         onNewProject={() => { resetModal(); setNewProjectOpen(true); }}
       />
 
+      <GuidedActionPanel context={hubJourney} />
+
       {hasNoProjects ? (
-        <PMOnboarding onNewProject={() => { resetModal(); setNewProjectOpen(true); }} />
+        <>
+          <RoleEmptyState role="pm" action={{ label: "Create project", onClick: () => { resetModal(); setNewProjectOpen(true); } }} />
+          <PMOnboarding onNewProject={() => { resetModal(); setNewProjectOpen(true); }} />
+        </>
       ) : (
         <>
           {attentionProjects.length > 0 && (

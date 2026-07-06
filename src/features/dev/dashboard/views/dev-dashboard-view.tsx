@@ -11,6 +11,8 @@ import { getDevFlowDeveloper } from "@/shared/api/devflow-api";
 import { useDevFlowProjects } from "@/shared/hooks/use-devflow-projects";
 import { BackendAwareRouteState } from "@/shared/components/backend-aware-route-state";
 import { compactDevFlowError, devflowLifecycleView } from "@/shared/utils/devflow-projects";
+import { GuidedActionPanel, RoleEmptyState } from "@/shared/components/journey";
+import { makeProjectJourneyContext } from "@/shared/journey";
 
 export function DevDashboardView() {
   const router = useRouter();
@@ -22,6 +24,18 @@ export function DevDashboardView() {
   const openTasks = projects.reduce((total, project) => total + (project.lifecycle?.signals?.openTasks || 0), 0);
   const activeWorkOrders = projects.reduce((total, project) => total + (project.lifecycle?.signals?.activeWorkOrders || 0), 0);
   const inDelivery = projects.filter((project) => project.lifecycle?.signals?.orchestrationStarted).length;
+  const focusProject = projects.find((project) => project.lifecycle?.signals?.openTasks || project.lifecycle?.signals?.activeWorkOrders) || projects[0] || null;
+  const journeyContext = makeProjectJourneyContext({
+    role: "dev",
+    project: focusProject,
+    loading,
+    totalProjects: projects.length,
+    activeCount: projects.length,
+    pendingActions: openTasks + activeWorkOrders,
+    blockers: error ? [{ title: "Developer queue could not load", description: compactDevFlowError(error), severity: "warning" }] : [],
+    primaryAction: focusProject ? { label: "Open assigned project", href: `/dev/project/${focusProject.id}` } : { label: "Open projects", href: "/dev/projects" },
+    secondaryAction: { label: "Refresh", onClick: refresh, variant: "secondary", icon: <IconRefresh size={13} /> },
+  });
 
   useEffect(() => {
     let active = true;
@@ -50,6 +64,11 @@ export function DevDashboardView() {
           </>
         }
       />
+
+      <GuidedActionPanel context={journeyContext} />
+      {!projects.length && !loading && !error && (
+        <RoleEmptyState role="dev" action={{ label: "Refresh assignments", onClick: refresh, variant: "secondary", icon: <IconRefresh size={13} /> }} />
+      )}
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 14, marginBottom: 20 }}>
         <Metric icon={<IconFolder size={17} />} label="Assigned projects" value={loading ? "..." : String(projects.length)} sub={error ? compactDevFlowError(error) : "From /projects"} />

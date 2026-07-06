@@ -28,6 +28,8 @@ import {
 import { useDevFlowProjectOutputs } from "@/shared/hooks/use-devflow-projects";
 import { useSelectedDevFlowProject } from "@/shared/projects/selected-project-context";
 import { compactDevFlowError, devflowLifecycleView, formatDevFlowDate } from "@/shared/utils/devflow-projects";
+import { BlockingIssuePanel, GuidedActionPanel } from "@/shared/components/journey";
+import { makeProjectJourneyContext } from "@/shared/journey";
 
 /* Feature-level views work against loosely-typed backend payloads. */
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -117,6 +119,17 @@ export function ClientProductView() {
   const refresh = async () => {
     await Promise.all([refreshProjects(), refreshSelectedProject?.(), outputs.refresh(), refreshDeliveryReadiness()]);
   };
+  const productJourney = makeProjectJourneyContext({
+    role: "client",
+    project: selectedProject,
+    loading: selectedProjectLoading || outputs.loading,
+    pendingActions: sharedArtifacts.filter((artifact: Artifact) => artifact.reviewStatus === "PENDING").length,
+    blockers: deliveryBlockers.map((blocker: string) => ({ title: blocker, severity: "warning" })),
+    primaryAction: selectedProject
+      ? { label: deliveryBlockers.length ? "Review blockers" : "Review deliverables", onClick: refreshDeliveryReadiness }
+      : undefined,
+    secondaryAction: { label: "Refresh build", onClick: refresh, variant: "secondary", icon: <IconRefresh size={13} /> },
+  });
 
   const acceptDelivery = async () => {
     if (deliveryBlockers.length) {
@@ -157,6 +170,7 @@ export function ClientProductView() {
       <div data-screen-label="Client - My Product">
         <ClientPageHeader title="My Product" subtitle="Preview your application, review the latest build, and approve final delivery." />
         <ClientProductBackendNotice loading={selectedProjectLoading} error={selectedProjectError} project={selectedProject} />
+        <GuidedActionPanel context={productJourney} />
       </div>
     );
   }
@@ -166,6 +180,9 @@ export function ClientProductView() {
       <ClientPageHeader title="My Product" subtitle="Preview your application, review the latest build, and approve final delivery." />
 
       <ClientProductBackendNotice loading={selectedProjectLoading} error={selectedProjectError} project={selectedProject} />
+
+      <GuidedActionPanel context={productJourney} />
+      <BlockingIssuePanel issues={productJourney.blockers} />
 
       {/* Hero — single status, one progress line, primary action */}
       <Card style={{ padding: 28, marginBottom: 24 }}>

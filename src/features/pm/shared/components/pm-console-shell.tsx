@@ -5,6 +5,7 @@ import { AppShell, type ShellNavItem } from "@/shared/components/layout/app-shel
 import { SelectedProjectProvider } from "@/shared/projects/selected-project-context";
 import { ProjectSwitcher } from "@/shared/projects/project-switcher";
 import { DevFlowNotificationBell } from "@/shared/components/notifications/devflow-notification-bell";
+import { ProjectContextStrip } from "@/shared/components/journey";
 import { IconFolder, IconSettings } from "@/shared/components/icons";
 
 const PM_NAV: ShellNavItem[] = [
@@ -41,6 +42,7 @@ export function PMConsoleShell({ children }: { children: ReactNode }) {
           </>
         }
       >
+        <ProjectContextStrip role="pm" />
         {children}
       </AppShell>
     </SelectedProjectProvider>

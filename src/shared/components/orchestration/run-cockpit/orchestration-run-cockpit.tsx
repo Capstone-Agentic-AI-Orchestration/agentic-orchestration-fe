@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type CSSProperties } from "react";
+import { useRef, useState, type CSSProperties } from "react";
 import {
   controlDevFlowOrchestration,
   type DevFlowOrchestrationControlAction,
@@ -19,8 +19,9 @@ import {
   IconGitBranch,
 } from "@/shared/components/icons";
 import { ActivityConsole } from "@/shared/components/orchestration/activity-console";
+import { useOrchestrationStore } from "@/shared/store/orchestration-store";
 import { RunMeterBar } from "./run-meter-bar";
-import { AgentStreamGrid } from "./agent-stream-grid";
+import { AgentLiveHandoff, AgentOutputInspector, AgentRunTranscript, AgentStreamGrid, AgentStreamPulse } from "./agent-stream-grid";
 import { PipelineRail } from "./pipeline-rail";
 
 const RUNNING_STATUSES = new Set([
@@ -44,6 +45,7 @@ interface OrchestrationRunCockpitProps {
   status: string;
   onStart: () => void;
   onRerun: () => void;
+  onResync?: () => Promise<void> | void;
   starting: boolean;
   error?: string;
 }
@@ -54,14 +56,35 @@ export function OrchestrationRunCockpit({
   status,
   onStart,
   onRerun,
+  onResync,
   starting,
   error,
 }: OrchestrationRunCockpitProps) {
+  const connectionStatus = useOrchestrationStore((s) => s.connectionStatus);
+  const [selectedAgentNodeId, setSelectedAgentNodeId] = useState<string | null>(null);
+  const [resyncing, setResyncing] = useState(false);
+  const inspectorRef = useRef<HTMLDivElement>(null);
   const isRunning = RUNNING_STATUSES.has(status);
   const isAwaitingGate = status === "AWAITING_GATE_1" || status === "AWAITING_GATE_2";
   const isFailed = status === "FAILED";
   const isDelivered = status === "DELIVERED";
   const isLive = isRunning || isAwaitingGate || isFailed || isDelivered;
+  const streamOnline = connectionStatus === "connected";
+  const selectAgentNode = (nodeId: string) => {
+    setSelectedAgentNodeId(nodeId);
+    window.requestAnimationFrame(() => {
+      inspectorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
+  const resyncStream = async () => {
+    if (!onResync || resyncing) return;
+    setResyncing(true);
+    try {
+      await onResync();
+    } finally {
+      setResyncing(false);
+    }
+  };
 
   // Pristine project that has never run → premium launch pad.
   if (!isLive) {
@@ -102,16 +125,61 @@ export function OrchestrationRunCockpit({
       )}
 
       <div className="cockpit-toolbar">
-        <div className="row gap-2" style={{ alignItems: "center" }}>
-          <IconActivity size={15} style={{ color: "var(--primary-2)" }} />
-          <span className="cockpit-toolbar-title">Live agent floor</span>
-          {isRunning && <span className="cockpit-live-pill">● Live</span>}
+        <div className="cockpit-toolbar-copy">
+          <div className="row gap-2" style={{ alignItems: "center" }}>
+            <IconActivity size={15} style={{ color: "var(--primary-2)" }} />
+            <span className="cockpit-toolbar-title">Live agent output</span>
+            {isRunning && (
+              <span className={streamOnline ? "cockpit-live-pill" : "cockpit-live-pill is-paused"}>
+                {streamOnline ? "Live tokens" : "Tokens paused"}
+              </span>
+            )}
+          </div>
+          <p className="cockpit-toolbar-subtitle">
+            {streamOnline
+              ? "Watch each specialist think, stream, validate, and hand off its artifact."
+              : "Status keeps polling while token deltas resume after the socket reconnects."}
+          </p>
         </div>
-        {isRunning && <RunControlCluster projectId={projectId} />}
+        <div className="cockpit-toolbar-actions">
+          <AgentStreamPulse />
+          <StreamHealthPill status={connectionStatus} />
+          {onResync && (
+            <button
+              type="button"
+              className="stream-resync-btn"
+              onClick={resyncStream}
+              disabled={resyncing}
+              title={streamOnline ? "Request the latest stream state from the socket" : "Refresh run status while the socket reconnects"}
+            >
+              <IconRefresh size={13} className={resyncing ? "spin" : undefined} />
+              {resyncing ? "Syncing" : streamOnline ? "Resync stream" : "Refresh status"}
+            </button>
+          )}
+          {isRunning && <RunControlCluster projectId={projectId} />}
+        </div>
+      </div>
+
+      <AgentLiveHandoff />
+      <AgentRunTranscript
+        selectedNodeId={selectedAgentNodeId}
+        onSelectAgent={selectAgentNode}
+        streamOnline={streamOnline}
+      />
+      <div ref={inspectorRef} className="agent-inspector-anchor">
+        <AgentOutputInspector
+          selectedNodeId={selectedAgentNodeId}
+          onSelectedNodeIdChange={setSelectedAgentNodeId}
+          streamOnline={streamOnline}
+        />
       </div>
 
       <div className="cockpit-stage">
-        <AgentStreamGrid />
+        <AgentStreamGrid
+          selectedNodeId={selectedAgentNodeId}
+          onSelectAgent={selectAgentNode}
+          streamOnline={streamOnline}
+        />
         <PipelineRail />
       </div>
 
@@ -126,6 +194,30 @@ export function OrchestrationRunCockpit({
         </div>
       </details>
     </div>
+  );
+}
+
+function StreamHealthPill({ status }: { status: "disconnected" | "connecting" | "connected" }) {
+  const copy = {
+    connected: {
+      label: "Socket live",
+      detail: "Receiving token events",
+    },
+    connecting: {
+      label: "Connecting",
+      detail: "Opening live stream",
+    },
+    disconnected: {
+      label: "Status polling",
+      detail: "Token stream resumes after socket reconnect",
+    },
+  }[status];
+
+  return (
+    <span className={`stream-health-pill is-${status}`} title={copy.detail} aria-live="polite">
+      <span className="stream-health-dot" aria-hidden="true" />
+      <span>{copy.label}</span>
+    </span>
   );
 }
 

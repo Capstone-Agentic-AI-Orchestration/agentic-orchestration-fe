@@ -5,6 +5,7 @@ import { AppShell, type ShellNavItem } from "@/shared/components/layout/app-shel
 import { SelectedProjectProvider } from "@/shared/projects/selected-project-context";
 import { ProjectSwitcher } from "@/shared/projects/project-switcher";
 import { DevFlowNotificationBell } from "@/shared/components/notifications/devflow-notification-bell";
+import { ProjectContextStrip } from "@/shared/components/journey";
 import { IconCpu, IconFolder, IconHome, IconSettings } from "@/shared/components/icons";
 
 const DEV_NAV: ShellNavItem[] = [
@@ -44,6 +45,7 @@ export function DevConsoleShell({ children }: { children: ReactNode }) {
           </>
         }
       >
+        <ProjectContextStrip role="dev" />
         {children}
       </AppShell>
     </SelectedProjectProvider>

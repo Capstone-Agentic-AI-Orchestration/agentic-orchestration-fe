@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * HowItWorks — 4 numbered rows explaining the flow.
+ * HowItWorks - 4 rows explaining the flow.
  * No staggered animation. Single fade-up on scroll.
  */
 
@@ -12,28 +12,28 @@ const STEPS = [
   {
     n: "01",
     title: "Brief",
-    body: "Submit a single description of what you want built. The system parses it, scopes it, and drafts a contract with file manifest and acceptance criteria.",
+    body: "Submit one description. Devflow parses scope, target stack, file manifest, and acceptance criteria.",
   },
   {
     n: "02",
     title: "Kickoff",
-    body: "A PM and the AI align on milestones, team, and required documents. Stakeholders are added, permissions set, and the contract is locked.",
+    body: "The run locks milestones, stakeholders, permissions, and the contract before agents start work.",
   },
   {
     n: "03",
     title: "Build",
-    body: "Four specialised agents — frontend, backend, database, architecture — execute in parallel. Artifacts are generated, self-reviewed, and contract-validated.",
+    body: "Frontend, backend, database, and architecture agents execute in parallel with contract checks.",
   },
   {
     n: "04",
     title: "Review",
-    body: "The PM approves two gates: the contract before build, and the artifacts before delivery. Approved work is committed to GitHub and handed off to the client.",
+    body: "The PM approves the contract and final artifacts. Approved work lands in GitHub.",
   },
 ];
 
 export function HowItWorks() {
   return (
-    <SectionReveal as="section" className="how">
+    <SectionReveal as="section" className="how" id="how-it-works">
       <div className="how-inner">
         <div className="how-head">
           <p className="how-eyebrow">The flow</p>

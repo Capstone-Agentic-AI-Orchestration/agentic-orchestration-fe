@@ -73,10 +73,10 @@ export function Gate2Step({ ctx }: { ctx: OrchestratorWizardContextValue }) {
       <div className="wizard-step-section">
         <h3 className="wizard-step-section-title">
           <IconCode size={16} />
-          Gate 2: Code Review
+          Build review
         </h3>
         <p className="wizard-step-section-desc">
-          Review the generated artifacts before approving the GitHub commit. Click any file to expand
+          Review the generated deliverables before approving the GitHub commit. Click any file to expand
           its content.
         </p>
       </div>
@@ -85,7 +85,7 @@ export function Gate2Step({ ctx }: { ctx: OrchestratorWizardContextValue }) {
         <div className="wizard-info-banner info">
           <IconAlertTriangle size={16} />
           <span>
-            This gate is not currently awaiting review (status: {projectStatus?.replace(/_/g, " ")}).
+            This build review is not currently awaiting approval (status: {projectStatus?.replace(/_/g, " ")}).
           </span>
         </div>
       )}
@@ -99,12 +99,12 @@ export function Gate2Step({ ctx }: { ctx: OrchestratorWizardContextValue }) {
 
       <div className="wizard-step-section">
         <h4 style={{ margin: "0 0 10px", fontSize: "0.8125rem", fontWeight: 700, color: "var(--text-2)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-          Generated Artifacts ({artifacts.length})
+          Generated Deliverables ({artifacts.length})
         </h4>
         {artifacts.length === 0 ? (
           <div className="wizard-info-banner info">
             <IconFileText size={16} />
-            <span>No artifacts generated yet. Code generation happens after Gate 1 approval.</span>
+            <span>No deliverables generated yet. Code generation happens after plan approval.</span>
           </div>
         ) : (
           <div style={{ display: "grid", gap: 16 }}>
@@ -163,7 +163,7 @@ export function Gate2Step({ ctx }: { ctx: OrchestratorWizardContextValue }) {
           <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
             <Button variant="primary" onClick={() => handleApprove(true)} disabled={acting}>
               <IconCheck size={14} />
-              {acting ? "Approving…" : "Approve & Commit to GitHub"}
+              {acting ? "Approving…" : "Approve build and commit to GitHub"}
             </Button>
             <Button variant="danger" onClick={() => handleApprove(false)} disabled={acting}>
               <IconClose size={14} />

@@ -30,7 +30,7 @@ const CHECKLIST_FIELDS = [
   { key: "rolesConfirmed", label: "Roles assigned", desc: "Delivery roles defined" },
   { key: "clientAccessConfirmed", label: "Client access set up", desc: "Client invite configured" },
   { key: "initialTasksCreated", label: "Starter tasks created", desc: "Initial tasks generated" },
-  { key: "initialWorkOrdersCreated", label: "Starter work orders created", desc: "Initial work orders generated" },
+  { key: "initialWorkOrdersCreated", label: "Starter agent tasks created", desc: "Initial agent tasks generated" },
 ] as const;
 
 const TEXT_FIELDS = [
@@ -263,7 +263,7 @@ export function KickoffStep({ ctx }: { ctx: OrchestratorWizardContextValue }) {
         </Button>
         <Button variant="secondary" size="sm" onClick={createStarterWorkOrders} disabled={action === "work-orders"}>
           <IconWorkflow size={14} />
-          {action === "work-orders" ? "Creating…" : "Create starter work orders"}
+          {action === "work-orders" ? "Creating…" : "Create starter agent tasks"}
         </Button>
       </div>
 

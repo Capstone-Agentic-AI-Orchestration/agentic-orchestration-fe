@@ -1,226 +1,112 @@
 "use client";
 
 /**
- * HeroScene — raw three.js agent-orchestration graph.
- * Nodes (brief → agents → contract → deploy) joined by faint edges, with
- * bright pulses travelling along them (the data the app moves between agents).
- * Monochrome, transparent background.
- *
- * Interaction: the graph subtly tilts toward the cursor (bounded, so it never
- * leaves frame) and drifts slowly on its own. Static single frame under
- * prefers-reduced-motion.
- *
- * Robustness: retries sizing until the container has layout, survives WebGL
- * context loss, and fully disposes (incl. forceContextLoss) on unmount so dev
- * HMR / StrictMode remounts don't exhaust GL contexts and blank the canvas.
+ * HeroScene - animated build panels for the landing hero.
+ * No WebGL. The old node graph was removed so the prompt-to-build story
+ * comes from the live brief, agent lanes, and delivery outputs.
  */
 
-import { useEffect, useRef } from "react";
-import * as THREE from "three";
+import type { CSSProperties } from "react";
 
-const NODES: [number, number, number][] = [
-  [0, 2.3, 0], // 0 brief
-  [-2.2, 0.85, 0.65], // 1 frontend
-  [-0.85, 0.65, -0.85], // 2 backend
-  [0.85, 0.75, 0.75], // 3 database
-  [2.2, 0.95, -0.55], // 4 architecture
-  [0, -0.35, 0], // 5 contract
-  [0, -2.3, 0], // 6 deploy
-];
+const AGENT_LANES = [
+  { label: "Architecture", value: "service map", delay: "0s" },
+  { label: "Frontend", value: "routes + UI", delay: "0.35s" },
+  { label: "Backend", value: "APIs + jobs", delay: "0.7s" },
+  { label: "Database", value: "schema + RLS", delay: "1.05s" },
+] as const;
 
-const EDGES: [number, number][] = [
-  [0, 1], [0, 2], [0, 3], [0, 4],
-  [1, 5], [2, 5], [3, 5], [4, 5],
-  [0, 5],
-  [5, 6],
-];
+const OUTPUTS = ["PR opened", "Tests queued", "Review passed"] as const;
 
-const PULSE_COUNT = 12;
+const PROCESS_LINES = ["scope parsed", "contract locked", "agents dispatched"] as const;
+
+const LIVE_COMMAND = "run orchestration --brief brief.md";
+
+const SIGNAL_PACKETS = [
+  { x: "18%", y: "24%", delay: "0s" },
+  { x: "48%", y: "13%", delay: "0.55s" },
+  { x: "78%", y: "31%", delay: "1.1s" },
+  { x: "35%", y: "58%", delay: "1.65s" },
+  { x: "66%", y: "72%", delay: "2.2s" },
+] as const;
 
 export function HeroScene() {
-  const containerRef = useRef<HTMLDivElement>(null);
+  return (
+    <div className="hero-scene" aria-hidden="true">
+      <div className="hero-live-layer">
+        <div className="hero-signal-field">
+          {SIGNAL_PACKETS.map((packet, index) => (
+            <span
+              key={`${packet.x}-${packet.y}`}
+              className="hero-signal-packet"
+              style={{
+                "--packet-x": packet.x,
+                "--packet-y": packet.y,
+                "--packet-delay": packet.delay,
+                "--packet-index": index,
+              } as CSSProperties}
+            />
+          ))}
+        </div>
 
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
+        <span className="hero-connector hero-connector-a" />
+        <span className="hero-connector hero-connector-b" />
+        <span className="hero-connector hero-connector-c" />
 
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        <div className="hero-command-card">
+          <div className="hero-command-top">
+            <span>brief.md</span>
+            <span className="hero-command-status">
+              <span className="hero-status-dot" />
+              compiling
+            </span>
+          </div>
+          <p>Build a client portal with auth, billing, tickets, dashboards, and GitHub delivery.</p>
+          <div className="hero-command-log">
+            {PROCESS_LINES.map((line, index) => (
+              <span
+                key={line}
+                className="hero-log-line"
+                style={{ "--line-delay": `${index * 0.55}s` } as CSSProperties}
+              >
+                {line}
+              </span>
+            ))}
+          </div>
+          <div className="hero-command-input">
+            <span className="hero-command-prompt">$</span>
+            <span className="hero-command-typed">{LIVE_COMMAND}</span>
+            <span className="hero-command-insert" />
+          </div>
+        </div>
 
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
-    camera.position.set(0, 0, 5.6);
+        <div className="hero-agent-stack">
+          {AGENT_LANES.map((agent) => (
+            <div
+              key={agent.label}
+              className="hero-agent-row"
+              style={{ "--agent-delay": agent.delay } as CSSProperties}
+            >
+              <span className="hero-agent-label">{agent.label}</span>
+              <span className="hero-agent-value">{agent.value}</span>
+              <span className="hero-agent-signal" />
+            </div>
+          ))}
+        </div>
 
-    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: "low-power" });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setClearColor(0x000000, 0);
-    const canvas = renderer.domElement;
-    container.appendChild(canvas);
-
-    const onContextLost = (e: Event) => e.preventDefault();
-    canvas.addEventListener("webglcontextlost", onContextLost, false);
-
-    const group = new THREE.Group();
-    group.rotation.x = 0.12;
-    scene.add(group);
-
-    const nodeVecs = NODES.map((n) => new THREE.Vector3(...n));
-    const disposables: { dispose: () => void }[] = [];
-    const rings: THREE.Mesh[] = [];
-
-    // Nodes
-    const nodeMat = new THREE.MeshBasicMaterial({ color: 0xfafafa });
-    const sphereGeo = new THREE.SphereGeometry(0.07, 18, 18);
-    disposables.push(nodeMat, sphereGeo);
-    nodeVecs.forEach((v, i) => {
-      const isHub = i === 0 || i === 6;
-      const mesh = new THREE.Mesh(sphereGeo, nodeMat);
-      mesh.position.copy(v);
-      mesh.scale.setScalar(isHub ? 1.6 : 1);
-      group.add(mesh);
-
-      const ringGeo = new THREE.RingGeometry(isHub ? 0.18 : 0.13, isHub ? 0.195 : 0.145, 40);
-      const ringMat = new THREE.MeshBasicMaterial({
-        color: 0xffffff,
-        transparent: true,
-        opacity: isHub ? 0.35 : 0.18,
-        side: THREE.DoubleSide,
-      });
-      disposables.push(ringGeo, ringMat);
-      const ring = new THREE.Mesh(ringGeo, ringMat);
-      ring.position.copy(v);
-      ring.lookAt(camera.position);
-      group.add(ring);
-      rings.push(ring);
-    });
-
-    // Edges
-    const edgePositions: number[] = [];
-    EDGES.forEach(([a, b]) => {
-      edgePositions.push(nodeVecs[a].x, nodeVecs[a].y, nodeVecs[a].z, nodeVecs[b].x, nodeVecs[b].y, nodeVecs[b].z);
-    });
-    const edgeGeo = new THREE.BufferGeometry();
-    edgeGeo.setAttribute("position", new THREE.Float32BufferAttribute(edgePositions, 3));
-    const edgeMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.22 });
-    disposables.push(edgeGeo, edgeMat);
-    group.add(new THREE.LineSegments(edgeGeo, edgeMat));
-
-    // Pulses
-    const pulses = Array.from({ length: PULSE_COUNT }, (_, i) => ({
-      edge: i % EDGES.length,
-      t: Math.random(),
-      speed: 0.12 + Math.random() * 0.22,
-    }));
-    const pulseGeo = new THREE.BufferGeometry();
-    pulseGeo.setAttribute("position", new THREE.Float32BufferAttribute(new Float32Array(PULSE_COUNT * 3), 3));
-    const pulseMat = new THREE.PointsMaterial({
-      color: 0xffffff,
-      size: 0.075,
-      sizeAttenuation: true,
-      transparent: true,
-      opacity: 0.95,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-    });
-    disposables.push(pulseGeo, pulseMat);
-    group.add(new THREE.Points(pulseGeo, pulseMat));
-
-    const tmp = new THREE.Vector3();
-    const updatePulses = (dt: number) => {
-      const arr = pulseGeo.attributes.position.array as Float32Array;
-      for (let i = 0; i < pulses.length; i++) {
-        const p = pulses[i];
-        p.t += p.speed * dt;
-        if (p.t > 1) {
-          p.t -= 1;
-          p.edge = Math.floor(Math.random() * EDGES.length);
-        }
-        const [a, b] = EDGES[p.edge];
-        tmp.copy(nodeVecs[a]).lerp(nodeVecs[b], p.t);
-        arr[i * 3] = tmp.x;
-        arr[i * 3 + 1] = tmp.y;
-        arr[i * 3 + 2] = tmp.z;
-      }
-      pulseGeo.attributes.position.needsUpdate = true;
-    };
-    updatePulses(0);
-
-    const render = () => renderer.render(scene, camera);
-
-    const resize = () => {
-      const w = container.clientWidth;
-      const h = container.clientHeight;
-      if (w === 0 || h === 0) return false;
-      renderer.setSize(w, h, false);
-      camera.aspect = w / h;
-      camera.updateProjectionMatrix();
-
-      // Scale the graph down on narrow viewports so it stays composed.
-      const aspect = w / h;
-      const baseScale = aspect < 0.85 ? 0.72 : aspect < 1.1 ? 0.88 : 1;
-      group.scale.setScalar(baseScale);
-
-      rings.forEach((ring) => ring.lookAt(camera.position));
-      render();
-      return true;
-    };
-    const ro = new ResizeObserver(resize);
-    ro.observe(container);
-
-    // Pointer parallax (rotation only → always stays in frame).
-    const target = { x: 0, y: 0 };
-    const onPointer = (e: PointerEvent) => {
-      target.x = (e.clientX / window.innerWidth - 0.5) * 2;
-      target.y = (e.clientY / window.innerHeight - 0.5) * 2;
-    };
-    window.addEventListener("pointermove", onPointer);
-
-    let raf = 0;
-    let last = performance.now();
-    const loop = (now: number) => {
-      const dt = Math.min((now - last) / 1000, 0.05);
-      last = now;
-
-      // Very slow idle drift so the graph feels alive without being swimmy.
-      group.rotation.y += dt * 0.05;
-      group.rotation.x += (0.12 - target.y * 0.18 - group.rotation.x) * 0.04;
-      group.rotation.z += (target.x * 0.08 - group.rotation.z) * 0.04;
-
-      rings.forEach((ring) => ring.lookAt(camera.position));
-      updatePulses(dt);
-      render();
-      raf = requestAnimationFrame(loop);
-    };
-
-    // Wait for layout, then start.
-    let started = false;
-    const start = () => {
-      if (started) return;
-      if (!resize()) {
-        raf = requestAnimationFrame(start);
-        return;
-      }
-      started = true;
-      if (reduced) render();
-      else {
-        last = performance.now();
-        raf = requestAnimationFrame(loop);
-      }
-    };
-    start();
-
-    return () => {
-      cancelAnimationFrame(raf);
-      ro.disconnect();
-      window.removeEventListener("pointermove", onPointer);
-      canvas.removeEventListener("webglcontextlost", onContextLost);
-      disposables.forEach((d) => d.dispose());
-      renderer.dispose();
-      renderer.forceContextLoss();
-      if (canvas.parentNode === container) container.removeChild(canvas);
-    };
-  }, []);
-
-  return <div ref={containerRef} className="hero-scene" aria-hidden="true" />;
+        <div className="hero-output-grid">
+          {OUTPUTS.map((output, index) => (
+            <span
+              key={output}
+              className="hero-output-chip"
+              style={{ "--output-delay": `${index * 0.28}s` } as CSSProperties}
+            >
+              {output}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default HeroScene;

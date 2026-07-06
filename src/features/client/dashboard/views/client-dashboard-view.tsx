@@ -9,6 +9,8 @@ import { DevFlowProjectTimeline } from "@/shared/components/project-timeline/dev
 import { useDevFlowProjectOutputs } from "@/shared/hooks/use-devflow-projects";
 import { useSelectedDevFlowProject } from "@/shared/projects/selected-project-context";
 import { compactDevFlowError, devflowLifecycleView, formatDevFlowDate, projectInitials } from "@/shared/utils/devflow-projects";
+import { GuidedActionPanel, RoleEmptyState } from "@/shared/components/journey";
+import { makeProjectJourneyContext } from "@/shared/journey";
 
 export function ClientDashboardView() {
   const router = useRouter();
@@ -24,6 +26,19 @@ export function ClientDashboardView() {
     refreshProjects();
     outputs.refresh();
   };
+  const pendingReviews = outputs.artifacts.filter((artifact) => artifact.reviewStatus === "PENDING").length;
+  const journeyContext = makeProjectJourneyContext({
+    role: "client",
+    project: selectedProject,
+    loading: selectedProjectLoading,
+    totalProjects: projects.length,
+    pendingActions: pendingReviews,
+    blockers: selectedProjectError ? [{ title: "Project could not load", description: compactDevFlowError(selectedProjectError), severity: "warning" }] : [],
+    primaryAction: selectedProject
+      ? { label: pendingReviews ? "Review deliverables" : "View deliverables", href: "/client/product" }
+      : undefined,
+    secondaryAction: { label: "Refresh", onClick: refresh, variant: "secondary", icon: <IconCalendar size={13} /> },
+  });
 
   return (
     <div data-screen-label="Client - Dashboard">
@@ -47,6 +62,11 @@ export function ClientDashboardView() {
         projectCount={projects.length}
       />
 
+      <GuidedActionPanel context={journeyContext} />
+      {!selectedProject && !selectedProjectLoading && (
+        <RoleEmptyState role="client" />
+      )}
+
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 16, marginBottom: 24 }}>
         <KPICard label="Current Stage" value={engagementStage} icon={<IconRocket size={18} />} tint="#8B5CF6" sub={selectedProject ? "Backend status" : "Awaiting project selection"}>
           <div style={{ marginTop: 10, fontSize: 12, color: "var(--text-3)" }}>{selectedProject ? `${engagementProgress}% complete` : "No backend project yet"}</div>
@@ -57,7 +77,7 @@ export function ClientDashboardView() {
         <KPICard label="Visible Artifacts" value={String(outputs.artifacts.length)} icon={<IconFileText size={18} />} tint="#10B981" sub="from backend">
           <div style={{ marginTop: 10, fontSize: 12, color: "var(--text-3)" }}>Client-visible deliverables</div>
         </KPICard>
-        <KPICard label="Pending Actions" value={String(outputs.artifacts.filter((artifact) => artifact.reviewStatus === "PENDING").length)} icon={<IconAlertTriangle size={18} />} tint="#F59E0B" sub="artifact reviews">
+        <KPICard label="Pending Actions" value={String(pendingReviews)} icon={<IconAlertTriangle size={18} />} tint="#F59E0B" sub="deliverable reviews">
           <div style={{ marginTop: 10, fontSize: 12 }}><a className="auth-link" onClick={() => navigate("product")}>Review product</a></div>
         </KPICard>
       </div>

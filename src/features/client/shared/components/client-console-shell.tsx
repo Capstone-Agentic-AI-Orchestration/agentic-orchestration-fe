@@ -5,6 +5,7 @@ import { AppShell, type ShellNavItem } from "@/shared/components/layout/app-shel
 import { SelectedProjectProvider, useSelectedDevFlowProject } from "@/shared/projects/selected-project-context";
 import { ProjectSwitcher } from "@/shared/projects/project-switcher";
 import { DevFlowNotificationBell } from "@/shared/components/notifications/devflow-notification-bell";
+import { ProjectContextStrip } from "@/shared/components/journey";
 import { devflowLifecycleView } from "@/shared/utils/devflow-projects";
 import { IconHome, IconLayout } from "@/shared/components/icons";
 
@@ -57,6 +58,7 @@ export function ClientConsoleShell({ children }: { children: ReactNode }) {
           </>
         }
       >
+        <ProjectContextStrip role="client" />
         {children}
       </AppShell>
     </SelectedProjectProvider>

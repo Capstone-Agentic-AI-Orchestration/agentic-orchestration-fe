@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * MarketingFooter — minimal footer.
+ * MarketingFooter - minimal footer.
  * 3 columns: brand + product + legal.
  */
 
@@ -23,7 +23,6 @@ export function MarketingFooter() {
             <h4>Product</h4>
             <ul>
               <li><a href="#how-it-works">How it works</a></li>
-              <li><a href="#faq">FAQ</a></li>
               <li><a href="#cta">Get started</a></li>
             </ul>
           </div>

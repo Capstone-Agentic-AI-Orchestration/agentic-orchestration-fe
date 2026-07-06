@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Hero — Landing page hero.
+ * Hero - Landing page hero.
  * Single sentence + one CTA. No eyebrow badge.
  * Animation: clip-path wipe on the headline (single play on load).
  * Respects prefers-reduced-motion.
@@ -14,7 +14,7 @@ import { gsap, registerGsapPlugins } from "@/lib/gsap";
 import { MagneticButton } from "./MagneticButton";
 import "./Hero.css";
 
-// WebGL scene is client-only — no SSR.
+// WebGL scene is client-only, no SSR.
 const HeroScene = dynamic(() => import("./HeroScene").then((m) => m.HeroScene), { ssr: false });
 
 export function Hero() {
@@ -80,7 +80,7 @@ export function Hero() {
         </h1>
         <p ref={paragraphRef} className="hero-paragraph">
           The first LangGraph-powered multi-agent system that turns a single
-          brief into a production-grade application — frontend, backend,
+          brief into a production-grade application: frontend, backend,
           database, architecture, reviewed and shipped to GitHub in days.
         </p>
         <div ref={ctaRef} className="hero-cta">
@@ -88,7 +88,7 @@ export function Hero() {
             className="hero-button"
             onClick={handleCta}
           >
-            Start building →
+            Start building
           </MagneticButton>
         </div>
       </div>

@@ -61,7 +61,7 @@ export function CTASection() {
             <div className="cta-terminal-dots">
               <span /><span /><span />
             </div>
-            <span className="cta-terminal-label">devflow — start</span>
+            <span className="cta-terminal-label">devflow start</span>
           </div>
           <pre className="cta-terminal-body">
             <code>
@@ -128,7 +128,7 @@ export function CTASection() {
                 className="cta-button"
                 disabled={submitting}
               >
-                {submitting ? "Starting..." : "Start →"}
+                {submitting ? "Starting..." : "Start"}
               </button>
             </>
           )}

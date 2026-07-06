@@ -69,16 +69,16 @@ export const ORCHESTRATOR_STEPS: OrchestratorStep[] = [
   },
   {
     id: "gate-1",
-    label: "Gate 1: Architecture",
-    shortLabel: "Gate 1",
-    description: "Review the project contract before code generation",
+    label: "Plan Review",
+    shortLabel: "Plan",
+    description: "Review the architecture and project contract before code generation",
     icon: IconClipboard,
   },
   {
     id: "gate-2",
-    label: "Gate 2: Code Review",
-    shortLabel: "Gate 2",
-    description: "Review generated artifacts before GitHub commit",
+    label: "Build Review",
+    shortLabel: "Review",
+    description: "Review generated deliverables before GitHub commit",
     icon: IconCode,
   },
   {

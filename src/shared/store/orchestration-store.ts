@@ -89,7 +89,13 @@ const MAX_ACTIVITY_LOG = 200;
 function trimChunks(existing: StreamChunk[], incoming: StreamChunk[]): AgentStreamState {
   const all = [...existing, ...incoming];
   const chunks = all.length > MAX_CHUNKS_PER_AGENT ? all.slice(-MAX_CHUNKS_PER_AGENT) : all;
-  return { chunks, buffer: chunks.map((c) => c.chunk).join('') };
+  return {
+    chunks,
+    buffer: chunks
+      .filter((c) => c.type === 'token')
+      .map((c) => c.chunk)
+      .join(''),
+  };
 }
 
 function pushLog(log: ActivityLogEntry[], entry: ActivityLogEntry): ActivityLogEntry[] {
@@ -145,8 +151,15 @@ export const useOrchestrationStore = create<OrchestrationStore>((set) => ({
 
   applyEvent: (event) =>
     set((state) => {
+      const activeRunId = state.orchestrationState?.runId;
+      if (event.type !== 'run.status' && activeRunId && event.runId && activeRunId !== event.runId) {
+        return {};
+      }
+
       switch (event.type) {
-        case 'run.status':
+        case 'run.status': {
+          const previousRunId = activeRunId;
+          const isNewRun = Boolean(previousRunId && previousRunId !== event.runId);
           return {
             orchestrationState: {
               status: event.status,
@@ -155,7 +168,15 @@ export const useOrchestrationStore = create<OrchestrationStore>((set) => ({
               runId: event.runId,
               error: event.error ?? null,
             },
+            ...(isNewRun
+              ? {
+                  agentStreams: {},
+                  nodeStates: {},
+                  activityLog: [],
+                }
+              : {}),
           };
+        }
 
         case 'node.lifecycle': {
           const prev = state.nodeStates[event.nodeId];

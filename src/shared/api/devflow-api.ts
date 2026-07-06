@@ -84,6 +84,7 @@ export type DevFlowWorkOrderStatus = "DRAFT" | "READY" | "DISPATCHED" | "COMPLET
 export type DevFlowWorkOrderPriority = "LOW" | "NORMAL" | "HIGH" | "URGENT";
 
 export type DevFlowAgentProviderMode = "mock" | "llm" | "simulation";
+export type DevFlowLlmEngine = "eve" | "graph";
 
 export type DevFlowProjectTaskActivityType =
   | "TASK_CREATED"
@@ -706,6 +707,15 @@ export interface DevFlowLlmProviderVerification {
     inputTokens: number;
     outputTokens: number;
   } | null;
+  engineStatus?: DevFlowLlmEngineStatus;
+}
+
+export interface DevFlowLlmEngineStatus {
+  requestedEngine: DevFlowLlmEngine;
+  activeEngine: DevFlowLlmEngine;
+  fallbackReason: string | null;
+  eveServiceConfigured: boolean;
+  model: string;
 }
 
 export interface DevFlowAgentProviderStatus {
@@ -719,6 +729,12 @@ export interface DevFlowAgentProviderStatus {
   model?: string;
   fallbackModel?: string | null;
   providers: DevFlowAgentProviderCapability[];
+  llmEngine?: DevFlowLlmEngineStatus;
+  requestedEngine?: DevFlowLlmEngine;
+  activeEngine?: DevFlowLlmEngine;
+  fallbackReason?: string | null;
+  eveServiceConfigured?: boolean;
+  engineModel?: string;
   githubDelivery?: DevFlowGithubDeliveryStatus;
 }
 

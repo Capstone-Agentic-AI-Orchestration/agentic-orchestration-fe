@@ -19,7 +19,7 @@ export function RunStep({ ctx }: { ctx: OrchestratorWizardContextValue }) {
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState("");
 
-  useSocketSubscription({
+  const { resync } = useSocketSubscription({
     projectId,
     fallbackPollFn: async () => {
       await refresh();
@@ -58,6 +58,11 @@ export function RunStep({ ctx }: { ctx: OrchestratorWizardContextValue }) {
     }
   };
 
+  const handleResync = async () => {
+    resync();
+    await refresh();
+  };
+
   // When the run reaches an approval boundary, route to the focused gate screen.
   useEffect(() => {
     if (isAwaitingGate1) {
@@ -83,7 +88,7 @@ export function RunStep({ ctx }: { ctx: OrchestratorWizardContextValue }) {
         </h3>
         <p className="wizard-step-section-desc">
           Launch the agent pipeline and watch every agent stream its work — tokens, decisions, cost,
-          and artifacts — in real time. The run pauses at Gate 1 and Gate 2 for your approval.
+          and deliverables in real time. The run pauses at plan review and build review for your approval.
         </p>
       </div>
 
@@ -93,6 +98,7 @@ export function RunStep({ ctx }: { ctx: OrchestratorWizardContextValue }) {
         status={projectStatus}
         onStart={handleStart}
         onRerun={handleRerun}
+        onResync={handleResync}
         starting={starting}
         error={error}
       />
@@ -100,7 +106,7 @@ export function RunStep({ ctx }: { ctx: OrchestratorWizardContextValue }) {
       <OrchestratorStepNav
         projectId={projectId}
         currentStep="run"
-        nextLabel={isAwaitingGate1 ? "Go to Gate 1" : isAwaitingGate2 ? "Go to Gate 2" : isDelivered ? "Go to Delivery" : "Continue"}
+        nextLabel={isAwaitingGate1 ? "Go to plan review" : isAwaitingGate2 ? "Go to build review" : isDelivered ? "Go to delivery" : "Continue"}
         isLastStep={false}
         nextDisabled={!isAwaitingGate1 && !isAwaitingGate2 && !isDelivered}
         onComplete={() => {

@@ -87,9 +87,11 @@ jest.mock('@/shared/components/icons', () => ({
   IconCheckCircle: () => <svg />,
   IconClock: () => <svg />,
   IconFileText: () => <svg />,
+  IconInfo: () => <svg />,
   IconLayout: () => <svg />,
   IconMessageCircle: () => <svg />,
   IconRocket: () => <svg />,
+  IconShield: () => <svg />,
   IconUpload: () => <svg />,
   IconUsers: () => <svg />,
 }));

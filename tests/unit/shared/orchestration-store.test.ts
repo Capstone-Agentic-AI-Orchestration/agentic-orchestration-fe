@@ -60,6 +60,140 @@ describe("orchestration store applyEvent", () => {
     expect(state.activityLog.some((l) => l.description === "designing schema" && l.type === "agent")).toBe(true);
   });
 
+  it("keeps a contiguous token buffer per agent across stream batches", () => {
+    dispatch({
+      ...base,
+      type: "agent.stream",
+      nodeId: "frontend_agent",
+      chunks: [
+        { nodeId: "frontend_agent", runId: "r1", type: "token", chunk: "function " },
+        { nodeId: "frontend_agent", runId: "r1", type: "token", chunk: "App()" },
+      ],
+    });
+    dispatch({
+      ...base,
+      ts: 1050,
+      type: "agent.stream",
+      nodeId: "frontend_agent",
+      chunks: [
+        { nodeId: "frontend_agent", runId: "r1", type: "token", chunk: " { return null; }" },
+      ],
+    });
+
+    const stream = useOrchestrationStore.getState().agentStreams.frontend_agent;
+    expect(stream.buffer).toBe("function App() { return null; }");
+    expect(stream.chunks.map((c) => c.timestamp)).toEqual([1000, 1000, 1050]);
+  });
+
+  it("clears visible stream state when a different run starts", () => {
+    dispatch({ ...base, type: "run.status", status: "GENERATING_CODE", currentNode: "frontend_agent" });
+    dispatch({
+      ...base,
+      type: "agent.stream",
+      nodeId: "frontend_agent",
+      chunks: [{ nodeId: "frontend_agent", runId: "r1", type: "token", chunk: "old output" }],
+    });
+    dispatch({ ...base, type: "node.progress", nodeId: "frontend_agent", pct: 40, label: "old run" });
+    dispatch({
+      ...base,
+      type: "agent.stream",
+      nodeId: "frontend_agent",
+      chunks: [{ nodeId: "frontend_agent", runId: "r1", type: "decision", chunk: "old decision" }],
+    });
+
+    dispatch({
+      ...base,
+      runId: "r2",
+      ts: 2000,
+      type: "run.status",
+      status: "GENERATING_CODE",
+      currentNode: "backend_agent",
+    });
+
+    const state = useOrchestrationStore.getState();
+    expect(state.orchestrationState?.runId).toBe("r2");
+    expect(state.agentStreams).toEqual({});
+    expect(state.nodeStates).toEqual({});
+    expect(state.activityLog).toEqual([]);
+  });
+
+  it("ignores late stream chunks from an older run", () => {
+    dispatch({ ...base, type: "run.status", status: "GENERATING_CODE", currentNode: "frontend_agent" });
+    dispatch({
+      ...base,
+      runId: "r2",
+      ts: 2000,
+      type: "run.status",
+      status: "GENERATING_CODE",
+      currentNode: "backend_agent",
+    });
+    dispatch({
+      ...base,
+      ts: 2100,
+      type: "agent.stream",
+      nodeId: "frontend_agent",
+      chunks: [{ nodeId: "frontend_agent", runId: "r1", type: "token", chunk: "late old output" }],
+    });
+    dispatch({
+      ...base,
+      runId: "r2",
+      ts: 2200,
+      type: "agent.stream",
+      nodeId: "backend_agent",
+      chunks: [{ nodeId: "backend_agent", runId: "r2", type: "token", chunk: "new output" }],
+    });
+
+    const state = useOrchestrationStore.getState();
+    expect(state.agentStreams.frontend_agent).toBeUndefined();
+    expect(state.agentStreams.backend_agent.buffer).toBe("new output");
+  });
+
+  it("ignores late node updates and errors from an older run", () => {
+    dispatch({ ...base, type: "run.status", status: "GENERATING_CODE", currentNode: "frontend_agent" });
+    dispatch({
+      ...base,
+      runId: "r2",
+      ts: 2000,
+      type: "run.status",
+      status: "GENERATING_CODE",
+      currentNode: "backend_agent",
+    });
+
+    dispatch({ ...base, ts: 2100, type: "node.lifecycle", nodeId: "frontend_agent", phase: "entering" });
+    dispatch({ ...base, ts: 2200, type: "node.progress", nodeId: "frontend_agent", pct: 90, label: "late progress" });
+    dispatch({
+      ...base,
+      ts: 2300,
+      type: "run.error",
+      nodeId: "frontend_agent",
+      code: "NODE_FAILED",
+      severity: "transient",
+      message: "late failure",
+    });
+    dispatch({ ...base, runId: "r2", ts: 2400, type: "node.progress", nodeId: "backend_agent", pct: 25, label: "current progress" });
+
+    const state = useOrchestrationStore.getState();
+    expect(state.nodeStates.frontend_agent).toBeUndefined();
+    expect(state.nodeStates.backend_agent.progressLabel).toBe("current progress");
+    expect(state.activityLog.some((entry) => entry.description.includes("late failure"))).toBe(false);
+  });
+
+  it("accepts telemetry without a run id for backwards-compatible metric updates", () => {
+    dispatch({ ...base, type: "run.status", status: "GENERATING_CODE", currentNode: "backend_agent" });
+    dispatch({
+      v: V,
+      projectId: "p1",
+      ts: 1500,
+      type: "node.telemetry",
+      nodeId: "backend_agent",
+      outputTokens: 42,
+      model: "compat-model",
+    });
+
+    const telemetry = useOrchestrationStore.getState().nodeStates.backend_agent.telemetry;
+    expect(telemetry).toMatchObject({ outputTokens: 42, model: "compat-model" });
+  });
+
   it("stores a node error with recovery actions", () => {
     dispatch({
       ...base,

@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { Badge, Button, Card, Field, Input, Modal, Select, Textarea } from "@/shared/components/ui";
 import { OrchestrationProviderStatusPanel } from "@/shared/components/orchestration/orchestration-provider-status-panel";
 import { OrchestrationLiveVisualizer } from "@/shared/components/orchestration/orchestration-live-visualizer";
+import { BlockingIssuePanel, GuidedActionPanel } from "@/shared/components/journey";
+import { makeProjectJourneyContext } from "@/shared/journey";
 import {
   createDevFlowAdminDomain,
   createDevFlowAdminRepository,
@@ -164,6 +166,23 @@ export function AdminOverviewView() {
   const activeWorkOrders = projects.reduce((sum, project) => sum + (project.lifecycle?.signals?.activeWorkOrders || 0), 0);
   const pendingInvites = projects.flatMap((project) => project.clientInvites || []).filter((invite) => invite.status === "PENDING").length;
   const delivered = projects.filter((project) => project.status === "DELIVERED" || project.deliveryReview?.status === "ACCEPTED").length;
+  const missingRepos = Math.max(0, projects.length - reposLinked);
+  const adminIssues = [
+    directory.error ? { title: "Project directory could not load", description: compactDevFlowError(directory.error), severity: "critical" } : null,
+    missingRepos ? { title: "Projects missing repository links", description: `${missingRepos} project${missingRepos === 1 ? "" : "s"} need a repository before GitHub delivery is clear.`, severity: "warning" } : null,
+    pendingInvites ? { title: "Pending client invites", description: `${pendingInvites} invite${pendingInvites === 1 ? "" : "s"} still need acceptance.`, severity: "info" } : null,
+  ].filter(Boolean);
+  const overviewJourney = makeProjectJourneyContext({
+    role: "admin",
+    project: projects.find((project) => !project.repoUrl) || projects[0] || null,
+    loading: directory.loading,
+    totalProjects: projects.length,
+    activeCount: projects.filter((project) => project.status !== "DELIVERED").length,
+    pendingActions: missingRepos + pendingInvites,
+    blockers: adminIssues,
+    primaryAction: { label: "Open providers", href: "/admin/providers" },
+    secondaryAction: { label: "Refresh", onClick: directory.refresh, variant: "secondary", icon: <IconRefresh size={13} /> },
+  });
 
   return (
     <div data-screen-label="Admin - Overview">
@@ -173,11 +192,14 @@ export function AdminOverviewView() {
         actions={<Button variant="secondary" size="sm" icon={<IconRefresh size={13} />} onClick={directory.refresh}>Refresh</Button>}
       />
 
+      <GuidedActionPanel context={overviewJourney} />
+      <BlockingIssuePanel issues={adminIssues} />
+
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, marginBottom: 20 }}>
         <StatCard label="Projects" value={directory.loading ? "..." : String(projects.length)} sub="Backend records" icon={<IconFolder size={16} />} />
         <StatCard label="Users" value={directory.loading ? "..." : String(users.length)} sub="From project memberships" icon={<IconUsers size={16} />} tint="#10B981" />
         <StatCard label="Repositories" value={directory.loading ? "..." : `${reposLinked}/${projects.length}`} sub="Repo URLs linked" icon={<IconGitHub size={16} />} tint="#A78BFA" />
-        <StatCard label="Active handoffs" value={directory.loading ? "..." : String(activeWorkOrders)} sub="Work orders in motion" icon={<IconWorkflow size={16} />} tint="#F59E0B" />
+        <StatCard label="Active handoffs" value={directory.loading ? "..." : String(activeWorkOrders)} sub="Agent tasks in motion" icon={<IconWorkflow size={16} />} tint="#F59E0B" />
       </div>
 
       {directory.error && <ErrorCard message={directory.error} />}
@@ -211,7 +233,7 @@ export function AdminOverviewView() {
           <Card style={{ padding: 18 }}>
             <h3 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 12px" }}>Attention</h3>
             <SignalRow icon={<IconUsers size={14} />} label="Pending client invites" value={String(pendingInvites)} tone={pendingInvites ? "amber" : "green"} />
-            <SignalRow icon={<IconGitHub size={14} />} label="Projects missing repo links" value={String(Math.max(0, projects.length - reposLinked))} tone={projects.length - reposLinked ? "amber" : "green"} />
+            <SignalRow icon={<IconGitHub size={14} />} label="Projects missing repo links" value={String(missingRepos)} tone={missingRepos ? "amber" : "green"} />
             <SignalRow icon={<IconRocket size={14} />} label="Delivered projects" value={String(delivered)} tone="blue" />
           </Card>
         </div>
@@ -664,10 +686,28 @@ export function AdminProvidersView() {
     projectsState.refresh();
     provider.refresh();
   };
+  const providerIssues = [
+    projectsState.error ? { title: "Projects could not load", description: compactDevFlowError(projectsState.error), severity: "critical" } : null,
+    provider.error ? { title: "Provider status could not load", description: compactDevFlowError(provider.error), severity: "critical" } : null,
+  ].filter(Boolean);
+  const providerJourney = makeProjectJourneyContext({
+    role: "admin",
+    project: selectedProject,
+    loading: projectsState.loading || provider.loading,
+    totalProjects: projectsState.projects.length,
+    pendingActions: provider.status?.missingRequirements?.length || 0,
+    blockers: providerIssues,
+    providerStatus: provider.status,
+    providerError: provider.error ? compactDevFlowError(provider.error) : "",
+    primaryAction: { label: "Refresh provider status", onClick: refresh, variant: "secondary", icon: <IconRefresh size={13} /> },
+    secondaryAction: selectedProject ? { label: "Open project", href: `/pm/project/${selectedProject.id}`, variant: "ghost" } : undefined,
+  });
 
   return (
     <div data-screen-label="Admin - Providers">
       <AdminPageHeader title="AI Providers" subtitle="Backend provider selection, adapter readiness, GitHub delivery configuration, and missing runtime requirements." actions={<Button variant="secondary" size="sm" icon={<IconRefresh size={13} />} onClick={refresh}>Refresh</Button>} />
+      <GuidedActionPanel context={providerJourney} />
+      <BlockingIssuePanel issues={providerJourney.blockers} />
       <Card style={{ padding: 20, marginBottom: 18 }}>
         <div className="row" style={{ justifyContent: "space-between", gap: 14, alignItems: "flex-end", flexWrap: "wrap" }}>
           <div style={{ minWidth: 260, flex: 1 }}>
