@@ -3,22 +3,22 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Button, Field, Input, Logo } from "@/shared/components/ui";
+import { Button, Field, Input } from "@/shared/components/ui";
 import { IconArrowLeft, IconArrowRight, IconArrowUpRight, IconCheck, IconEye, IconEyeOff, IconGitHub, IconMail, IconShield, IconSparkles } from "@/shared/components/icons";
 import { useAuth } from "@/shared/auth/auth-provider";
 import { loginPathForRole } from "@/shared/auth/role-routing";
 import { getDevFlowClientInviteStatus } from "@/shared/api/devflow-api";
 
 const BRAND_HEADINGS = {
-  "sign-in": <>Welcome back to <span className="gradient-text">Alphaexplora.</span></>,
-  "sign-up": <>One last step to start your <span className="gradient-text">engagement.</span></>,
+  "sign-in": <>Return to the <span className="gradient-text">build cockpit.</span></>,
+  "sign-up": <>One last step to start your <span className="gradient-text">workspace.</span></>,
   forgot: <>No worries, we'll get you <span className="gradient-text">back in.</span></>,
   reset: <>Choose a new <span className="gradient-text">password.</span></>,
 };
 
 const BRAND_SUBS = {
-  "sign-in": "Track your engagement, message your project manager, review documents, and approve deliverables in one secure place.",
-  "sign-up": "Complete your account setup to access your client dashboard and collaborate with your delivery team.",
+  "sign-in": "Resume live orchestration, review agent output, and move builds from plan to pull request.",
+  "sign-up": "Complete your account setup to access your DevFlow workspace and collaborate with your delivery team.",
   forgot: "Enter the email address associated with your account and we'll send you a secure recovery link.",
   reset: "Your new password must be at least 8 characters and should not match any previous passwords.",
 };
@@ -51,39 +51,31 @@ function SplitHeading({ text, gradientWord }) {
 /* ---------- Premium Brand Panel (Editorial Split - Left) ---------- */
 function AuthBrandPanel({ heading, sub }) {
   const router = useRouter();
-  const headingText = typeof heading === "object" ? "Enterprise IT, intelligently delivered." : "";
   return (
     <aside className="auth-premium-brand">
-      <div className="auth-premium-orb auth-premium-orb--1" />
-      <div className="auth-premium-orb auth-premium-orb--2" />
-      <div className="auth-premium-orb auth-premium-orb--3" />
       <button type="button" className="auth-brand-logo" onClick={() => router.push("/")} aria-label="Back to home">
-        <Logo />
+        <span className="auth-brand-mark">⌬</span>
+        <span className="auth-brand-word">devflow</span>
       </button>
-      <div style={{ marginTop: 48 }}>
-        <SplitHeading text="Enterprise IT, intelligently delivered." gradientWord="intelligently" />
+      <div className="auth-brand-copy">
+        <h1 className="auth-premium-heading">{heading}</h1>
         <p className="auth-premium-sub">{sub}</p>
       </div>
       <div className="auth-premium-testimonial">
-        <div className="row gap-3" style={{ alignItems: "flex-start" }}>
-          <div style={{
-            width: 44, height: 44, borderRadius: "50%",
-            background: "linear-gradient(135deg, #10B981, #14B8A6)",
-            display: "grid", placeItems: "center",
-            color: "white", fontWeight: 700, fontSize: 15,
-            flexShrink: 0,
-          }}>
-            AV
-          </div>
-          <div>
-            <div style={{ fontWeight: 600, fontSize: 14, lineHeight: 1.4 }}>
-              From kickoff to production deploy in twelve business days.
-            </div>
-            <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontWeight: 600, fontSize: 13, color: "white" }}>Aileen V.</span>
-              <span style={{ color: "var(--text-3)", fontSize: 12 }}>CTO, Tindahan PH</span>
-            </div>
-          </div>
+        <div className="auth-run-card-header">
+          <span>Live run</span>
+          <strong>client-portal</strong>
+        </div>
+        <div className="auth-run-grid">
+          <span className="auth-run-node is-active">plan</span>
+          <span className="auth-run-node">code</span>
+          <span className="auth-run-node">test</span>
+          <span className="auth-run-node">ship</span>
+        </div>
+        <div className="auth-run-log">
+          <span>[planner.agent] Workspace context restored.</span>
+          <span>[qa.agent] Last build review is ready.</span>
+          <span>[ship.agent] Preview waiting for approval.</span>
         </div>
       </div>
     </aside>
@@ -101,13 +93,13 @@ function AuthSubmitButton({ children, submitting, ...props }) {
         width: "100%", height: 52,
         padding: "0 24px 0 28px",
         borderRadius: 999,
-        background: "linear-gradient(135deg, #2F6BFF, #4F8BFF)",
-        border: "none",
-        color: "white",
+        background: "rgba(245,247,247,0.96)",
+        border: "1px solid rgba(255,255,255,0.84)",
+        color: "#060707",
         fontWeight: 600, fontSize: 15,
         cursor: submitting ? "not-allowed" : "pointer",
         opacity: submitting ? 0.6 : 1,
-        boxShadow: "0 8px 28px rgba(47,107,255,0.35)",
+        boxShadow: "0 18px 44px rgba(0,0,0,0.36)",
         transition: "all 0.7s cubic-bezier(0.32,0.72,0,1)",
         position: "relative",
         overflow: "hidden",
@@ -118,7 +110,7 @@ function AuthSubmitButton({ children, submitting, ...props }) {
       {submitting ? "Signing in..." : children}
       <span style={{
         width: 32, height: 32, borderRadius: "50%",
-        background: "rgba(0,0,0,0.2)",
+        background: "rgba(6,7,7,0.12)",
         display: "flex", alignItems: "center", justifyContent: "center",
         transition: "transform 0.7s cubic-bezier(0.32,0.72,0,1)",
         flexShrink: 0,
@@ -213,7 +205,7 @@ function SignInForm({ onDone }) {
   return (
     <form onSubmit={submit} noValidate>
       <h1 style={{ fontSize: 26, fontWeight: 700, letterSpacing: "-0.025em", margin: 0 }}>
-        Sign in to your dashboard
+        Sign in to DevFlow
       </h1>
       <p style={{ fontSize: 14.5, color: "var(--text-2)", marginTop: 8, lineHeight: 1.55 }}>
         Use your GitHub account to access your assigned DevFlow workspace.
@@ -728,7 +720,9 @@ export function ClientAuthView({ mode = "sign-in" }) {
           textAlign: "center",
         }}>
           Need help signing in?{" "}
-          <button type="button" className="auth-link auth-link-btn">Contact support</button>
+          <a className="auth-link" href="mailto:hello@alphaexplora.com?subject=DevFlow%20sign-in%20help">
+            Contact support
+          </a>
         </div>
 
         <div className="row gap-4" style={{

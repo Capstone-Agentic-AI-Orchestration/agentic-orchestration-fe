@@ -53,6 +53,20 @@ npm run typecheck
 npm run build
 ```
 
+## Deploy
+
+Deploy this app to Vercel after the Render backend is available. Set only browser-safe public env values:
+
+```env
+NEXT_PUBLIC_API_URL="https://<backend-service>.onrender.com"
+NEXT_PUBLIC_SOCKET_URL="https://<backend-service>.onrender.com"
+NEXT_PUBLIC_SUPABASE_URL="https://your-project-ref.supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="your-supabase-publishable-or-anon-key"
+NEXT_PUBLIC_AUTH_REDIRECT_PATH="/client/sign-in"
+```
+
+Do not put backend secrets, database URLs, service-role keys, GitHub keys, Eve tokens, or model provider keys in Vercel.
+
 Persona seed and smoke scripts from the legacy backend still need to be migrated into `agentic-orchestration-be` before those flows can be verified end to end.
 
 ## Live Backend Areas

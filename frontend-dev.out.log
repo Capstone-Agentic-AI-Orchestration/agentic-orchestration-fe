@@ -1,0 +1,15 @@
+
+> agentic-orchestration-fe@0.1.0 dev
+> next dev --port 3001 --port 3001
+
+▲ Next.js 16.2.6 (Turbopack)
+- Local:         http://localhost:3001
+- Network:       http://192.168.0.103:3001
+- Environments: .env.local
+✓ Ready in 671ms
+
+ GET /client/sign-in 200 in 637ms (next.js: 450ms, application-code: 187ms)
+ GET /pm/projects 200 in 596ms (next.js: 528ms, application-code: 69ms)
+ GET /pm/projects 200 in 79ms (next.js: 4ms, application-code: 75ms)
+ GET /pm/projects 200 in 58ms (next.js: 4ms, application-code: 55ms)
+ GET /pm/projects 200 in 33ms (next.js: 5ms, application-code: 27ms)

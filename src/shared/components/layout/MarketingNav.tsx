@@ -28,7 +28,7 @@ export function MarketingNav() {
         </div>
 
         <div className="mnav-cta">
-          <a href="/sign-in" className="mnav-signin">Sign in</a>
+          <Link href="/client/sign-in" className="mnav-signin">Sign in</Link>
           <a href="#cta" className="mnav-start">Start</a>
         </div>
       </div>

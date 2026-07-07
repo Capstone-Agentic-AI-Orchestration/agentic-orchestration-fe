@@ -6,7 +6,6 @@
  * Subtle border pulse on the terminal, disabled on reduced-motion.
  */
 
-import { useReducedMotion } from "motion/react";
 import { useState, type FormEvent } from "react";
 import { SectionReveal } from "@/shared/components/layout/SectionReveal";
 import { createDevFlowInquiry } from "@/shared/api/devflow-api";
@@ -14,7 +13,6 @@ import { compactDevFlowError } from "@/shared/utils/devflow-projects";
 import "./CTASection.css";
 
 export function CTASection() {
-  const reduced = useReducedMotion();
   const [email, setEmail] = useState("");
   const [brief, setBrief] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -76,7 +74,7 @@ export function CTASection() {
                 </>
               )}
             </code>
-            <div className={`cta-terminal-glow ${reduced ? "is-static" : ""}`} aria-hidden="true" />
+            <div className="cta-terminal-glow" aria-hidden="true" />
           </pre>
         </div>
 

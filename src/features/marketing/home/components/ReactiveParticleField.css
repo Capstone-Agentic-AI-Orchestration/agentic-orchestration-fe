@@ -1,0 +1,86 @@
+.reactive-particle-field {
+  --cursor-x: 42%;
+  --cursor-y: 54%;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: auto;
+  background:
+    radial-gradient(circle at 68% 38%, rgba(37, 166, 205, 0.12), transparent 28%),
+    radial-gradient(circle at 48% 60%, rgba(88, 230, 178, 0.06), transparent 26%),
+    #060707;
+}
+
+.reactive-particle-field canvas {
+  position: absolute;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.reactive-cursor-aura,
+.reactive-signal-rings {
+  position: absolute;
+  left: var(--cursor-x);
+  top: var(--cursor-y);
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, -50%);
+  transition: opacity 180ms ease;
+}
+
+.reactive-particle-field[data-pointer="active"] .reactive-cursor-aura,
+.reactive-particle-field[data-pointer="active"] .reactive-signal-rings {
+  opacity: 1;
+}
+
+.reactive-cursor-aura {
+  width: 190px;
+  height: 190px;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle, rgba(255, 255, 255, 0.18) 0 2px, transparent 3px),
+    radial-gradient(circle, rgba(55, 194, 230, 0.22), transparent 58%);
+  filter: blur(0.2px);
+  mix-blend-mode: screen;
+}
+
+.reactive-signal-rings {
+  width: 310px;
+  height: 310px;
+  border: 1px solid rgba(107, 216, 255, 0.18);
+  border-radius: 999px;
+  box-shadow:
+    0 0 0 46px rgba(107, 216, 255, 0.035),
+    0 0 0 92px rgba(116, 242, 190, 0.018);
+  animation: reactiveRingPulse 2.2s ease-out infinite;
+}
+
+@keyframes reactiveRingPulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0.76);
+    opacity: 0.72;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.08);
+    opacity: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .reactive-particle-field {
+    pointer-events: none;
+  }
+
+  .reactive-cursor-aura,
+  .reactive-signal-rings {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reactive-signal-rings {
+    animation: none;
+  }
+}
