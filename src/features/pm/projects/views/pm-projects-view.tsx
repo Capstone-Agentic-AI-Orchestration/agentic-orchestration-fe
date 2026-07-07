@@ -471,14 +471,14 @@ function PMOnboarding({ onNewProject }: { onNewProject: () => void }) {
   const router = useRouter();
   return (
     <div className="pm-onboarding-hero reveal">
-      <div style={{ width: 64, height: 64, borderRadius: 16, background: "rgba(47,107,255,.1)", display: "grid", placeItems: "center", margin: "0 auto 20px" }}>
+      <div style={{ width: 64, height: 64, borderRadius: 16, background: "rgba(255,255,255,.06)", border: "1px solid var(--border)", display: "grid", placeItems: "center", margin: "0 auto 20px" }}>
         <IconFolder size={28} style={{ color: "var(--primary)" }} />
       </div>
       <h2>Create your first project</h2>
       <p>Spin up a project draft, then follow the guided orchestration wizard to set up, build, and deliver — no guesswork.</p>
       <div className="pm-onboarding-cards">
         <button type="button" className="pm-onboarding-card magnetic" onClick={onNewProject}>
-          <div className="pm-onboarding-card-icon" style={{ background: "rgba(47,107,255,.12)", color: "var(--primary)" }}><IconPlus size={18} /></div>
+          <div className="pm-onboarding-card-icon" style={{ background: "rgba(255,255,255,.07)", color: "var(--primary)" }}><IconPlus size={18} /></div>
           <div className="pm-onboarding-card-body">
             <h4>Create a new project</h4>
             <p>Start with a company name, tech stack, and a rough brief — expand it with AI.</p>
@@ -526,13 +526,13 @@ function LifecycleGridCard({ project, index, onOpen, onContinue }) {
             <span style={{ color: "var(--text-2)", fontWeight: 600 }}>{stage?.label}</span>
           </div>
           <div className="proj-card-track">
-            <div className="proj-card-fill" style={{ width: `${getStageProgress(stageId)}%`, background: stageId === "delivered" ? "#34D399" : "linear-gradient(90deg, var(--primary), #8B5CF6)" }} />
+            <div className="proj-card-fill" style={{ width: `${getStageProgress(stageId)}%`, background: stageId === "delivered" ? "#34D399" : "linear-gradient(90deg, #F5F5F5, #737373)" }} />
           </div>
         </div>
 
         <div className="row gap-2" style={{ flexWrap: "wrap", minHeight: 22 }}>
           {signals.openTasks > 0 && <Badge tone="blue">{signals.openTasks} task{signals.openTasks > 1 ? "s" : ""}</Badge>}
-          {signals.activeWorkOrders > 0 && <Badge tone="purple">{signals.activeWorkOrders} work orders</Badge>}
+          {signals.activeWorkOrders > 0 && <Badge tone="gray">{signals.activeWorkOrders} work orders</Badge>}
           {project.status === "FAILED" && <Badge tone="red">Failed</Badge>}
         </div>
       </div>
@@ -575,7 +575,7 @@ function LifecycleTable({ projects, onOpen, onContinue }) {
               </div>
               <div style={{ width: 120 }}>
                 <div style={{ height: 5, borderRadius: 999, background: "rgba(148,163,184,.16)", overflow: "hidden" }}>
-                  <div style={{ width: `${getStageProgress(stageId)}%`, height: "100%", borderRadius: 999, background: stageId === "delivered" ? "#34D399" : "linear-gradient(90deg, var(--primary), #8B5CF6)" }} />
+                  <div style={{ width: `${getStageProgress(stageId)}%`, height: "100%", borderRadius: 999, background: stageId === "delivered" ? "#34D399" : "linear-gradient(90deg, #F5F5F5, #737373)" }} />
                 </div>
               </div>
               <div>
