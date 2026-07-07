@@ -1,0 +1,293 @@
+/* Agent IDE Split Panel */
+.agent-ide-panel {
+  position: absolute;
+  top: 100px;
+  right: clamp(24px, 4vw, 80px);
+  width: min(650px, 48vw);
+  height: 480px;
+  background: rgba(8, 8, 8, 0.85);
+  border: 1px solid var(--border-soft);
+  border-radius: 4px;
+  box-shadow: 0 35px 90px rgba(0, 0, 0, 0.75), 0 0 1px 1px rgba(255, 255, 255, 0.02) inset;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: "Geist Mono", ui-monospace, monospace;
+  z-index: 10;
+  transform: translateZ(0);
+}
+
+/* IDE Top Title Bar */
+.ide-header {
+  height: 38px;
+  background: rgba(5, 5, 5, 0.95);
+  border-bottom: 1px solid var(--border-soft);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  user-select: none;
+}
+
+.ide-dots {
+  display: flex;
+  gap: 6px;
+  margin-right: 24px;
+  align-items: center;
+}
+
+.ide-dots .dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: var(--text-4);
+  opacity: 0.5;
+}
+
+.ide-title-bar {
+  font-size: 10px;
+  color: var(--text-3);
+  letter-spacing: 0.02em;
+}
+
+/* Horizontal Pipeline Track */
+.pipeline-track {
+  display: flex;
+  align-items: center;
+  padding: 14px 20px;
+  background: rgba(4, 4, 4, 0.65);
+  border-bottom: 1px solid var(--border-soft);
+  gap: 8px;
+  user-select: none;
+}
+
+.pipeline-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.node-icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border-soft);
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.4s ease;
+}
+
+.node-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: transparent;
+  transition: all 0.4s ease;
+}
+
+.node-label {
+  font-size: 8px;
+  font-weight: 500;
+  color: var(--text-4);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  transition: color 0.4s ease;
+}
+
+/* Active Node Status */
+.pipeline-node.active .node-icon {
+  border-color: var(--text);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.pipeline-node.active .node-dot {
+  background: var(--text);
+  box-shadow: 0 0 10px rgba(250, 250, 250, 0.8);
+}
+
+.pipeline-node.active .node-label {
+  color: var(--text);
+}
+
+/* Completed Node Status */
+.pipeline-node.completed .node-icon {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.pipeline-node.completed .node-dot {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.pipeline-node.completed .node-label {
+  color: var(--text-3);
+}
+
+/* Connectors between steps */
+.pipeline-connector {
+  flex: 1;
+  height: 1px;
+  background: var(--border-soft);
+  position: relative;
+  overflow: hidden;
+  margin: 0 4px;
+}
+
+.pipeline-connector.completed {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.connector-pulse {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 32px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.35),
+    transparent
+  );
+  transform: translateX(-100%);
+  animation: connectorFlow 2.4s linear infinite;
+}
+
+@keyframes connectorFlow {
+  0% { transform: translateX(-100%); }
+  60%, 100% { transform: translateX(250%); }
+}
+
+/* IDE Split Workspace */
+.ide-body {
+  display: flex;
+  flex: 1;
+  min-height: 0; /* Important for inner scrollbars */
+  background: #050505;
+}
+
+.ide-pane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0; /* Prevents overflow blowout */
+}
+
+.pane-left {
+  border-right: 1px solid var(--border-soft);
+}
+
+.pane-header {
+  height: 28px;
+  background: rgba(3, 3, 3, 0.95);
+  border-bottom: 1px solid var(--border-soft);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 12px;
+  font-size: 8.5px;
+  color: var(--text-4);
+  letter-spacing: 0.06em;
+  user-select: none;
+}
+
+.pane-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+/* Custom terminal background colors */
+.terminal-theme {
+  background: #020202;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.editor-theme {
+  background: #050505;
+}
+
+/* Log lines styles (monochrome hierarchy) */
+.log-line {
+  word-break: break-all;
+}
+
+.log-system {
+  color: var(--text-4);
+}
+
+.log-ceo, .log-cto {
+  color: var(--text-3);
+}
+
+.log-developer, .log-tester {
+  color: var(--text-2);
+}
+
+.log-success {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.log-success::before {
+  content: "✓ ";
+  color: var(--text-3);
+}
+
+/* Writing / Coding indicator */
+.writing-pulse {
+  font-size: 8px;
+  color: var(--text-2);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  animation: codeBufferPulse 1.2s infinite alternate;
+}
+
+@keyframes codeBufferPulse {
+  0% { opacity: 0.45; }
+  100% { opacity: 1; }
+}
+
+.code-content {
+  margin: 0;
+  font-family: inherit;
+  font-size: 10px;
+  line-height: 1.4;
+  color: var(--text-2);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.agent-tag {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-soft);
+  padding: 2px 6px;
+  border-radius: 2px;
+  color: var(--text-3);
+  font-size: 8px;
+  text-transform: uppercase;
+}
+
+/* Responsive adjustment */
+@media (max-width: 1024px) {
+  .agent-ide-panel {
+    width: min(520px, 45vw);
+    height: 440px;
+    top: 120px;
+  }
+}
+
+@media (max-width: 768px) {
+  .agent-ide-panel {
+    display: none; /* Hidden on mobile view */
+  }
+}

@@ -529,13 +529,14 @@ export function Text({
   className?: string;
   children?: ReactNode;
 }) {
+  const CustomTag = Tag as any;
   return (
-    <Tag
+    <CustomTag
       className={[mono ? "mono" : undefined, className].filter(Boolean).join(" ") || undefined}
       style={{ fontSize: size, fontWeight: weight, color: toneColor[tone], margin: 0, ...style }}
     >
       {children}
-    </Tag>
+    </CustomTag>
   );
 }
 

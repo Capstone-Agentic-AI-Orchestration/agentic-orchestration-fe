@@ -14,7 +14,8 @@ import { gsap, registerGsapPlugins } from "@/lib/gsap";
 import { MagneticButton } from "./MagneticButton";
 import "./Hero.css";
 
-// WebGL scene is client-only, no SSR.
+// WebGL scenes are client-only, no SSR.
+const Dither = dynamic(() => import("./Dither").then((m) => m.default), { ssr: false });
 const HeroScene = dynamic(() => import("./HeroScene").then((m) => m.HeroScene), { ssr: false });
 
 export function Hero() {
@@ -71,8 +72,21 @@ export function Hero() {
 
   return (
     <section ref={rootRef} className="hero">
+      <Dither
+        waveColor={[0.16, 0.16, 0.16]}
+        disableAnimation={false}
+        enableMouseInteraction={true}
+        mouseRadius={0.4}
+        colorNum={4}
+        waveAmplitude={0.25}
+        waveFrequency={2.5}
+        waveSpeed={0.04}
+        pixelSize={2}
+      />
+      <div className="retro-glow-bottom-dither" />
       <HeroScene />
       <div className="hero-inner">
+
         <h1 ref={headlineRef} className="hero-headline">
           <span>One prompt,</span>
           <br />

@@ -3,7 +3,8 @@
 .hero {
   position: relative;
   min-height: 100dvh;
-  padding: 160px 0 120px;
+  display: flex;
+  align-items: center;
   border-bottom: 1px solid var(--border-soft);
   background: var(--bg-0);
   overflow: hidden;
@@ -561,6 +562,7 @@
 
 .hero-inner {
   position: relative;
+  width: 100%;
   max-width: 1360px;
   margin: 0 auto;
   padding: 0 48px;

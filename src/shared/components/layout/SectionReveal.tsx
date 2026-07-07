@@ -62,9 +62,10 @@ export function SectionReveal({
     { scope: ref },
   );
 
+  const CustomTag = Tag as any;
   return (
-    <Tag ref={ref as never} className={className} id={id}>
+    <CustomTag ref={ref} className={className} id={id}>
       {children}
-    </Tag>
+    </CustomTag>
   );
 }

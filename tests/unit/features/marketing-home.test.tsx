@@ -48,9 +48,9 @@ describe('MarketingHomeView v2', () => {
     expect(elements[0]).toBeInTheDocument();
   });
 
-  it('shows the FAQ section title', () => {
+  it('shows the CTA section description', () => {
     render(<MarketingHomeView />);
-    const elements = screen.getAllByText(/FAQ/i);
+    const elements = screen.getAllByText(/No credit card/i);
     expect(elements.length).toBeGreaterThan(0);
     expect(elements[0]).toBeInTheDocument();
   });
