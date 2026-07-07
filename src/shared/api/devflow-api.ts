@@ -57,6 +57,29 @@ export type DevFlowClientInviteStatus = "PENDING" | "ACCEPTED" | "REVOKED";
 
 export type DevFlowProjectKickoffStatus = "DRAFT" | "READY" | "LOCKED";
 
+export interface DevFlowDesignSystem {
+  presetId: string;
+  palette: string;
+  typography: string;
+  spacing: string;
+  layout: string;
+  components: string;
+  motion: string;
+  voice: string;
+  brand: string;
+  antiPatterns: string[];
+}
+
+export interface DevFlowDesignGuidance {
+  theme: "black" | "light" | "system";
+  productFeel: "enterprise" | "playful" | "editorial" | "luxury" | "operational";
+  layoutDensity: "compact" | "balanced" | "spacious";
+  accessibilityLevel: "standard" | "strict";
+  forbiddenPatterns: string[];
+  notes?: string;
+  designSystem?: DevFlowDesignSystem;
+}
+
 export type DevFlowProjectLifecycleStage =
   | "APPROVED"
   | "CLIENT_ONBOARDING"
@@ -905,6 +928,7 @@ export interface CreateDevFlowProjectInput {
   companyName: string;
   brief: string;
   stackKey: string;
+  designGuidance?: DevFlowDesignGuidance;
 }
 
 export interface CreateDevFlowInquiryInput {
@@ -957,6 +981,10 @@ export interface AddDevFlowProjectMemberInput {
 export interface StartDevFlowOrchestrationResult {
   accepted: boolean;
   runId: string;
+}
+
+export interface StartDevFlowOrchestrationInput {
+  designGuidance?: DevFlowDesignGuidance;
 }
 
 export interface DevFlowOrchestrationStatus {
@@ -1801,6 +1829,8 @@ export function autoAnalyzeDevFlowBrief(input: {
   companyName: string;
   brief: string;
   stackKey: string;
+  designGuidance?: DevFlowDesignGuidance;
+  mode?: "fast" | "thorough";
 }): Promise<DevFlowAutoAnalyzeResult> {
   return request<DevFlowAutoAnalyzeResult>("/projects/auto-analyze", {
     method: "POST",
@@ -1837,9 +1867,13 @@ export function removeDevFlowProjectMember(
   });
 }
 
-export function startDevFlowOrchestration(projectId: string): Promise<StartDevFlowOrchestrationResult> {
+export function startDevFlowOrchestration(
+  projectId: string,
+  input: StartDevFlowOrchestrationInput = {},
+): Promise<StartDevFlowOrchestrationResult> {
   return request<StartDevFlowOrchestrationResult>(`/projects/${projectId}/orchestration/start`, {
     method: "POST",
+    body: JSON.stringify(input),
   });
 }
 

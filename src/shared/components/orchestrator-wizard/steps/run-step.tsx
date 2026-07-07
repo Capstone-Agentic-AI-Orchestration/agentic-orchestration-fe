@@ -7,6 +7,7 @@ import {
   startDevFlowOrchestration,
   rerunReadyDevFlowWorkOrders,
 } from "@/shared/api/devflow-api";
+import { loadDesignGuidance } from "@/shared/design-guidance";
 import { IconRocket } from "@/shared/components/icons";
 import { OrchestrationRunCockpit } from "@/shared/components/orchestration/run-cockpit/orchestration-run-cockpit";
 import { useSocketSubscription } from "@/shared/hooks/use-socket-subscription";
@@ -36,7 +37,9 @@ export function RunStep({ ctx }: { ctx: OrchestratorWizardContextValue }) {
     setStarting(true);
     setError("");
     try {
-      await startDevFlowOrchestration(projectId);
+      await startDevFlowOrchestration(projectId, {
+        designGuidance: loadDesignGuidance(projectId),
+      });
       await refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));

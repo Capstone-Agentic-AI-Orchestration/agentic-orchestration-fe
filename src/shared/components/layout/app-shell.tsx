@@ -242,7 +242,7 @@ function AppTopBar({
           <span className="cs-crumb-current">{title}</span>
         </div>
 
-        <div style={{ flex: 1, maxWidth: 440, marginLeft: 24 }}>
+        <div className="cs-topbar-search">
           <div style={{ position: "relative" }}>
             <IconSearch size={15} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--text-3)" }} />
             <input className="input" placeholder={searchPlaceholder} style={{ paddingLeft: 36, height: 36, fontSize: 13.5 }} />

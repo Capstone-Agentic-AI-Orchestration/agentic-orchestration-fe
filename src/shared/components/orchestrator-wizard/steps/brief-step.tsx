@@ -1,13 +1,16 @@
 // @ts-nocheck
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
-  autoAnalyzeDevFlowBrief,
   updateDevFlowProject,
   type DevFlowAutoAnalyzeResult,
+  type DevFlowDesignGuidance,
 } from "@/shared/api/devflow-api";
+import { requestFastBriefAnalysis } from "@/shared/ai/brief-analysis";
 import { Button, Card, Field, Input, Select, Textarea } from "@/shared/components/ui";
+import { DesignGuidancePanel } from "@/shared/components/design/design-guidance-panel";
+import { loadDesignGuidance, saveDesignGuidance } from "@/shared/design-guidance";
 import {
   IconSparkles,
   IconCheck,
@@ -36,27 +39,35 @@ export function BriefStep({
   const [companyName, setCompanyName] = useState(project?.companyName ?? "");
   const [brief, setBrief] = useState(project?.brief ?? "");
   const [stackKey, setStackKey] = useState(project?.stackKey ?? "nextjs-nestjs-supabase");
+  const [designGuidance, setDesignGuidance] = useState<DevFlowDesignGuidance>(() => loadDesignGuidance(projectId));
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeError, setAnalyzeError] = useState("");
   const [analyzeResult, setAnalyzeResult] = useState<DevFlowAutoAnalyzeResult | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [saved, setSaved] = useState(false);
+  const analyzeRequestRef = useRef(0);
 
   const canSave = companyName.trim().length > 0 && brief.trim().length >= 10;
 
   const handleAnalyze = async () => {
+    const requestId = analyzeRequestRef.current + 1;
+    analyzeRequestRef.current = requestId;
+    const input = {
+      companyName: companyName.trim() || "Unknown company",
+      brief: brief.trim(),
+      stackKey,
+      designGuidance,
+    };
     setAnalyzing(true);
     setAnalyzeError("");
     setAnalyzeResult(null);
     try {
-      const result = await autoAnalyzeDevFlowBrief({
-        companyName: companyName.trim() || "Unknown company",
-        brief: brief.trim(),
-        stackKey,
-      });
+      const result = await requestFastBriefAnalysis(input);
+      if (analyzeRequestRef.current !== requestId) return;
       setAnalyzeResult(result);
     } catch (err) {
+      if (analyzeRequestRef.current !== requestId) return;
       const message = err instanceof Error ? err.message : String(err);
       const details = (err as any)?.details ?? "";
       const combined = message + " " + details;
@@ -66,7 +77,9 @@ export function BriefStep({
           : message,
       );
     } finally {
-      setAnalyzing(false);
+      if (analyzeRequestRef.current === requestId) {
+        setAnalyzing(false);
+      }
     }
   };
 
@@ -80,6 +93,7 @@ export function BriefStep({
     setSaveError("");
     setSaved(false);
     try {
+      saveDesignGuidance(projectId, designGuidance);
       await updateDevFlowProject(projectId, { companyName, brief, stackKey });
       setSaved(true);
       await refresh();
@@ -116,10 +130,22 @@ export function BriefStep({
               <span>{analyzeError}</span>
             </div>
           )}
+          {analyzing && !analyzeResult && (
+            <div className="auto-analyze-skeleton" aria-label="Analyzing brief">
+              <span className="skeleton auto-analyze-skeleton-line is-wide" />
+              <span className="skeleton auto-analyze-skeleton-line" />
+              <span className="skeleton auto-analyze-skeleton-line is-short" />
+              <div className="auto-analyze-skeleton-chips">
+                <span className="skeleton" />
+                <span className="skeleton" />
+                <span className="skeleton" />
+              </div>
+            </div>
+          )}
           {analyzeResult && (
             <div className="auto-analyze-result">
               <h4>Enhanced Brief</h4>
-              <p style={{ margin: "0 0 12px", fontSize: "0.875rem", lineHeight: 1.6, color: "var(--text)" }}>
+              <p className="auto-analyze-result-copy">
                 {analyzeResult.enhancedBrief}
               </p>
               <h4>Suggested Features</h4>
@@ -130,7 +156,7 @@ export function BriefStep({
                   </span>
                 ))}
               </div>
-              <h4 style={{ marginTop: "14px" }}>Tech Stack</h4>
+              <h4 className="auto-analyze-subhead">Tech Stack</h4>
               <div className="auto-analyze-techstack">
                 <div className="auto-analyze-tech-item">
                   <span className="auto-analyze-tech-label">Frontend</span>
@@ -149,7 +175,7 @@ export function BriefStep({
                   <span className="auto-analyze-tech-value">{analyzeResult.suggestedTechStack.styling}</span>
                 </div>
               </div>
-              <div style={{ marginTop: "10px", fontSize: "0.75rem", color: "var(--text-3)" }}>
+              <div className="auto-analyze-meta">
                 Complexity: <strong>{analyzeResult.complexity}</strong> · Est. files:{" "}
                 <strong>{analyzeResult.estimatedFiles}</strong>
               </div>
@@ -169,7 +195,7 @@ export function BriefStep({
             size="sm"
             onClick={handleAnalyze}
             disabled={analyzing || brief.trim().length < 3}
-            style={{ marginTop: analyzeResult ? "14px" : "0" }}
+            style={{ marginTop: analyzeResult || analyzing ? "14px" : "0" }}
           >
             {analyzing ? (
               <>
@@ -203,7 +229,7 @@ export function BriefStep({
             <span>Project brief saved. Continue to the next step.</span>
           </div>
         )}
-        <div style={{ display: "grid", gap: "16px" }}>
+        <div className="wizard-review-stack">
           <Field label="Company name">
             <Input
               value={companyName}
@@ -232,6 +258,11 @@ export function BriefStep({
             </Select>
           </Field>
         </div>
+      </div>
+
+      <div className="wizard-step-section">
+        <h3 className="wizard-step-section-title">Design Direction</h3>
+        <DesignGuidancePanel value={designGuidance} onChange={setDesignGuidance} />
       </div>
 
       <OrchestratorStepNav

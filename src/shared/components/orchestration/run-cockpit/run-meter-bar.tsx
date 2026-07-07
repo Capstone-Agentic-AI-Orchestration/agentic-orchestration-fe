@@ -47,7 +47,7 @@ const STATUS_LABEL: Record<string, string> = {
 const CONN_TONE: Record<string, string> = {
   connected: "#10B981",
   connecting: "#F59E0B",
-  disconnected: "#EF4444",
+  disconnected: "#F59E0B",
 };
 
 function normalizeNode(node: string | undefined | null): string {
@@ -109,7 +109,7 @@ export function RunMeterBar({ projectName, status: statusProp }: RunMeterBarProp
         ? 6
         : 0;
 
-  const accent = isFailed ? "#EF4444" : isDelivered ? "#10B981" : "#2F6BFF";
+  const accent = isFailed ? "#EF4444" : isDelivered ? "#10B981" : isRunning ? "#FAFAFA" : "#A1A1A1";
   const detail =
     orchestrationState?.error ||
     nodeStates[currentNode]?.progressLabel ||
@@ -145,21 +145,21 @@ export function RunMeterBar({ projectName, status: statusProp }: RunMeterBarProp
             label="Tokens streamed"
             value={<AnimatedNumber value={totalTokens} />}
             sub={totalTokens > 0 ? `${inputTokens.toLocaleString()} in · ${outputTokens.toLocaleString()} out` : "in · out"}
-            accent="#4F8BFF"
+            accent="var(--text-2)"
           />
           <MeterStat
             icon={<IconCreditCard size={13} />}
             label="Est. spend"
             value={<AnimatedNumber value={cost} format={(n) => `$${n.toFixed(n < 1 ? 4 : 2)}`} />}
             sub={activeModel || "live cost"}
-            accent="#A78BFA"
+            accent="var(--text-2)"
           />
           <MeterStat
             icon={<IconClock size={13} />}
             label="Elapsed"
             value={formatElapsed(elapsed)}
             sub={isRunning ? "running" : isDelivered ? "complete" : "idle"}
-            accent="#34D399"
+            accent={isRunning ? "var(--text-2)" : isDelivered ? "var(--green)" : "var(--text-3)"}
           />
           <div className="cockpit-stat cockpit-stat-budget">
             <span className="cockpit-stat-label">
@@ -172,7 +172,7 @@ export function RunMeterBar({ projectName, status: statusProp }: RunMeterBarProp
                 className="cockpit-budget-fill"
                 style={{
                   width: `${budgetPct}%`,
-                  background: budgetPct > 85 ? "linear-gradient(90deg,#F59E0B,#EF4444)" : "linear-gradient(90deg,#2F6BFF,#8B5CF6)",
+                  background: budgetPct > 85 ? "var(--amber)" : "var(--text)",
                 }}
               />
             </span>
@@ -195,8 +195,10 @@ export function RunMeterBar({ projectName, status: statusProp }: RunMeterBarProp
               style={{
                 width: `${progress}%`,
                 background: isFailed
-                  ? "linear-gradient(90deg,#EF4444,#FCA5A5)"
-                  : "linear-gradient(90deg,#2F6BFF,#10B981,#A78BFA)",
+                  ? "var(--red)"
+                  : isDelivered
+                    ? "var(--green)"
+                    : "var(--text)",
               }}
             />
           </div>

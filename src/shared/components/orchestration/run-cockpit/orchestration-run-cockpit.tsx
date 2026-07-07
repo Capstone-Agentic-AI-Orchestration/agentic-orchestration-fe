@@ -106,6 +106,24 @@ export function OrchestrationRunCockpit({
         </div>
       )}
 
+      {isAwaitingGate && (
+        <div className="cockpit-state-banner is-awaiting reveal">
+          <IconShield size={16} />
+          <span>
+            {status === "AWAITING_GATE_1"
+              ? "Plan review is waiting for approval before code generation starts."
+              : "Build review is waiting for approval before GitHub delivery."}
+          </span>
+        </div>
+      )}
+
+      {isDelivered && (
+        <div className="cockpit-state-banner is-delivered reveal">
+          <IconGitBranch size={16} />
+          <span>Delivery is complete. Review the final handoff and client-facing artifacts.</span>
+        </div>
+      )}
+
       {isFailed && (
         <div className="cockpit-retry reveal">
           <div className="row gap-2" style={{ alignItems: "center" }}>
@@ -293,6 +311,13 @@ function LaunchPad({
             </button>
           )}
         </div>
+        {starting && (
+          <div className="cockpit-loading-skeleton" aria-label="Starting orchestration">
+            <span className="skeleton" />
+            <span className="skeleton" />
+            <span className="skeleton" />
+          </div>
+        )}
       </div>
     </section>
   );

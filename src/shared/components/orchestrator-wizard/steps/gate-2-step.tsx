@@ -15,12 +15,14 @@ import {
 } from "@/shared/components/icons";
 import { OrchestratorStepNav } from "@/shared/components/orchestrator-wizard/orchestrator-stepper";
 import type { OrchestratorWizardContextValue } from "@/shared/components/orchestrator-wizard/orchestrator-wizard-layout";
+import { DesignGuidancePanel } from "@/shared/components/design/design-guidance-panel";
+import { loadDesignGuidance } from "@/shared/design-guidance";
 
-const AGENT_LABELS: Record<string, { label: string; color: string }> = {
-  frontend: { label: "Frontend", color: "#F97316" },
-  backend: { label: "Backend", color: "#10B981" },
-  database: { label: "Database", color: "#14B8A6" },
-  architecture: { label: "Architecture", color: "#A78BFA" },
+const AGENT_LABELS: Record<string, { label: string; tone: "neutral" | "green" | "attention" | "gray" }> = {
+  frontend: { label: "Frontend", tone: "attention" },
+  backend: { label: "Backend", tone: "green" },
+  database: { label: "Database", tone: "neutral" },
+  architecture: { label: "Architecture", tone: "gray" },
 };
 
 export function Gate2Step({ ctx }: { ctx: OrchestratorWizardContextValue }) {
@@ -34,6 +36,7 @@ export function Gate2Step({ ctx }: { ctx: OrchestratorWizardContextValue }) {
   const projectStatus = project?.status ?? status?.status;
   const isAwaiting = projectStatus === "AWAITING_GATE_2";
   const artifacts = project?.artifacts ?? status?.artifacts ?? [];
+  const designGuidance = loadDesignGuidance(projectId);
 
   const handleApprove = async (approved: boolean) => {
     setActing(true);
@@ -53,6 +56,7 @@ export function Gate2Step({ ctx }: { ctx: OrchestratorWizardContextValue }) {
 
   const handleExpand = async (artifactId: string) => {
     if (expandedArtifacts[artifactId] !== undefined) return;
+    setExpandedArtifacts((prev) => ({ ...prev, [artifactId]: null as any }));
     try {
       const full = await getDevFlowProjectArtifact(projectId, artifactId);
       setExpandedArtifacts((prev) => ({ ...prev, [artifactId]: full.content ?? "" }));
@@ -98,7 +102,16 @@ export function Gate2Step({ ctx }: { ctx: OrchestratorWizardContextValue }) {
       )}
 
       <div className="wizard-step-section">
-        <h4 style={{ margin: "0 0 10px", fontSize: "0.8125rem", fontWeight: 700, color: "var(--text-2)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+        <h4 className="wizard-section-label">
+          Frontend Design Contract
+        </h4>
+        <div className="wizard-review-panel">
+          <DesignGuidancePanel value={designGuidance} readOnly />
+        </div>
+      </div>
+
+      <div className="wizard-step-section">
+        <h4 className="wizard-section-label">
           Generated Deliverables ({artifacts.length})
         </h4>
         {artifacts.length === 0 ? (
@@ -107,20 +120,20 @@ export function Gate2Step({ ctx }: { ctx: OrchestratorWizardContextValue }) {
             <span>No deliverables generated yet. Code generation happens after plan approval.</span>
           </div>
         ) : (
-          <div style={{ display: "grid", gap: 16 }}>
+          <div className="wizard-review-stack">
             {Object.entries(groupedArtifacts).map(([agent, items]) => {
-              const meta = AGENT_LABELS[agent] ?? { label: agent, color: "var(--text-3)" };
+              const meta = AGENT_LABELS[agent] ?? { label: agent, tone: "gray" as const };
               return (
-                <div key={agent}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                    <Badge tone="blue" style={{ background: `${meta.color}20`, color: meta.color, border: `1px solid ${meta.color}40` }}>
+                <div key={agent} className="wizard-review-panel wizard-review-panel--dense">
+                  <div className="wizard-artifact-group-head">
+                    <Badge tone={meta.tone}>
                       {meta.label}
                     </Badge>
-                    <span style={{ fontSize: "0.75rem", color: "var(--text-3)" }}>
+                    <span>
                       {items.length} file{items.length === 1 ? "" : "s"}
                     </span>
                   </div>
-                  <div style={{ display: "grid", gap: 8 }}>
+                  <div className="wizard-artifact-list">
                     {items.map((artifact: any) => (
                       <details
                         key={artifact.id}
@@ -128,17 +141,25 @@ export function Gate2Step({ ctx }: { ctx: OrchestratorWizardContextValue }) {
                         onClick={() => handleExpand(artifact.id)}
                       >
                         <summary>
-                          <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            <IconFileText size={14} style={{ color: "var(--text-3)" }} />
-                            <span style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "0.8125rem" }}>
+                          <span className="gate-review-artifact-summary-main">
+                            <IconFileText size={14} />
+                            <span className="gate-review-artifact-path">
                               {artifact.filePath}
                             </span>
                           </span>
                           <Badge tone="gray">{artifact.language}</Badge>
                         </summary>
-                        <pre>
-                          <code>{expandedArtifacts[artifact.id] ?? artifact.content ?? "Loading…"}</code>
-                        </pre>
+                        {expandedArtifacts[artifact.id] === null ? (
+                          <div className="gate-review-artifact-loading" aria-label="Loading artifact content">
+                            <span className="skeleton" />
+                            <span className="skeleton" />
+                            <span className="skeleton" />
+                          </div>
+                        ) : (
+                          <pre>
+                            <code>{expandedArtifacts[artifact.id] ?? artifact.content ?? "Loading..."}</code>
+                          </pre>
+                        )}
                       </details>
                     ))}
                   </div>
@@ -151,7 +172,7 @@ export function Gate2Step({ ctx }: { ctx: OrchestratorWizardContextValue }) {
 
       {isAwaiting && (
         <div className="wizard-step-section">
-          <h4 style={{ margin: "0 0 10px", fontSize: "0.8125rem", fontWeight: 700, color: "var(--text-2)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+          <h4 className="wizard-section-label">
             Review Notes (optional)
           </h4>
           <Textarea
@@ -160,7 +181,7 @@ export function Gate2Step({ ctx }: { ctx: OrchestratorWizardContextValue }) {
             onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNotes(e.target.value)}
             placeholder="Add any feedback or conditions for this code review…"
           />
-          <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+          <div className="wizard-action-row">
             <Button variant="primary" onClick={() => handleApprove(true)} disabled={acting}>
               <IconCheck size={14} />
               {acting ? "Approving…" : "Approve build and commit to GitHub"}

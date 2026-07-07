@@ -215,6 +215,8 @@ export function Modal({
   children,
   footer,
   width = 520,
+  bodyStyle,
+  footerStyle,
 }: {
   open: boolean;
   onClose: () => void;
@@ -222,6 +224,8 @@ export function Modal({
   children?: ReactNode;
   footer?: ReactNode;
   width?: number;
+  bodyStyle?: CSSProperties;
+  footerStyle?: CSSProperties;
 }) {
   useEffect(() => {
     if (!open) return;
@@ -251,14 +255,25 @@ export function Modal({
         background: "rgba(0,0,0,.72)",
         display: "grid",
         placeItems: "center",
-        padding: 24,
+        padding: "clamp(12px, 4vw, 24px)",
+        boxSizing: "border-box",
+        overflowY: "auto",
+        overflowX: "hidden",
         animation: "modalFade .2s ease",
       }}
     >
       <div
         onClick={(e) => e.stopPropagation()}
         className="card"
-        style={{ width, maxWidth: "92vw", animation: "modalIn .2s ease" }}
+        style={{
+          width,
+          maxWidth: "calc(100vw - 32px)",
+          maxHeight: "calc(100vh - 48px)",
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+          animation: "modalIn .2s ease",
+        }}
       >
         <div
           style={{
@@ -267,6 +282,7 @@ export function Modal({
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
+            flexShrink: 0,
           }}
         >
           <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, letterSpacing: "-0.02em" }}>{title}</h3>
@@ -274,7 +290,7 @@ export function Modal({
             <IconClose size={16} />
           </button>
         </div>
-        <div style={{ padding: 22 }}>{children}</div>
+        <div style={{ padding: 22, overflow: "auto", minHeight: 0, ...bodyStyle }}>{children}</div>
         {footer && (
           <div
             style={{
@@ -283,6 +299,9 @@ export function Modal({
               display: "flex",
               justifyContent: "flex-end",
               gap: 10,
+              flexShrink: 0,
+              background: "var(--bg-1)",
+              ...footerStyle,
             }}
           >
             {footer}

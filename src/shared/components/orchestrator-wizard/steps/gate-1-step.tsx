@@ -15,6 +15,8 @@ import {
 } from "@/shared/components/icons";
 import { OrchestratorStepNav } from "@/shared/components/orchestrator-wizard/orchestrator-stepper";
 import type { OrchestratorWizardContextValue } from "@/shared/components/orchestrator-wizard/orchestrator-wizard-layout";
+import { DesignGuidancePanel } from "@/shared/components/design/design-guidance-panel";
+import { loadDesignGuidance } from "@/shared/design-guidance";
 
 export function Gate1Step({ ctx }: { ctx: OrchestratorWizardContextValue }) {
   const { project, projectId, status, refresh } = ctx;
@@ -26,6 +28,7 @@ export function Gate1Step({ ctx }: { ctx: OrchestratorWizardContextValue }) {
   const projectStatus = project?.status ?? status?.status;
   const isAwaiting = projectStatus === "AWAITING_GATE_1";
   const contract = project?.contract ?? status?.contract;
+  const designGuidance = loadDesignGuidance(projectId);
 
   const handleApprove = async (approved: boolean) => {
     setActing(true);
@@ -74,38 +77,47 @@ export function Gate1Step({ ctx }: { ctx: OrchestratorWizardContextValue }) {
       )}
 
       <div className="wizard-step-section">
-        <h4 style={{ margin: "0 0 10px", fontSize: "0.8125rem", fontWeight: 700, color: "var(--text-2)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+        <h4 className="wizard-section-label">
+          Frontend Design Contract
+        </h4>
+        <div className="wizard-review-panel">
+          <DesignGuidancePanel value={designGuidance} readOnly />
+        </div>
+      </div>
+
+      <div className="wizard-step-section">
+        <h4 className="wizard-section-label">
           Project Contract
         </h4>
         {contract ? (
-          <div style={{ display: "grid", gap: 16 }}>
-            <div style={{ padding: 16, background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: 10 }}>
-              <div style={{ fontSize: "0.75rem", color: "var(--text-3)", textTransform: "uppercase", fontWeight: 600, marginBottom: 4 }}>
+          <div className="wizard-review-stack">
+            <div className="wizard-review-panel">
+              <div className="wizard-review-kicker">
                 Project Name
               </div>
-              <div style={{ fontSize: "0.9375rem", fontWeight: 700, color: "var(--text)" }}>
+              <div className="wizard-review-title">
                 {contract.projectName ?? project?.companyName}
               </div>
-              <div style={{ fontSize: "0.8125rem", color: "var(--text-2)", marginTop: 8, lineHeight: 1.5 }}>
+              <div className="wizard-review-body">
                 {contract.description ?? project?.brief}
               </div>
             </div>
 
             {contract.requirements && (
-              <div style={{ padding: 16, background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: 10 }}>
-                <div style={{ fontSize: "0.75rem", color: "var(--text-3)", textTransform: "uppercase", fontWeight: 600, marginBottom: 8 }}>
+              <div className="wizard-review-panel">
+                <div className="wizard-review-kicker">
                   Requirements
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8, fontSize: "0.8125rem" }}>
-                  <div><span style={{ color: "var(--text-3)" }}>Type:</span> {contract.requirements.projectType}</div>
-                  <div><span style={{ color: "var(--text-3)" }}>Complexity:</span> {contract.requirements.complexity}</div>
-                  <div><span style={{ color: "var(--text-3)" }}>Est. files:</span> {contract.requirements.estimatedFiles}</div>
-                  <div><span style={{ color: "var(--text-3)" }}>Stack:</span> {contract.requirements.techStack?.frontend} + {contract.requirements.techStack?.backend}</div>
+                <div className="wizard-metadata-grid">
+                  <div><span>Type</span><strong>{contract.requirements.projectType}</strong></div>
+                  <div><span>Complexity</span><strong>{contract.requirements.complexity}</strong></div>
+                  <div><span>Est. files</span><strong>{contract.requirements.estimatedFiles}</strong></div>
+                  <div><span>Stack</span><strong>{contract.requirements.techStack?.frontend} + {contract.requirements.techStack?.backend}</strong></div>
                 </div>
                 {contract.requirements.features?.length > 0 && (
-                  <div style={{ marginTop: 10 }}>
-                    <div style={{ fontSize: "0.75rem", color: "var(--text-3)", marginBottom: 4 }}>Features:</div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  <div className="wizard-feature-group">
+                    <div className="wizard-review-kicker">Features</div>
+                    <div className="wizard-feature-chips">
                       {contract.requirements.features.map((f: string, i: number) => (
                         <span key={i} className="auto-analyze-feature-chip">{f}</span>
                       ))}
@@ -116,27 +128,27 @@ export function Gate1Step({ ctx }: { ctx: OrchestratorWizardContextValue }) {
             )}
 
             {contract.fileManifest?.length > 0 && (
-              <div style={{ padding: 16, background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: 10 }}>
-                <div style={{ fontSize: "0.75rem", color: "var(--text-3)", textTransform: "uppercase", fontWeight: 600, marginBottom: 8 }}>
+              <div className="wizard-review-panel">
+                <div className="wizard-review-kicker">
                   File Manifest ({contract.fileManifest.length} files)
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 4, fontSize: "0.75rem", fontFamily: "var(--font-mono, monospace)" }}>
+                <div className="wizard-file-manifest">
                   {contract.fileManifest.map((path: string, i: number) => (
-                    <div key={i} style={{ color: "var(--text-2)", padding: "2px 0" }}>{path}</div>
+                    <div key={i} className="wizard-file-path">{path}</div>
                   ))}
                 </div>
               </div>
             )}
 
             {contract.acceptanceCriteria?.length > 0 && (
-              <div style={{ padding: 16, background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: 10 }}>
-                <div style={{ fontSize: "0.75rem", color: "var(--text-3)", textTransform: "uppercase", fontWeight: 600, marginBottom: 8 }}>
+              <div className="wizard-review-panel">
+                <div className="wizard-review-kicker">
                   Acceptance Criteria
                 </div>
-                <div style={{ display: "grid", gap: 6 }}>
+                <div className="wizard-check-row-list">
                   {contract.acceptanceCriteria.map((c: string, i: number) => (
-                    <div key={i} style={{ display: "flex", gap: 8, fontSize: "0.8125rem", color: "var(--text-2)" }}>
-                      <IconCheck size={14} style={{ color: "var(--green)", flexShrink: 0, marginTop: 2 }} />
+                    <div key={i} className="wizard-check-row">
+                      <IconCheck size={14} />
                       <span>{c}</span>
                     </div>
                   ))}
@@ -154,7 +166,7 @@ export function Gate1Step({ ctx }: { ctx: OrchestratorWizardContextValue }) {
 
       {isAwaiting && (
         <div className="wizard-step-section">
-          <h4 style={{ margin: "0 0 10px", fontSize: "0.8125rem", fontWeight: 700, color: "var(--text-2)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+          <h4 className="wizard-section-label">
             Review Notes (optional)
           </h4>
           <Textarea
@@ -163,7 +175,7 @@ export function Gate1Step({ ctx }: { ctx: OrchestratorWizardContextValue }) {
             onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNotes(e.target.value)}
             placeholder="Add any feedback or conditions for this plan approval…"
           />
-          <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+          <div className="wizard-action-row">
             <Button variant="primary" onClick={() => handleApprove(true)} disabled={acting}>
               <IconCheck size={14} />
               {acting ? "Approving…" : "Approve plan and start build"}

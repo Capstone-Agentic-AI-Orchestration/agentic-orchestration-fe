@@ -86,6 +86,7 @@ import {
   verifyDevFlowGithubDelivery,
   verifyDevFlowLlmProvider,
 } from "@/shared/api/devflow-api";
+import { loadDesignGuidance } from "@/shared/design-guidance";
 import { useDevFlowOrchestrationProviderStatus, useDevFlowOrchestrationStatus, useDevFlowProjectOutputs } from "@/shared/hooks/use-devflow-projects";
 import {
   ProjectLifecycleIndicator,
@@ -476,7 +477,9 @@ function BackendProjectDetail({ project, onBack }) {
     setStarting(true);
     setError("");
     try {
-      await startDevFlowOrchestration(detail.id);
+      await startDevFlowOrchestration(detail.id, {
+        designGuidance: loadDesignGuidance(detail.id),
+      });
       await new Promise((resolve) => window.setTimeout(resolve, 1200));
       setDetail(await getDevFlowProject(detail.id));
       await Promise.all([outputs.refresh?.(), orchestration.refresh?.(), provider.refresh?.(), refreshOrchestrationRuns(), refreshDeliveryReadiness()]);

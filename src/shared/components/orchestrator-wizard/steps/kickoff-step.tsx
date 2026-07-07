@@ -9,6 +9,8 @@ import {
   autoAnalyzeDevFlowBrief,
 } from "@/shared/api/devflow-api";
 import { Button, Field, Textarea, Badge } from "@/shared/components/ui";
+import { DesignGuidancePanel } from "@/shared/components/design/design-guidance-panel";
+import { loadDesignGuidance, saveDesignGuidance } from "@/shared/design-guidance";
 import {
   IconCheck,
   IconCheckCircle,
@@ -58,6 +60,7 @@ function kickoffFormFromKickoff(kickoff: any, project: any) {
     clientAccessConfirmed: Boolean(kickoff?.clientAccessConfirmed),
     initialTasksCreated: Boolean(kickoff?.initialTasksCreated),
     initialWorkOrdersCreated: Boolean(kickoff?.initialWorkOrdersCreated),
+    designGuidance: loadDesignGuidance(project?.id),
   };
 }
 
@@ -83,7 +86,9 @@ export function KickoffStep({ ctx }: { ctx: OrchestratorWizardContextValue }) {
     setError("");
     setSaved(false);
     try {
-      await updateDevFlowProjectKickoff(projectId, form);
+      saveDesignGuidance(projectId, form.designGuidance);
+      const { designGuidance, ...kickoffPayload } = form;
+      await updateDevFlowProjectKickoff(projectId, kickoffPayload);
       setSaved(true);
       await refresh();
     } catch (err) {
@@ -132,6 +137,7 @@ export function KickoffStep({ ctx }: { ctx: OrchestratorWizardContextValue }) {
         companyName: project?.companyName || "",
         brief: project.brief,
         stackKey: project?.stackKey || "nextjs-nestjs-supabase",
+        designGuidance: form.designGuidance,
       });
       setValue("scopeSummary", result.enhancedBrief);
       setValue("milestones", result.suggestedFeatures.map((f: string) => `- ${f}`).join("\n"));
@@ -171,7 +177,7 @@ export function KickoffStep({ ctx }: { ctx: OrchestratorWizardContextValue }) {
               Define scope, milestones, and confirm readiness. {completed} of {CHECKLIST_FIELDS.length} checks complete.
             </p>
           </div>
-          <Badge tone={ready ? "green" : "yellow"}>
+          <Badge tone={ready ? "green" : "amber"}>
             {ready ? "Ready" : kickoff?.status || "Draft"}
           </Badge>
         </div>
@@ -192,7 +198,7 @@ export function KickoffStep({ ctx }: { ctx: OrchestratorWizardContextValue }) {
 
       {/* Auto-analyze card */}
       <div className="wizard-step-section">
-        <div className="auto-analyze-card" style={{ padding: 16 }}>
+        <div className="auto-analyze-card compact">
           <div className="auto-analyze-header">
             <IconSparkles size={18} />
             <h3>Auto-generate kickoff content</h3>
@@ -207,14 +213,31 @@ export function KickoffStep({ ctx }: { ctx: OrchestratorWizardContextValue }) {
               <><IconSparkles size={14} /> Auto-generate from brief</>
             )}
           </Button>
+          {analyzing && (
+            <div className="auto-analyze-skeleton" aria-label="Generating kickoff content">
+              <span className="skeleton auto-analyze-skeleton-line is-wide" />
+              <span className="skeleton auto-analyze-skeleton-line" />
+              <span className="skeleton auto-analyze-skeleton-line is-short" />
+            </div>
+          )}
         </div>
       </div>
 
       <div className="wizard-step-section">
-        <h4 style={{ margin: "0 0 10px", fontSize: "0.8125rem", fontWeight: 700, color: "var(--text-2)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+        <h4 className="wizard-section-label">
+          Design Direction
+        </h4>
+        <DesignGuidancePanel
+          value={form.designGuidance}
+          onChange={(next) => setValue("designGuidance", next)}
+        />
+      </div>
+
+      <div className="wizard-step-section">
+        <h4 className="wizard-section-label">
           Project Details
         </h4>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14 }}>
+        <div className="wizard-field-grid">
           {TEXT_FIELDS.map((field) => (
             <Field key={field.key} label={field.label}>
               <Textarea
@@ -228,7 +251,7 @@ export function KickoffStep({ ctx }: { ctx: OrchestratorWizardContextValue }) {
       </div>
 
       <div className="wizard-step-section">
-        <h4 style={{ margin: "0 0 10px", fontSize: "0.8125rem", fontWeight: 700, color: "var(--text-2)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+        <h4 className="wizard-section-label">
           Readiness Checklist
         </h4>
         <div className="wizard-checklist">
@@ -243,7 +266,7 @@ export function KickoffStep({ ctx }: { ctx: OrchestratorWizardContextValue }) {
               </span>
               <span className="wizard-checklist-label">
                 <strong>{item.label}</strong>
-                <span style={{ display: "block", fontSize: "0.75rem", color: "var(--text-3)", marginTop: 2 }}>
+                <span className="wizard-checklist-desc">
                   {item.desc}
                 </span>
               </span>
@@ -252,7 +275,7 @@ export function KickoffStep({ ctx }: { ctx: OrchestratorWizardContextValue }) {
         </div>
       </div>
 
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 16 }}>
+      <div className="wizard-action-row">
         <Button variant="primary" size="sm" onClick={saveKickoff} disabled={saving}>
           <IconCheckCircle size={14} />
           {saving ? "Saving…" : "Save kickoff"}
