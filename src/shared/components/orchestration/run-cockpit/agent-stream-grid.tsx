@@ -1,7 +1,26 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
-import { useOrchestrationStore, type NodeRuntime, type AgentStreamState, type StreamChunk } from "@/shared/store/orchestration-store";
+import {
+  AGENT_STATE_META,
+  ORCHESTRATION_AGENT_DEFINITIONS,
+  buildTranscriptEntries,
+  filterChunksByMode,
+  filterTranscriptEntriesByMode,
+  filterTranscriptEntriesByScope,
+  formatChunksForClipboard,
+  formatCompactCount,
+  formatStreamAge,
+  formatTranscriptForClipboard,
+  resolveAgentState,
+  type AgentSnapshot,
+  type AgentState,
+  type AgentStreamDefinition,
+  type StreamViewMode,
+  type TranscriptScope,
+} from "@/features/orchestration/model/agent-stream";
+import { useAgentStreamGridViewModel, useAgentStreamSnapshots, useNow } from "@/features/orchestration/view-model/use-agent-stream-view-model";
+import { type AgentStreamState, type NodeRuntime, type StreamChunk } from "@/shared/store/orchestration-store";
 import {
   IconFileText,
   IconShield,
@@ -25,16 +44,8 @@ import {
  * test pins — so the store data maps straight onto each panel.
  */
 
-interface AgentDef {
-  nodeId: string;
-  label: string;
-  role: string;
-  color: string;
-  icon: ReactNode;
-}
-
 interface AgentPanelProps {
-  agent: AgentDef;
+  agent: AgentStreamDefinition;
   runtime: NodeRuntime | undefined;
   stream: AgentStreamState | undefined;
   currentNode: string;
@@ -63,78 +74,23 @@ interface AgentRunTranscriptProps {
   streamOnline?: boolean;
 }
 
-const AGENTS: AgentDef[] = [
-  { nodeId: "parse_requirements", label: "Requirements", role: "Parser", color: "#4F8BFF", icon: <IconFileText size={15} /> },
-  { nodeId: "negotiate_contract", label: "Contract", role: "Architect", color: "#A78BFA", icon: <IconShield size={15} /> },
-  { nodeId: "architecture_agent", label: "Architecture", role: "System design", color: "#6366F1", icon: <IconWorkflow size={15} /> },
-  { nodeId: "frontend_agent", label: "Frontend", role: "UI engineer", color: "#F97316", icon: <IconCode size={15} /> },
-  { nodeId: "backend_agent", label: "Backend", role: "API engineer", color: "#10B981", icon: <IconCpu size={15} /> },
-  { nodeId: "database_agent", label: "Database", role: "Schema engineer", color: "#14B8A6", icon: <IconDatabase size={15} /> },
-  { nodeId: "self_critique", label: "Self-Review", role: "Quality check", color: "#E879F9", icon: <IconCheckCircle size={15} /> },
-  { nodeId: "validate_outputs", label: "Validation", role: "Reviewer", color: "#FBBF24", icon: <IconCheckCircle size={15} /> },
-  { nodeId: "commit_to_github", label: "GitHub", role: "Delivery", color: "#34D399", icon: <IconGitBranch size={15} /> },
-];
-
-type AgentState = "idle" | "running" | "done" | "error";
-type StreamViewMode = "all" | "tokens" | "events";
-type TranscriptScope = "all" | "selected";
-
 const EMPTY_STREAM_CHUNKS: StreamChunk[] = [];
 
-interface AgentSnapshot {
-  agent: AgentDef;
-  index: number;
-  runtime: NodeRuntime | undefined;
-  stream: AgentStreamState | undefined;
-  state: AgentState;
-  tokenChunks: number;
-  streamedChars: number;
-  lastToken: StreamChunk | undefined;
-  lastChunk: StreamChunk | undefined;
-}
-
-interface TranscriptEntry {
-  id: string;
-  agent: AgentDef;
-  type: StreamChunk["type"];
-  text: string;
-  timestamp: number;
-}
-
-function resolveState(runtime: NodeRuntime | undefined, stream: AgentStreamState | undefined, currentNode: string): AgentState {
-  const phase = runtime?.phase;
-  if (phase === "error" || stream?.chunks.at(-1)?.type === "error") return "error";
-  if (phase === "running" || phase === "entering" || currentNode === runtime?.nodeId) return "running";
-  if (phase === "exiting" || (stream?.buffer.length ?? 0) > 0) return "done";
-  return "idle";
-}
-
-const STATE_META: Record<AgentState, { label: string; tone: string }> = {
-  idle: { label: "Waiting", tone: "#64748B" },
-  running: { label: "Streaming", tone: "#4F8BFF" },
-  done: { label: "Done", tone: "#34D399" },
-  error: { label: "Failed", tone: "#EF4444" },
-};
-
 export function AgentStreamGrid({ selectedNodeId = null, onSelectAgent, streamOnline = true }: AgentStreamGridProps) {
-  const agentStreams = useOrchestrationStore((s) => s.agentStreams);
-  const nodeStates = useOrchestrationStore((s) => s.nodeStates);
-  const orchestrationState = useOrchestrationStore((s) => s.orchestrationState);
-  const currentNode = orchestrationState?.currentNode ?? "";
-  const retryCount = orchestrationState?.retryCount ?? 0;
+  const vm = useAgentStreamGridViewModel();
 
   return (
     <div className="cockpit-grid">
-      {AGENTS.map((agent, i) => (
+      {vm.snapshots.map((snapshot) => (
         <AgentPanel
-          key={agent.nodeId}
-          agent={agent}
-          runtime={nodeStates[agent.nodeId]}
-          stream={agentStreams[agent.nodeId]}
-          currentNode={currentNode}
-          index={i}
-          retryCount={retryCount}
-          selected={selectedNodeId === agent.nodeId}
+          key={snapshot.agent.nodeId}
+          agent={snapshot.agent}
+          runtime={snapshot.runtime}
+          stream={snapshot.stream}
+          currentNode={vm.currentNode}
+          index={snapshot.index}
+          retryCount={vm.retryCount}
+          selected={selectedNodeId === snapshot.agent.nodeId}
           onSelect={(nodeId) => onSelectAgent?.(nodeId)}
           streamOnline={streamOnline}
         />
@@ -154,8 +110,8 @@ function AgentPanel({
   onSelect,
   streamOnline,
 }: AgentPanelProps) {
-  const state = resolveState(runtime, stream, currentNode);
-  const meta = STATE_META[state];
+  const state = resolveAgentState(runtime, stream, currentNode);
+  const meta = AGENT_STATE_META[state];
   const t = runtime?.telemetry;
   const tokenChunks = useMemo(
     () => (stream?.chunks ?? []).filter((c) => c.type === "token"),
@@ -192,7 +148,7 @@ function AgentPanel({
     >
       <header className="agent-panel-head">
         <span className="agent-panel-icon" style={{ background: `${agent.color}1f`, color: agent.color }}>
-          {agent.icon}
+          {agentIcon(agent.nodeId, 15)}
         </span>
         <div style={{ minWidth: 0, flex: 1 }}>
           <div className="agent-panel-name">
@@ -306,131 +262,8 @@ function StreamConsole({
   );
 }
 
-function filterChunksByMode(chunks: StreamChunk[], mode: StreamViewMode): StreamChunk[] {
-  if (mode === "tokens") return chunks.filter((chunk) => chunk.type === "token");
-  if (mode === "events") return chunks.filter((chunk) => chunk.type !== "token");
-  return chunks;
-}
-
-function formatChunksForClipboard(chunks: StreamChunk[], mode: StreamViewMode): string {
-  if (chunks.length === 0) return "";
-  if (mode === "tokens") {
-    return chunks.map((chunk) => chunk.chunk).join("");
-  }
-  if (mode === "events") {
-    return chunks.map(formatEventLine).join("\n");
-  }
-
-  return chunks
-    .map((chunk) => (chunk.type === "token" ? chunk.chunk : `\n${formatEventLine(chunk)}\n`))
-    .join("")
-    .trim();
-}
-
-function formatEventLine(chunk: StreamChunk): string {
-  const label = chunk.type === "tool-call" ? "tool" : chunk.type;
-  return `[${label}] ${chunk.chunk}`;
-}
-
-function buildTranscriptEntries(snapshots: AgentSnapshot[]): TranscriptEntry[] {
-  const ordered = snapshots
-    .flatMap((snapshot) =>
-      (snapshot.stream?.chunks ?? []).map((chunk, index) => ({
-        agent: snapshot.agent,
-        agentIndex: snapshot.index,
-        chunk,
-        index,
-      })),
-    )
-    .sort((a, b) => a.chunk.timestamp - b.chunk.timestamp || a.agentIndex - b.agentIndex || a.index - b.index);
-
-  const entries: TranscriptEntry[] = [];
-  for (const item of ordered) {
-    const previous = entries.at(-1);
-    if (item.chunk.type === "token" && previous?.type === "token" && previous.agent.nodeId === item.agent.nodeId) {
-      previous.text += item.chunk.chunk;
-      previous.timestamp = item.chunk.timestamp;
-      continue;
-    }
-
-    entries.push({
-      id: `${item.agent.nodeId}-${item.chunk.timestamp}-${item.index}-${entries.length}`,
-      agent: item.agent,
-      type: item.chunk.type,
-      text: item.chunk.chunk,
-      timestamp: item.chunk.timestamp,
-    });
-  }
-
-  return entries;
-}
-
-function formatTranscriptForClipboard(entries: TranscriptEntry[]): string {
-  return entries
-    .map((entry) => {
-      const label = entry.type === "tool-call" ? "tool" : entry.type;
-      return `[${entry.agent.label} · ${label}] ${entry.text}`;
-    })
-    .join("\n");
-}
-
-function filterTranscriptEntriesByMode(entries: TranscriptEntry[], mode: StreamViewMode): TranscriptEntry[] {
-  if (mode === "tokens") return entries.filter((entry) => entry.type === "token");
-  if (mode === "events") return entries.filter((entry) => entry.type !== "token");
-  return entries;
-}
-
-function filterTranscriptEntriesByScope(
-  entries: TranscriptEntry[],
-  selectedNodeId: string | null,
-  scope: TranscriptScope,
-): TranscriptEntry[] {
-  if (scope !== "selected" || !selectedNodeId) return entries;
-  return entries.filter((entry) => entry.agent.nodeId === selectedNodeId);
-}
-
-function useAgentSnapshots() {
-  const agentStreams = useOrchestrationStore((s) => s.agentStreams);
-  const nodeStates = useOrchestrationStore((s) => s.nodeStates);
-  const orchestrationState = useOrchestrationStore((s) => s.orchestrationState);
-  const currentNode = orchestrationState?.currentNode ?? "";
-
-  return useMemo<AgentSnapshot[]>(
-    () =>
-      AGENTS.map((agent, index) => {
-        const runtime = nodeStates[agent.nodeId];
-        const stream = agentStreams[agent.nodeId];
-        const chunks = stream?.chunks ?? [];
-        const tokenChunkList = chunks.filter((chunk) => chunk.type === "token");
-        return {
-          agent,
-          index,
-          runtime,
-          stream,
-          state: resolveState(runtime, stream, currentNode),
-          tokenChunks: tokenChunkList.length,
-          streamedChars: stream?.buffer.length ?? 0,
-          lastToken: tokenChunkList.at(-1),
-          lastChunk: chunks.at(-1),
-        };
-      }),
-    [agentStreams, currentNode, nodeStates],
-  );
-}
-
-function useNow(intervalMs = 1000) {
-  const [now, setNow] = useState(() => Date.now());
-
-  useEffect(() => {
-    const id = window.setInterval(() => setNow(Date.now()), intervalMs);
-    return () => window.clearInterval(id);
-  }, [intervalMs]);
-
-  return now;
-}
-
 export function AgentStreamPulse() {
-  const snapshots = useAgentSnapshots();
+  const snapshots = useAgentStreamSnapshots();
   const now = useNow();
   const latestToken = snapshots
     .flatMap((item) => (item.lastToken ? [{ agent: item.agent, chunk: item.lastToken }] : []))
@@ -447,7 +280,7 @@ export function AgentStreamPulse() {
   const label = latest
     ? `${isToken ? "Latest token" : "Latest event"} · ${latest.agent.label}`
     : "Waiting for stream";
-  const age = ageMs == null ? "No chunks yet" : formatAge(ageMs);
+  const age = ageMs == null ? "No chunks yet" : formatStreamAge(ageMs);
 
   return (
     <span
@@ -465,7 +298,7 @@ export function AgentStreamPulse() {
 }
 
 export function AgentLiveHandoff() {
-  const snapshots = useAgentSnapshots();
+  const snapshots = useAgentStreamSnapshots();
   const active = snapshots.find((item) => item.state === "running") ?? null;
   const next = active
     ? snapshots.slice(active.index + 1).find((item) => item.state === "idle")
@@ -487,7 +320,7 @@ export function AgentLiveHandoff() {
   const focusBody = active
     ? active.runtime?.progressLabel ?? "Streaming model output into the run."
     : lastEvent?.chunk.chunk ?? "Start or resume the run to watch each specialist hand work forward.";
-  const nextLabel = next?.agent.label ?? (completed === AGENTS.length ? "Delivery complete" : "Gate or review");
+  const nextLabel = next?.agent.label ?? (completed === ORCHESTRATION_AGENT_DEFINITIONS.length ? "Delivery complete" : "Gate or review");
 
   return (
     <section className="agent-handoff-strip reveal" aria-label="Live orchestration handoff">
@@ -502,7 +335,7 @@ export function AgentLiveHandoff() {
         </div>
       </div>
       <div className="agent-handoff-metrics" aria-label="Live stream metrics">
-        <HandoffMetric label="done" value={`${completed}/${AGENTS.length}`} />
+        <HandoffMetric label="done" value={`${completed}/${ORCHESTRATION_AGENT_DEFINITIONS.length}`} />
         <HandoffMetric label="chunks" value={totalTokenChunks > 0 ? fmtTok(totalTokenChunks) : "—"} />
         <HandoffMetric label="chars" value={totalStreamedChars > 0 ? fmtTok(totalStreamedChars) : "—"} />
         <HandoffMetric label="next" value={nextLabel} wide />
@@ -516,7 +349,7 @@ export function AgentRunTranscript({
   onSelectAgent,
   streamOnline = true,
 }: AgentRunTranscriptProps) {
-  const snapshots = useAgentSnapshots();
+  const snapshots = useAgentStreamSnapshots();
   const [copied, setCopied] = useState(false);
   const [followTranscript, setFollowTranscript] = useState(true);
   const [transcriptViewMode, setTranscriptViewMode] = useState<StreamViewMode>("all");
@@ -706,7 +539,7 @@ export function AgentOutputInspector({
   onSelectedNodeIdChange,
   streamOnline = true,
 }: AgentOutputInspectorProps = {}) {
-  const snapshots = useAgentSnapshots();
+  const snapshots = useAgentStreamSnapshots();
   const [localSelectedNodeId, setLocalSelectedNodeId] = useState<string | null>(null);
   const [followLive, setFollowLive] = useState(true);
   const [streamViewMode, setStreamViewMode] = useState<StreamViewMode>("all");
@@ -723,7 +556,7 @@ export function AgentOutputInspector({
     active ??
     firstWithOutput ??
     snapshots[0];
-  const meta = STATE_META[selected.state];
+  const meta = AGENT_STATE_META[selected.state];
   const chunks = selected.stream?.chunks ?? EMPTY_STREAM_CHUNKS;
   const visibleChunks = useMemo(() => filterChunksByMode(chunks, streamViewMode), [chunks, streamViewMode]);
   const visibleOutput = useMemo(
@@ -788,7 +621,7 @@ export function AgentOutputInspector({
           <span className="agent-inspector-kicker">Focused stream</span>
           <div className="agent-inspector-title-row">
             <span className="agent-inspector-icon" style={{ background: `${selected.agent.color}1f`, color: selected.agent.color }}>
-              {selected.agent.icon}
+              {agentIcon(selected.agent.nodeId, 15)}
             </span>
             <div>
               <h3 className="agent-inspector-title">{selected.agent.label}</h3>
@@ -856,7 +689,7 @@ export function AgentOutputInspector({
       <div className="agent-inspector-tabs" role="tablist" aria-label="Choose agent output stream">
         {snapshots.map((item) => {
           const isSelected = item.agent.nodeId === selected.agent.nodeId;
-          const itemMeta = STATE_META[item.state];
+          const itemMeta = AGENT_STATE_META[item.state];
           return (
             <button
               key={item.agent.nodeId}
@@ -922,14 +755,29 @@ function HandoffMetric({ label, value, wide = false }: { label: string; value: s
 }
 
 function fmtTok(n: number | undefined): string {
-  if (n == null) return "—";
-  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
-  return String(n);
+  const formatted = formatCompactCount(n);
+  return formatted === "-" ? "—" : formatted;
 }
 
-function formatAge(ageMs: number): string {
-  if (ageMs < 1500) return "just now";
-  if (ageMs < 60_000) return `${Math.floor(ageMs / 1000)}s ago`;
-  if (ageMs < 3_600_000) return `${Math.floor(ageMs / 60_000)}m ago`;
-  return `${Math.floor(ageMs / 3_600_000)}h ago`;
+function agentIcon(nodeId: string, size: number): ReactNode {
+  switch (nodeId) {
+    case "parse_requirements":
+      return <IconFileText size={size} />;
+    case "negotiate_contract":
+      return <IconShield size={size} />;
+    case "architecture_agent":
+      return <IconWorkflow size={size} />;
+    case "frontend_agent":
+      return <IconCode size={size} />;
+    case "backend_agent":
+      return <IconCpu size={size} />;
+    case "database_agent":
+      return <IconDatabase size={size} />;
+    case "commit_to_github":
+      return <IconGitBranch size={size} />;
+    case "self_critique":
+    case "validate_outputs":
+    default:
+      return <IconCheckCircle size={size} />;
+  }
 }

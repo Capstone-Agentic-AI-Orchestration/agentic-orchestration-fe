@@ -1,12 +1,13 @@
-// @ts-nocheck
 "use client";
 
-import { useState } from "react";
 import {
-  addDevFlowProjectMember,
-  removeDevFlowProjectMember,
-  searchDevFlowProfiles,
-} from "@/shared/api/devflow-api";
+  avatarInitial,
+  canRemoveMember,
+  memberDisplayName,
+  memberRoleTone,
+  profileDisplayName,
+  useTeamStepViewModel,
+} from "@/features/orchestration";
 import { Button, Field, Input, Badge } from "@/shared/components/ui";
 import {
   IconUsers,
@@ -21,53 +22,7 @@ import { OrchestratorStepNav } from "@/shared/components/orchestrator-wizard/orc
 import type { OrchestratorWizardContextValue } from "@/shared/components/orchestrator-wizard/orchestrator-wizard-layout";
 
 export function TeamStep({ ctx }: { ctx: OrchestratorWizardContextValue }) {
-  const { project, projectId, refresh } = ctx;
-  const members = project?.members ?? [];
-  const [query, setQuery] = useState("");
-  const [searching, setSearching] = useState(false);
-  const [results, setResults] = useState<any[]>([]);
-  const [selectedRole, setSelectedRole] = useState("DEV");
-  const [error, setError] = useState("");
-  const [adding, setAdding] = useState(false);
-
-  const handleSearch = async () => {
-    if (!query.trim()) return;
-    setSearching(true);
-    setError("");
-    try {
-      const profiles = await searchDevFlowProfiles({ q: query.trim() });
-      setResults(profiles);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setSearching(false);
-    }
-  };
-
-  const handleAdd = async (userId: string) => {
-    setAdding(true);
-    setError("");
-    try {
-      await addDevFlowProjectMember(projectId, { userId, role: selectedRole });
-      setResults((prev) => prev.filter((p) => p.userId !== userId));
-      await refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setAdding(false);
-    }
-  };
-
-  const handleRemove = async (userId: string) => {
-    try {
-      await removeDevFlowProjectMember(projectId, userId);
-      await refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    }
-  };
-
-  const memberIds = new Set(members.map((m: any) => m.userId));
+  const vm = useTeamStepViewModel(ctx);
 
   return (
     <div>
@@ -81,25 +36,25 @@ export function TeamStep({ ctx }: { ctx: OrchestratorWizardContextValue }) {
         </p>
       </div>
 
-      {error && (
+      {vm.error && (
         <div className="wizard-info-banner warning">
           <IconAlertTriangle size={16} />
-          <span>{error}</span>
+          <span>{vm.error}</span>
         </div>
       )}
 
       <div className="wizard-step-section">
         <h4 style={{ margin: "0 0 10px", fontSize: "0.8125rem", fontWeight: 700, color: "var(--text-2)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-          Current Members ({members.length})
+          Current Members ({vm.memberCount})
         </h4>
-        {members.length === 0 ? (
+        {!vm.hasMembers ? (
           <div className="wizard-info-banner info">
             <IconUser size={16} />
             <span>No members assigned yet. Search and add team members below.</span>
           </div>
         ) : (
           <div style={{ display: "grid", gap: 8 }}>
-            {members.map((member: any) => (
+            {vm.members.map((member) => (
               <div
                 key={member.userId}
                 style={{
@@ -114,11 +69,11 @@ export function TeamStep({ ctx }: { ctx: OrchestratorWizardContextValue }) {
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <div className="avatar" style={{ width: 32, height: 32 }}>
-                    {member.profile?.fullName?.[0]?.toUpperCase() ?? <IconUser size={16} />}
+                    {avatarInitial(member.profile?.fullName) || <IconUser size={16} />}
                   </div>
                   <div>
                     <div style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--text)" }}>
-                      {member.profile?.fullName ?? member.profile?.email ?? "Unknown"}
+                      {memberDisplayName(member)}
                     </div>
                     <div style={{ fontSize: "0.75rem", color: "var(--text-3)" }}>
                       {member.profile?.email}
@@ -126,13 +81,13 @@ export function TeamStep({ ctx }: { ctx: OrchestratorWizardContextValue }) {
                   </div>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <Badge tone={member.role === "DEV" ? "blue" : member.role === "PM" ? "purple" : "gray"}>
+                  <Badge tone={memberRoleTone(member.role)}>
                     {member.role}
                   </Badge>
-                  {member.role !== "PM" && (
+                  {canRemoveMember(member) && (
                     <button
                       type="button"
-                      onClick={() => handleRemove(member.userId)}
+                      onClick={() => vm.actions.remove(member.userId)}
                       style={{
                         background: "none",
                         border: "none",
@@ -157,36 +112,36 @@ export function TeamStep({ ctx }: { ctx: OrchestratorWizardContextValue }) {
           Add Member
         </h4>
         <div style={{ display: "flex", gap: 8, alignItems: "flex-end", flexWrap: "wrap" }}>
-          <Field label="Search by name or email" style={{ flex: 1, minWidth: 200 }}>
-            <Input
-              value={query}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)}
-              onKeyDown={(e: React.KeyboardEvent) => e.key === "Enter" && handleSearch()}
-              placeholder="e.g. dev@example.com"
-            />
-          </Field>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <Field label="Search by name or email">
+              <Input
+                value={vm.query}
+                onChange={vm.actions.onQueryChange}
+                onKeyDown={vm.actions.onSearchKeyDown}
+                placeholder="e.g. dev@example.com"
+              />
+            </Field>
+          </div>
           <Field label="Role">
             <select
               className="select"
-              value={selectedRole}
-              onChange={(e) => setSelectedRole(e.target.value)}
+              value={vm.selectedRole}
+              onChange={vm.actions.onRoleChange}
               style={{ width: "auto" }}
             >
               <option value="DEV">Developer</option>
               <option value="CLIENT">Client</option>
             </select>
           </Field>
-          <Button variant="primary" size="sm" onClick={handleSearch} disabled={searching || !query.trim()}>
+          <Button variant="primary" size="sm" onClick={vm.actions.search} disabled={vm.searching || !vm.canSearch}>
             <IconSearch size={14} />
-            {searching ? "Searching…" : "Search"}
+            {vm.searching ? "Searching…" : "Search"}
           </Button>
         </div>
 
-        {results.length > 0 && (
+        {vm.visibleResults.length > 0 && (
           <div style={{ display: "grid", gap: 8, marginTop: 14 }}>
-            {results
-              .filter((p) => !memberIds.has(p.userId))
-              .map((profile) => (
+            {vm.visibleResults.map((profile) => (
                 <div
                   key={profile.userId}
                   style={{
@@ -201,11 +156,11 @@ export function TeamStep({ ctx }: { ctx: OrchestratorWizardContextValue }) {
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                     <div className="avatar" style={{ width: 28, height: 28 }}>
-                      {profile.fullName?.[0]?.toUpperCase() ?? <IconUser size={14} />}
+                      {avatarInitial(profile.fullName) || <IconUser size={14} />}
                     </div>
                     <div>
                       <div style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--text)" }}>
-                        {profile.fullName ?? "Unknown"}
+                        {profileDisplayName(profile)}
                       </div>
                       <div style={{ fontSize: "0.75rem", color: "var(--text-3)" }}>{profile.email}</div>
                     </div>
@@ -213,11 +168,11 @@ export function TeamStep({ ctx }: { ctx: OrchestratorWizardContextValue }) {
                   <Button
                     variant="secondary"
                     size="sm"
-                    onClick={() => handleAdd(profile.userId)}
-                    disabled={adding}
+                    onClick={() => vm.actions.add(profile.userId)}
+                    disabled={vm.adding}
                   >
                     <IconPlus size={14} />
-                    Add as {selectedRole}
+                    Add as {vm.selectedRole}
                   </Button>
                 </div>
               ))}
@@ -226,7 +181,7 @@ export function TeamStep({ ctx }: { ctx: OrchestratorWizardContextValue }) {
       </div>
 
       <OrchestratorStepNav
-        projectId={projectId}
+        projectId={vm.projectId}
         currentStep="team"
         nextDisabled={false}
       />

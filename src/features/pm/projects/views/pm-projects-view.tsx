@@ -38,6 +38,16 @@ import {
   getStageProgress,
   type LifecycleStageId,
 } from "@/shared/components/project-lifecycle/project-lifecycle-indicator";
+import {
+  buildPmProjectStats,
+  filterPmProjects,
+  pmAttentionProjects,
+  pmProjectAttentionMeta,
+  pmProjectFilterCount,
+  pmProjectNeedsAttention,
+  pmProjectNextAction,
+  pmProjectOrchestrateRoute,
+} from "../model/pm-projects-list";
 
 const FILTERS = [
   { id: "all", label: "All" },
@@ -61,47 +71,27 @@ const CREATE_PROJECT_STEPS = [
   { id: "review", label: "Review", hint: "Create and start" },
 ];
 
-const ATTENTION_STATUSES = new Set(["AWAITING_GATE_1", "AWAITING_GATE_2", "FAILED"]);
-
 function isAttention(project) {
-  return ATTENTION_STATUSES.has(project.status);
+  return pmProjectNeedsAttention(project);
 }
 
 /** Deep-link straight to the right wizard step (the index route auto-resolves the rest). */
 function orchestrateRoute(project): string {
-  const id = project.id;
-  switch (project.status) {
-    case "AWAITING_GATE_1": return `/pm/orchestrate/${id}/gate-1`;
-    case "AWAITING_GATE_2": return `/pm/orchestrate/${id}/gate-2`;
-    case "FAILED":
-    case "PARSING_REQUIREMENTS":
-    case "NEGOTIATING_CONTRACT":
-    case "GENERATING_CODE":
-    case "COMMITTING": return `/pm/orchestrate/${id}/run`;
-    case "DELIVERED": return `/pm/orchestrate/${id}/delivery`;
-    default: return `/pm/orchestrate/${id}`;
-  }
+  return pmProjectOrchestrateRoute(project);
 }
 
 function attentionMeta(project) {
-  switch (project.status) {
-    case "AWAITING_GATE_1":
-      return { label: "Plan review - architecture", cta: "Review plan", tone: "amber", icon: <IconShield size={15} />, color: "#FBBF24" };
-    case "AWAITING_GATE_2":
-      return { label: "Build review - code", cta: "Review build", tone: "purple", icon: <IconCode size={15} />, color: "#A78BFA" };
-    default:
-      return { label: "Run blocked", cta: "Resume run", tone: "red", icon: <IconAlertTriangle size={15} />, color: "#FCA5A5" };
-  }
+  const meta = pmProjectAttentionMeta(project);
+  const icons = {
+    shield: <IconShield size={15} />,
+    code: <IconCode size={15} />,
+    alert: <IconAlertTriangle size={15} />,
+  };
+  return { ...meta, icon: icons[meta.icon] };
 }
 
 function nextAction(stageId: LifecycleStageId, project): string {
-  if (project.status === "AWAITING_GATE_1") return "Review the plan";
-  if (project.status === "AWAITING_GATE_2") return "Review the build";
-  if (project.status === "FAILED") return "Resume run";
-  if (project.status === "GENERATING_CODE") return "Monitor build";
-  if (project.status === "PARSING_REQUIREMENTS" || project.status === "NEGOTIATING_CONTRACT") return "Monitor run";
-  const stage = LIFECYCLE_STAGES.find((s) => s.id === stageId);
-  return stage?.nextAction ?? "Continue";
+  return pmProjectNextAction(stageId, project);
 }
 
 export function PMProjectsView() {
@@ -140,49 +130,16 @@ export function PMProjectsView() {
   };
 
   const projects = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    const filtered = backendProjects.filter((project) => {
-      const stage = mapProjectStatusToLifecycleStage(project.status, project.kickoffStatus);
-      const matchesFilter =
-        filter === "all" ? true :
-        filter === "attention" ? isAttention(project) :
-        filter === "active" ? stage !== "delivered" && project.status !== "FAILED" :
-        filter === "delivered" ? stage === "delivered" :
-        filter === "archived" ? project.status === "FAILED" :
-        true;
-      const matchesSearch =
-        !query ||
-        project.companyName.toLowerCase().includes(query) ||
-        project.id.toLowerCase().includes(query);
-      return matchesFilter && matchesSearch;
-    });
-    return filtered.sort((a, b) => {
-      if (sort === "started") return Date.parse(b.createdAt) - Date.parse(a.createdAt);
-      return Date.parse(b.updatedAt || b.createdAt) - Date.parse(a.updatedAt || a.createdAt);
-    });
+    return filterPmProjects({ projects: backendProjects, filter, search, sort });
   }, [backendProjects, filter, search, sort]);
 
   const attentionProjects = useMemo(
-    () => backendProjects.filter(isAttention).sort((a, b) => Date.parse(b.updatedAt || b.createdAt) - Date.parse(a.updatedAt || a.createdAt)),
+    () => pmAttentionProjects(backendProjects),
     [backendProjects],
   );
   const projectStats = useMemo(() => {
-    const active = backendProjects.filter((project) => {
-      const stage = mapProjectStatusToLifecycleStage(project.status, project.kickoffStatus);
-      return stage !== "delivered" && project.status !== "FAILED";
-    }).length;
-    const delivered = backendProjects.filter((project) => mapProjectStatusToLifecycleStage(project.status, project.kickoffStatus) === "delivered").length;
-    const activeBuilds = backendProjects.filter((project) =>
-      ["PARSING_REQUIREMENTS", "NEGOTIATING_CONTRACT", "GENERATING_CODE", "COMMITTING"].includes(project.status),
-    ).length;
-    return {
-      total: backendProjects.length,
-      waiting: attentionProjects.length,
-      active,
-      activeBuilds,
-      delivered,
-    };
-  }, [attentionProjects.length, backendProjects]);
+    return buildPmProjectStats(backendProjects);
+  }, [backendProjects]);
 
   const openProject = (id: string) => router.push(`/pm/project/${id}`);
   const hasNoProjects = !loadingBackend && !apiError && backendProjects.length === 0;
@@ -219,11 +176,7 @@ export function PMProjectsView() {
               <div className="pm-filter-row">
               {FILTERS.map((item) => {
                 const count =
-                  item.id === "all" ? backendProjects.length :
-                  item.id === "attention" ? attentionProjects.length :
-                  item.id === "active" ? backendProjects.filter((p) => mapProjectStatusToLifecycleStage(p.status, p.kickoffStatus) !== "delivered" && p.status !== "FAILED").length :
-                  item.id === "delivered" ? backendProjects.filter((p) => mapProjectStatusToLifecycleStage(p.status, p.kickoffStatus) === "delivered").length :
-                  backendProjects.filter((p) => p.status === "FAILED").length;
+                  pmProjectFilterCount(backendProjects, item.id);
                 return (
                   <button
                     key={item.id}

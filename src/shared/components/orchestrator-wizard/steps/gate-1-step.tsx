@@ -1,9 +1,6 @@
-// @ts-nocheck
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { approveDevFlowGate1 } from "@/shared/api/devflow-api";
+import { useGate1StepViewModel } from "@/features/orchestration";
 import { Button, Badge, Textarea } from "@/shared/components/ui";
 import {
   IconClipboard,
@@ -16,35 +13,9 @@ import {
 import { OrchestratorStepNav } from "@/shared/components/orchestrator-wizard/orchestrator-stepper";
 import type { OrchestratorWizardContextValue } from "@/shared/components/orchestrator-wizard/orchestrator-wizard-layout";
 import { DesignGuidancePanel } from "@/shared/components/design/design-guidance-panel";
-import { loadDesignGuidance } from "@/shared/design-guidance";
 
 export function Gate1Step({ ctx }: { ctx: OrchestratorWizardContextValue }) {
-  const { project, projectId, status, refresh } = ctx;
-  const router = useRouter();
-  const [notes, setNotes] = useState("");
-  const [acting, setActing] = useState(false);
-  const [error, setError] = useState("");
-
-  const projectStatus = project?.status ?? status?.status;
-  const isAwaiting = projectStatus === "AWAITING_GATE_1";
-  const contract = project?.contract ?? status?.contract;
-  const designGuidance = loadDesignGuidance(projectId);
-
-  const handleApprove = async (approved: boolean) => {
-    setActing(true);
-    setError("");
-    try {
-      await approveDevFlowGate1(projectId, approved, notes.trim() || undefined);
-      await refresh();
-      if (approved) {
-        router.push(`/pm/orchestrate/${projectId}/run`);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setActing(false);
-    }
-  };
+  const vm = useGate1StepViewModel(ctx);
 
   return (
     <div>
@@ -59,20 +30,20 @@ export function Gate1Step({ ctx }: { ctx: OrchestratorWizardContextValue }) {
         </p>
       </div>
 
-      {!isAwaiting && (
+      {!vm.isAwaiting && (
         <div className="wizard-info-banner info">
           <IconAlertTriangle size={16} />
           <span>
-            This plan review is not currently awaiting approval (status: {projectStatus?.replace(/_/g, " ")}).
+            This plan review is not currently awaiting approval (status: {vm.projectStatusLabel}).
             You can still review the contract below.
           </span>
         </div>
       )}
 
-      {error && (
+      {vm.error && (
         <div className="wizard-info-banner warning">
           <IconAlertTriangle size={16} />
-          <span>{error}</span>
+          <span>{vm.error}</span>
         </div>
       )}
 
@@ -81,7 +52,7 @@ export function Gate1Step({ ctx }: { ctx: OrchestratorWizardContextValue }) {
           Frontend Design Contract
         </h4>
         <div className="wizard-review-panel">
-          <DesignGuidancePanel value={designGuidance} readOnly />
+          <DesignGuidancePanel value={vm.designGuidance} readOnly />
         </div>
       </div>
 
@@ -89,36 +60,36 @@ export function Gate1Step({ ctx }: { ctx: OrchestratorWizardContextValue }) {
         <h4 className="wizard-section-label">
           Project Contract
         </h4>
-        {contract ? (
+        {vm.contract ? (
           <div className="wizard-review-stack">
             <div className="wizard-review-panel">
               <div className="wizard-review-kicker">
                 Project Name
               </div>
               <div className="wizard-review-title">
-                {contract.projectName ?? project?.companyName}
+                {vm.contractTitle}
               </div>
               <div className="wizard-review-body">
-                {contract.description ?? project?.brief}
+                {vm.contractDescription}
               </div>
             </div>
 
-            {contract.requirements && (
+            {vm.hasRequirements && (
               <div className="wizard-review-panel">
                 <div className="wizard-review-kicker">
                   Requirements
                 </div>
                 <div className="wizard-metadata-grid">
-                  <div><span>Type</span><strong>{contract.requirements.projectType}</strong></div>
-                  <div><span>Complexity</span><strong>{contract.requirements.complexity}</strong></div>
-                  <div><span>Est. files</span><strong>{contract.requirements.estimatedFiles}</strong></div>
-                  <div><span>Stack</span><strong>{contract.requirements.techStack?.frontend} + {contract.requirements.techStack?.backend}</strong></div>
+                  <div><span>Type</span><strong>{vm.contract.requirements.projectType}</strong></div>
+                  <div><span>Complexity</span><strong>{vm.contract.requirements.complexity}</strong></div>
+                  <div><span>Est. files</span><strong>{vm.contract.requirements.estimatedFiles}</strong></div>
+                  <div><span>Stack</span><strong>{vm.contract.requirements.techStack?.frontend} + {vm.contract.requirements.techStack?.backend}</strong></div>
                 </div>
-                {contract.requirements.features?.length > 0 && (
+                {vm.features.length > 0 && (
                   <div className="wizard-feature-group">
                     <div className="wizard-review-kicker">Features</div>
                     <div className="wizard-feature-chips">
-                      {contract.requirements.features.map((f: string, i: number) => (
+                      {vm.features.map((f: string, i: number) => (
                         <span key={i} className="auto-analyze-feature-chip">{f}</span>
                       ))}
                     </div>
@@ -127,26 +98,26 @@ export function Gate1Step({ ctx }: { ctx: OrchestratorWizardContextValue }) {
               </div>
             )}
 
-            {contract.fileManifest?.length > 0 && (
+            {vm.fileManifest.length > 0 && (
               <div className="wizard-review-panel">
                 <div className="wizard-review-kicker">
-                  File Manifest ({contract.fileManifest.length} files)
+                  File Manifest ({vm.fileManifest.length} files)
                 </div>
                 <div className="wizard-file-manifest">
-                  {contract.fileManifest.map((path: string, i: number) => (
+                  {vm.fileManifest.map((path: string, i: number) => (
                     <div key={i} className="wizard-file-path">{path}</div>
                   ))}
                 </div>
               </div>
             )}
 
-            {contract.acceptanceCriteria?.length > 0 && (
+            {vm.acceptanceCriteria.length > 0 && (
               <div className="wizard-review-panel">
                 <div className="wizard-review-kicker">
                   Acceptance Criteria
                 </div>
                 <div className="wizard-check-row-list">
-                  {contract.acceptanceCriteria.map((c: string, i: number) => (
+                  {vm.acceptanceCriteria.map((c: string, i: number) => (
                     <div key={i} className="wizard-check-row">
                       <IconCheck size={14} />
                       <span>{c}</span>
@@ -164,23 +135,23 @@ export function Gate1Step({ ctx }: { ctx: OrchestratorWizardContextValue }) {
         )}
       </div>
 
-      {isAwaiting && (
+      {vm.isAwaiting && (
         <div className="wizard-step-section">
           <h4 className="wizard-section-label">
             Review Notes (optional)
           </h4>
           <Textarea
             rows={3}
-            value={notes}
-            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNotes(e.target.value)}
+            value={vm.notes}
+            onChange={vm.actions.onNotesChange}
             placeholder="Add any feedback or conditions for this plan approval…"
           />
           <div className="wizard-action-row">
-            <Button variant="primary" onClick={() => handleApprove(true)} disabled={acting}>
+            <Button variant="primary" onClick={() => vm.actions.approve(true)} disabled={vm.acting}>
               <IconCheck size={14} />
-              {acting ? "Approving…" : "Approve plan and start build"}
+              {vm.acting ? "Approving…" : "Approve plan and start build"}
             </Button>
-            <Button variant="danger" onClick={() => handleApprove(false)} disabled={acting}>
+            <Button variant="danger" onClick={() => vm.actions.approve(false)} disabled={vm.acting}>
               <IconClose size={14} />
               Reject
             </Button>
@@ -189,11 +160,11 @@ export function Gate1Step({ ctx }: { ctx: OrchestratorWizardContextValue }) {
       )}
 
       <OrchestratorStepNav
-        projectId={projectId}
+        projectId={vm.projectId}
         currentStep="gate-1"
         nextLabel="Continue to build review"
-        nextDisabled={!isAwaiting || acting}
-        onComplete={() => handleApprove(true)}
+        nextDisabled={vm.nextDisabled}
+        onComplete={() => vm.actions.approve(true)}
       />
     </div>
   );

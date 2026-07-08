@@ -1,86 +1,13 @@
-// @ts-nocheck
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import {
-  startDevFlowOrchestration,
-  rerunReadyDevFlowWorkOrders,
-} from "@/shared/api/devflow-api";
-import { loadDesignGuidance } from "@/shared/design-guidance";
+import { useRunStepViewModel } from "@/features/orchestration";
 import { IconRocket } from "@/shared/components/icons";
 import { OrchestrationRunCockpit } from "@/shared/components/orchestration/run-cockpit/orchestration-run-cockpit";
-import { useSocketSubscription } from "@/shared/hooks/use-socket-subscription";
 import { OrchestratorStepNav } from "@/shared/components/orchestrator-wizard/orchestrator-stepper";
 import type { OrchestratorWizardContextValue } from "@/shared/components/orchestrator-wizard/orchestrator-wizard-layout";
 
 export function RunStep({ ctx }: { ctx: OrchestratorWizardContextValue }) {
-  const { project, projectId, status, refresh } = ctx;
-  const router = useRouter();
-  const [starting, setStarting] = useState(false);
-  const [error, setError] = useState("");
-
-  const { resync } = useSocketSubscription({
-    projectId,
-    fallbackPollFn: async () => {
-      await refresh();
-      return status;
-    },
-  });
-
-  const projectStatus = project?.status ?? status?.status ?? "PENDING";
-  const isAwaitingGate1 = projectStatus === "AWAITING_GATE_1";
-  const isAwaitingGate2 = projectStatus === "AWAITING_GATE_2";
-  const isDelivered = projectStatus === "DELIVERED";
-
-  const handleStart = async () => {
-    setStarting(true);
-    setError("");
-    try {
-      await startDevFlowOrchestration(projectId, {
-        designGuidance: loadDesignGuidance(projectId),
-      });
-      await refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setStarting(false);
-    }
-  };
-
-  const handleRerun = async () => {
-    setStarting(true);
-    setError("");
-    try {
-      await rerunReadyDevFlowWorkOrders(projectId);
-      await refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setStarting(false);
-    }
-  };
-
-  const handleResync = async () => {
-    resync();
-    await refresh();
-  };
-
-  // When the run reaches an approval boundary, route to the focused gate screen.
-  useEffect(() => {
-    if (isAwaitingGate1) {
-      const timer = setTimeout(() => router.push(`/pm/orchestrate/${projectId}/gate-1`), 1800);
-      return () => clearTimeout(timer);
-    }
-    if (isAwaitingGate2) {
-      const timer = setTimeout(() => router.push(`/pm/orchestrate/${projectId}/gate-2`), 1800);
-      return () => clearTimeout(timer);
-    }
-    if (isDelivered) {
-      const timer = setTimeout(() => router.push(`/pm/orchestrate/${projectId}/delivery`), 1800);
-      return () => clearTimeout(timer);
-    }
-  }, [isAwaitingGate1, isAwaitingGate2, isDelivered, projectId, router]);
+  const vm = useRunStepViewModel(ctx);
 
   return (
     <div>
@@ -96,27 +23,23 @@ export function RunStep({ ctx }: { ctx: OrchestratorWizardContextValue }) {
       </div>
 
       <OrchestrationRunCockpit
-        projectId={projectId}
-        projectName={project?.companyName}
-        status={projectStatus}
-        onStart={handleStart}
-        onRerun={handleRerun}
-        onResync={handleResync}
-        starting={starting}
-        error={error}
+        projectId={vm.projectId}
+        projectName={vm.projectName}
+        status={vm.projectStatus}
+        onStart={vm.actions.start}
+        onRerun={vm.actions.rerun}
+        onResync={vm.actions.resync}
+        starting={vm.starting}
+        error={vm.error}
       />
 
       <OrchestratorStepNav
-        projectId={projectId}
+        projectId={vm.projectId}
         currentStep="run"
-        nextLabel={isAwaitingGate1 ? "Go to plan review" : isAwaitingGate2 ? "Go to build review" : isDelivered ? "Go to delivery" : "Continue"}
+        nextLabel={vm.nextLabel}
         isLastStep={false}
-        nextDisabled={!isAwaitingGate1 && !isAwaitingGate2 && !isDelivered}
-        onComplete={() => {
-          if (isAwaitingGate1) router.push(`/pm/orchestrate/${projectId}/gate-1`);
-          else if (isAwaitingGate2) router.push(`/pm/orchestrate/${projectId}/gate-2`);
-          else if (isDelivered) router.push(`/pm/orchestrate/${projectId}/delivery`);
-        }}
+        nextDisabled={vm.nextDisabled}
+        onComplete={vm.actions.complete}
       />
     </div>
   );

@@ -1,6 +1,6 @@
-import { DevOrchestratorView } from "@/features/dev/orchestrator/views/dev-orchestrator-view";
+import { DevOrchestratorWorkbench } from "@/features/orchestration";
 
 export default function DevOrchestratorPage() {
-  return <DevOrchestratorView />;
+  return <DevOrchestratorWorkbench />;
 }
 

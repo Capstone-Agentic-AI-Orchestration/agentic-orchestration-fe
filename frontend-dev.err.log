@@ -2,3 +2,510 @@
 (Use `node --trace-deprecation ...` to show where the warning was created)
 (node:26400) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
 (Use `node --trace-deprecation ...` to show where the warning was created)
+[browser] You have Reduced Motion enabled on your device. Animations may not appear as expected.. For more information and steps for solving, visit https://motion.dev/troubleshooting/reduced-motion-disabled (src/features/marketing/home/components/MagneticButton.tsx:26:35)
+⨯ ./src/features/pm/projects/views/pm-projects-view.tsx:33:1
+Module not found: Can't resolve '@/shared/design-guidance'
+  [90m31 |[0m } [36mfrom[0m [32m"@/shared/api/devflow-api"[0m;
+  [90m32 |[0m [36mimport[0m { [33mDesignGuidancePanel[0m } [36mfrom[0m [32m"@/shared/components/design/design-guidance-panel"[0m;
+[31m[1m>[0m [90m33 |[0m [36mimport[0m { [33mDEFAULT_DESIGN_GUIDANCE[0m, saveDesignGuidance } [36mfrom[0m [32m"@/shared/design-guidance"[0m;
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m34 |[0m [36mimport[0m {
+  [90m35 |[0m   [33mLIFECYCLE_STAGES[0m,
+  [90m36 |[0m   mapProjectStatusToLifecycleStage,
+
+Import map: aliased to relative './src/shared/design-guidance' inside of [project]/
+
+
+Import trace:
+  Server Component:
+    ./src/features/pm/projects/views/pm-projects-view.tsx
+    ./src/app/(pm)/pm/projects/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/features/pm/projects/views/pm-projects-view.tsx:33:1
+Module not found: Can't resolve '@/shared/design-guidance'
+  [90m31 |[0m } [36mfrom[0m [32m"@/shared/api/devflow-api"[0m;
+  [90m32 |[0m [36mimport[0m { [33mDesignGuidancePanel[0m } [36mfrom[0m [32m"@/shared/components/design/design-guidance-panel"[0m;
+[31m[1m>[0m [90m33 |[0m [36mimport[0m { [33mDEFAULT_DESIGN_GUIDANCE[0m, saveDesignGuidance } [36mfrom[0m [32m"@/shared/design-guidance"[0m;
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m34 |[0m [36mimport[0m {
+  [90m35 |[0m   [33mLIFECYCLE_STAGES[0m,
+  [90m36 |[0m   mapProjectStatusToLifecycleStage,
+
+Import map: aliased to relative './src/shared/design-guidance' inside of [project]/
+
+
+Import trace:
+  Server Component:
+    ./src/features/pm/projects/views/pm-projects-view.tsx
+    ./src/app/(pm)/pm/projects/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/features/pm/projects/views/pm-projects-view.tsx:33:1
+Module not found: Can't resolve '@/shared/design-guidance'
+  [90m31 |[0m } [36mfrom[0m [32m"@/shared/api/devflow-api"[0m;
+  [90m32 |[0m [36mimport[0m { [33mDesignGuidancePanel[0m } [36mfrom[0m [32m"@/shared/components/design/design-guidance-panel"[0m;
+[31m[1m>[0m [90m33 |[0m [36mimport[0m { [33mDEFAULT_DESIGN_GUIDANCE[0m, saveDesignGuidance } [36mfrom[0m [32m"@/shared/design-guidance"[0m;
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m34 |[0m [36mimport[0m {
+  [90m35 |[0m   [33mLIFECYCLE_STAGES[0m,
+  [90m36 |[0m   mapProjectStatusToLifecycleStage,
+
+Import map: aliased to relative './src/shared/design-guidance' inside of [project]/
+
+
+Import trace:
+  Server Component:
+    ./src/features/pm/projects/views/pm-projects-view.tsx
+    ./src/app/(pm)/pm/projects/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/features/pm/projects/views/pm-projects-view.tsx:33:1
+Module not found: Can't resolve '@/shared/design-guidance'
+  [90m31 |[0m } [36mfrom[0m [32m"@/shared/api/devflow-api"[0m;
+  [90m32 |[0m [36mimport[0m { [33mDesignGuidancePanel[0m } [36mfrom[0m [32m"@/shared/components/design/design-guidance-panel"[0m;
+[31m[1m>[0m [90m33 |[0m [36mimport[0m { [33mDEFAULT_DESIGN_GUIDANCE[0m, saveDesignGuidance } [36mfrom[0m [32m"@/shared/design-guidance"[0m;
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m34 |[0m [36mimport[0m {
+  [90m35 |[0m   [33mLIFECYCLE_STAGES[0m,
+  [90m36 |[0m   mapProjectStatusToLifecycleStage,
+
+Import map: aliased to relative './src/shared/design-guidance' inside of [project]/
+
+
+Import trace:
+  Server Component:
+    ./src/features/pm/projects/views/pm-projects-view.tsx
+    ./src/app/(pm)/pm/projects/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/features/pm/projects/views/pm-projects-view.tsx:33:1
+Module not found: Can't resolve '@/shared/design-guidance'
+  [90m31 |[0m } [36mfrom[0m [32m"@/shared/api/devflow-api"[0m;
+  [90m32 |[0m [36mimport[0m { [33mDesignGuidancePanel[0m } [36mfrom[0m [32m"@/shared/components/design/design-guidance-panel"[0m;
+[31m[1m>[0m [90m33 |[0m [36mimport[0m { [33mDEFAULT_DESIGN_GUIDANCE[0m, saveDesignGuidance } [36mfrom[0m [32m"@/shared/design-guidance"[0m;
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m34 |[0m [36mimport[0m {
+  [90m35 |[0m   [33mLIFECYCLE_STAGES[0m,
+  [90m36 |[0m   mapProjectStatusToLifecycleStage,
+
+Import map: aliased to relative './src/shared/design-guidance' inside of [project]/
+
+
+Import trace:
+  Server Component:
+    ./src/features/pm/projects/views/pm-projects-view.tsx
+    ./src/app/(pm)/pm/projects/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/features/pm/projects/views/pm-projects-view.tsx:33:1
+Module not found: Can't resolve '@/shared/design-guidance'
+  [90m31 |[0m } [36mfrom[0m [32m"@/shared/api/devflow-api"[0m;
+  [90m32 |[0m [36mimport[0m { [33mDesignGuidancePanel[0m } [36mfrom[0m [32m"@/shared/components/design/design-guidance-panel"[0m;
+[31m[1m>[0m [90m33 |[0m [36mimport[0m { [33mDEFAULT_DESIGN_GUIDANCE[0m, saveDesignGuidance } [36mfrom[0m [32m"@/shared/design-guidance"[0m;
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m34 |[0m [36mimport[0m {
+  [90m35 |[0m   [33mLIFECYCLE_STAGES[0m,
+  [90m36 |[0m   mapProjectStatusToLifecycleStage,
+
+Import map: aliased to relative './src/shared/design-guidance' inside of [project]/
+
+
+Import trace:
+  Server Component:
+    ./src/features/pm/projects/views/pm-projects-view.tsx
+    ./src/app/(pm)/pm/projects/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/shared/components/design/design-guidance-panel.tsx:4:1
+Module not found: Can't resolve '@/shared/design-guidance'
+  [90m 2 |[0m
+  [90m 3 |[0m [36mimport[0m [36mtype[0m { [33mDevFlowDesignGuidance[0m } [36mfrom[0m [32m"@/shared/api/devflow-api"[0m;
+[31m[1m>[0m [90m 4 |[0m [36mimport[0m {
+  [90m   |[0m [31m[1m^^^^^^^[0m
+[31m[1m>[0m [90m 5 |[0m   [33mDEFAULT_FORBIDDEN_DESIGN_PATTERNS[0m,
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m 6 |[0m   describeDesignGuidance,
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m 7 |[0m   normalizeDesignGuidance,
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m 8 |[0m } [36mfrom[0m [32m"@/shared/design-guidance"[0m;
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m 9 |[0m [36mimport[0m { [33mField[0m, [33mSelect[0m, [33mTextarea[0m } [36mfrom[0m [32m"@/shared/components/ui"[0m;
+  [90m10 |[0m
+  [90m11 |[0m [36minterface[0m [33mDesignGuidancePanelProps[0m {
+
+Import map: aliased to relative './src/shared/design-guidance' inside of [project]/
+
+
+Import traces:
+  Client Component Browser:
+    ./src/shared/components/design/design-guidance-panel.tsx [Client Component Browser]
+    ./src/features/pm/projects/views/pm-projects-view.tsx [Client Component Browser]
+    ./src/features/pm/projects/views/pm-projects-view.tsx [Server Component]
+    ./src/app/(pm)/pm/projects/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/shared/components/design/design-guidance-panel.tsx [Client Component SSR]
+    ./src/features/pm/projects/views/pm-projects-view.tsx [Client Component SSR]
+    ./src/features/pm/projects/views/pm-projects-view.tsx [Server Component]
+    ./src/app/(pm)/pm/projects/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/shared/components/design/design-guidance-panel.tsx:4:1
+Module not found: Can't resolve '@/shared/design-guidance'
+  [90m 2 |[0m
+  [90m 3 |[0m [36mimport[0m [36mtype[0m { [33mDevFlowDesignGuidance[0m } [36mfrom[0m [32m"@/shared/api/devflow-api"[0m;
+[31m[1m>[0m [90m 4 |[0m [36mimport[0m {
+  [90m   |[0m [31m[1m^^^^^^^[0m
+[31m[1m>[0m [90m 5 |[0m   [33mDEFAULT_FORBIDDEN_DESIGN_PATTERNS[0m,
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m 6 |[0m   describeDesignGuidance,
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m 7 |[0m   normalizeDesignGuidance,
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m 8 |[0m } [36mfrom[0m [32m"@/shared/design-guidance"[0m;
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m 9 |[0m [36mimport[0m { [33mField[0m, [33mSelect[0m, [33mTextarea[0m } [36mfrom[0m [32m"@/shared/components/ui"[0m;
+  [90m10 |[0m
+  [90m11 |[0m [36minterface[0m [33mDesignGuidancePanelProps[0m {
+
+Import map: aliased to relative './src/shared/design-guidance' inside of [project]/
+
+
+Import traces:
+  Client Component Browser:
+    ./src/shared/components/design/design-guidance-panel.tsx [Client Component Browser]
+    ./src/features/pm/projects/views/pm-projects-view.tsx [Client Component Browser]
+    ./src/features/pm/projects/views/pm-projects-view.tsx [Server Component]
+    ./src/app/(pm)/pm/projects/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/shared/components/design/design-guidance-panel.tsx [Client Component SSR]
+    ./src/features/pm/projects/views/pm-projects-view.tsx [Client Component SSR]
+    ./src/features/pm/projects/views/pm-projects-view.tsx [Server Component]
+    ./src/app/(pm)/pm/projects/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/shared/components/design/design-guidance-panel.tsx:4:1
+Module not found: Can't resolve '@/shared/design-guidance'
+  [90m 2 |[0m
+  [90m 3 |[0m [36mimport[0m [36mtype[0m { [33mDevFlowDesignGuidance[0m } [36mfrom[0m [32m"@/shared/api/devflow-api"[0m;
+[31m[1m>[0m [90m 4 |[0m [36mimport[0m {
+  [90m   |[0m [31m[1m^^^^^^^[0m
+[31m[1m>[0m [90m 5 |[0m   [33mDEFAULT_FORBIDDEN_DESIGN_PATTERNS[0m,
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m 6 |[0m   describeDesignGuidance,
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m 7 |[0m   normalizeDesignGuidance,
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m 8 |[0m } [36mfrom[0m [32m"@/shared/design-guidance"[0m;
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m 9 |[0m [36mimport[0m { [33mField[0m, [33mSelect[0m, [33mTextarea[0m } [36mfrom[0m [32m"@/shared/components/ui"[0m;
+  [90m10 |[0m
+  [90m11 |[0m [36minterface[0m [33mDesignGuidancePanelProps[0m {
+
+Import map: aliased to relative './src/shared/design-guidance' inside of [project]/
+
+
+Import traces:
+  Client Component Browser:
+    ./src/shared/components/design/design-guidance-panel.tsx [Client Component Browser]
+    ./src/features/pm/projects/views/pm-projects-view.tsx [Client Component Browser]
+    ./src/features/pm/projects/views/pm-projects-view.tsx [Server Component]
+    ./src/app/(pm)/pm/projects/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/shared/components/design/design-guidance-panel.tsx [Client Component SSR]
+    ./src/features/pm/projects/views/pm-projects-view.tsx [Client Component SSR]
+    ./src/features/pm/projects/views/pm-projects-view.tsx [Server Component]
+    ./src/app/(pm)/pm/projects/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/shared/components/design/design-guidance-panel.tsx:4:1
+Module not found: Can't resolve '@/shared/design-guidance'
+  [90m 2 |[0m
+  [90m 3 |[0m [36mimport[0m [36mtype[0m { [33mDevFlowDesignGuidance[0m } [36mfrom[0m [32m"@/shared/api/devflow-api"[0m;
+[31m[1m>[0m [90m 4 |[0m [36mimport[0m {
+  [90m   |[0m [31m[1m^^^^^^^[0m
+[31m[1m>[0m [90m 5 |[0m   [33mDEFAULT_FORBIDDEN_DESIGN_PATTERNS[0m,
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m 6 |[0m   describeDesignGuidance,
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m 7 |[0m   normalizeDesignGuidance,
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m 8 |[0m } [36mfrom[0m [32m"@/shared/design-guidance"[0m;
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m 9 |[0m [36mimport[0m { [33mField[0m, [33mSelect[0m, [33mTextarea[0m } [36mfrom[0m [32m"@/shared/components/ui"[0m;
+  [90m10 |[0m
+  [90m11 |[0m [36minterface[0m [33mDesignGuidancePanelProps[0m {
+
+Import map: aliased to relative './src/shared/design-guidance' inside of [project]/
+
+
+Import traces:
+  Client Component Browser:
+    ./src/shared/components/design/design-guidance-panel.tsx [Client Component Browser]
+    ./src/features/pm/projects/views/pm-projects-view.tsx [Client Component Browser]
+    ./src/features/pm/projects/views/pm-projects-view.tsx [Server Component]
+    ./src/app/(pm)/pm/projects/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/shared/components/design/design-guidance-panel.tsx [Client Component SSR]
+    ./src/features/pm/projects/views/pm-projects-view.tsx [Client Component SSR]
+    ./src/features/pm/projects/views/pm-projects-view.tsx [Server Component]
+    ./src/app/(pm)/pm/projects/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/shared/components/design/design-guidance-panel.tsx:4:1
+Module not found: Can't resolve '@/shared/design-guidance'
+  [90m 2 |[0m
+  [90m 3 |[0m [36mimport[0m [36mtype[0m { [33mDevFlowDesignGuidance[0m } [36mfrom[0m [32m"@/shared/api/devflow-api"[0m;
+[31m[1m>[0m [90m 4 |[0m [36mimport[0m {
+  [90m   |[0m [31m[1m^^^^^^^[0m
+[31m[1m>[0m [90m 5 |[0m   [33mDEFAULT_FORBIDDEN_DESIGN_PATTERNS[0m,
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m 6 |[0m   describeDesignGuidance,
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m 7 |[0m   normalizeDesignGuidance,
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m 8 |[0m } [36mfrom[0m [32m"@/shared/design-guidance"[0m;
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m 9 |[0m [36mimport[0m { [33mField[0m, [33mSelect[0m, [33mTextarea[0m } [36mfrom[0m [32m"@/shared/components/ui"[0m;
+  [90m10 |[0m
+  [90m11 |[0m [36minterface[0m [33mDesignGuidancePanelProps[0m {
+
+Import map: aliased to relative './src/shared/design-guidance' inside of [project]/
+
+
+Import traces:
+  Client Component Browser:
+    ./src/shared/components/design/design-guidance-panel.tsx [Client Component Browser]
+    ./src/features/pm/projects/views/pm-projects-view.tsx [Client Component Browser]
+    ./src/features/pm/projects/views/pm-projects-view.tsx [Server Component]
+    ./src/app/(pm)/pm/projects/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/shared/components/design/design-guidance-panel.tsx [Client Component SSR]
+    ./src/features/pm/projects/views/pm-projects-view.tsx [Client Component SSR]
+    ./src/features/pm/projects/views/pm-projects-view.tsx [Server Component]
+    ./src/app/(pm)/pm/projects/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/shared/components/design/design-guidance-panel.tsx:4:1
+Module not found: Can't resolve '@/shared/design-guidance'
+  [90m 2 |[0m
+  [90m 3 |[0m [36mimport[0m [36mtype[0m { [33mDevFlowDesignGuidance[0m } [36mfrom[0m [32m"@/shared/api/devflow-api"[0m;
+[31m[1m>[0m [90m 4 |[0m [36mimport[0m {
+  [90m   |[0m [31m[1m^^^^^^^[0m
+[31m[1m>[0m [90m 5 |[0m   [33mDEFAULT_FORBIDDEN_DESIGN_PATTERNS[0m,
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m 6 |[0m   describeDesignGuidance,
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m 7 |[0m   normalizeDesignGuidance,
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m 8 |[0m } [36mfrom[0m [32m"@/shared/design-guidance"[0m;
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m 9 |[0m [36mimport[0m { [33mField[0m, [33mSelect[0m, [33mTextarea[0m } [36mfrom[0m [32m"@/shared/components/ui"[0m;
+  [90m10 |[0m
+  [90m11 |[0m [36minterface[0m [33mDesignGuidancePanelProps[0m {
+
+Import map: aliased to relative './src/shared/design-guidance' inside of [project]/
+
+
+Import traces:
+  Client Component Browser:
+    ./src/shared/components/design/design-guidance-panel.tsx [Client Component Browser]
+    ./src/features/pm/projects/views/pm-projects-view.tsx [Client Component Browser]
+    ./src/features/pm/projects/views/pm-projects-view.tsx [Server Component]
+    ./src/app/(pm)/pm/projects/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/shared/components/design/design-guidance-panel.tsx [Client Component SSR]
+    ./src/features/pm/projects/views/pm-projects-view.tsx [Client Component SSR]
+    ./src/features/pm/projects/views/pm-projects-view.tsx [Server Component]
+    ./src/app/(pm)/pm/projects/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/shared/components/design/design-guidance-panel.tsx:4:1
+Module not found: Can't resolve '@/shared/design-guidance'
+  [90m 2 |[0m
+  [90m 3 |[0m [36mimport[0m [36mtype[0m { [33mDevFlowDesignGuidance[0m } [36mfrom[0m [32m"@/shared/api/devflow-api"[0m;
+[31m[1m>[0m [90m 4 |[0m [36mimport[0m {
+  [90m   |[0m [31m[1m^^^^^^^[0m
+[31m[1m>[0m [90m 5 |[0m   [33mDEFAULT_FORBIDDEN_DESIGN_PATTERNS[0m,
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m 6 |[0m   describeDesignGuidance,
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m 7 |[0m   normalizeDesignGuidance,
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m 8 |[0m } [36mfrom[0m [32m"@/shared/design-guidance"[0m;
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m 9 |[0m [36mimport[0m { [33mField[0m, [33mSelect[0m, [33mTextarea[0m } [36mfrom[0m [32m"@/shared/components/ui"[0m;
+  [90m10 |[0m
+  [90m11 |[0m [36minterface[0m [33mDesignGuidancePanelProps[0m {
+
+Import map: aliased to relative './src/shared/design-guidance' inside of [project]/
+
+
+Import traces:
+  Client Component Browser:
+    ./src/shared/components/design/design-guidance-panel.tsx [Client Component Browser]
+    ./src/features/pm/projects/views/pm-projects-view.tsx [Client Component Browser]
+    ./src/features/pm/projects/views/pm-projects-view.tsx [Server Component]
+    ./src/app/(pm)/pm/projects/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/shared/components/design/design-guidance-panel.tsx [Client Component SSR]
+    ./src/features/pm/projects/views/pm-projects-view.tsx [Client Component SSR]
+    ./src/features/pm/projects/views/pm-projects-view.tsx [Server Component]
+    ./src/app/(pm)/pm/projects/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/shared/components/design/design-guidance-panel.tsx:4:1
+Module not found: Can't resolve '@/shared/design-guidance'
+  [90m 2 |[0m
+  [90m 3 |[0m [36mimport[0m [36mtype[0m { [33mDevFlowDesignGuidance[0m } [36mfrom[0m [32m"@/shared/api/devflow-api"[0m;
+[31m[1m>[0m [90m 4 |[0m [36mimport[0m {
+  [90m   |[0m [31m[1m^^^^^^^[0m
+[31m[1m>[0m [90m 5 |[0m   [33mDEFAULT_FORBIDDEN_DESIGN_PATTERNS[0m,
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m 6 |[0m   describeDesignGuidance,
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m 7 |[0m   normalizeDesignGuidance,
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m 8 |[0m } [36mfrom[0m [32m"@/shared/design-guidance"[0m;
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m 9 |[0m [36mimport[0m { [33mField[0m, [33mSelect[0m, [33mTextarea[0m } [36mfrom[0m [32m"@/shared/components/ui"[0m;
+  [90m10 |[0m
+  [90m11 |[0m [36minterface[0m [33mDesignGuidancePanelProps[0m {
+
+Import map: aliased to relative './src/shared/design-guidance' inside of [project]/
+
+
+Import traces:
+  Client Component Browser:
+    ./src/shared/components/design/design-guidance-panel.tsx [Client Component Browser]
+    ./src/features/pm/projects/views/pm-projects-view.tsx [Client Component Browser]
+    ./src/features/pm/projects/views/pm-projects-view.tsx [Server Component]
+    ./src/app/(pm)/pm/projects/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/shared/components/design/design-guidance-panel.tsx [Client Component SSR]
+    ./src/features/pm/projects/views/pm-projects-view.tsx [Client Component SSR]
+    ./src/features/pm/projects/views/pm-projects-view.tsx [Server Component]
+    ./src/app/(pm)/pm/projects/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/features/pm/projects/views/pm-projects-view.tsx:32:1
+Module not found: Can't resolve '@/shared/components/design/design-guidance-panel'
+  [90m30 |[0m   [36mtype[0m [33mDevFlowProjectSummary[0m,
+  [90m31 |[0m } [36mfrom[0m [32m"@/shared/api/devflow-api"[0m;
+[31m[1m>[0m [90m32 |[0m [36mimport[0m { [33mDesignGuidancePanel[0m } [36mfrom[0m [32m"@/shared/components/design/design-guidance-panel"[0m;
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m33 |[0m [36mimport[0m { [33mDEFAULT_DESIGN_GUIDANCE[0m, saveDesignGuidance } [36mfrom[0m [32m"@/shared/design-guidance"[0m;
+  [90m34 |[0m [36mimport[0m {
+  [90m35 |[0m   [33mLIFECYCLE_STAGES[0m,
+
+Import map: aliased to relative './src/shared/components/design/design-guidance-panel' inside of [project]/
+
+
+Import trace:
+  Server Component:
+    ./src/features/pm/projects/views/pm-projects-view.tsx
+    ./src/app/(pm)/pm/projects/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/features/pm/projects/views/pm-projects-view.tsx:32:1
+Module not found: Can't resolve '@/shared/components/design/design-guidance-panel'
+  [90m30 |[0m   [36mtype[0m [33mDevFlowProjectSummary[0m,
+  [90m31 |[0m } [36mfrom[0m [32m"@/shared/api/devflow-api"[0m;
+[31m[1m>[0m [90m32 |[0m [36mimport[0m { [33mDesignGuidancePanel[0m } [36mfrom[0m [32m"@/shared/components/design/design-guidance-panel"[0m;
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m33 |[0m [36mimport[0m { [33mDEFAULT_DESIGN_GUIDANCE[0m, saveDesignGuidance } [36mfrom[0m [32m"@/shared/design-guidance"[0m;
+  [90m34 |[0m [36mimport[0m {
+  [90m35 |[0m   [33mLIFECYCLE_STAGES[0m,
+
+Import map: aliased to relative './src/shared/components/design/design-guidance-panel' inside of [project]/
+
+
+Import trace:
+  Server Component:
+    ./src/features/pm/projects/views/pm-projects-view.tsx
+    ./src/app/(pm)/pm/projects/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/features/pm/projects/views/pm-projects-view.tsx:32:1
+Module not found: Can't resolve '@/shared/components/design/design-guidance-panel'
+  [90m30 |[0m   [36mtype[0m [33mDevFlowProjectSummary[0m,
+  [90m31 |[0m } [36mfrom[0m [32m"@/shared/api/devflow-api"[0m;
+[31m[1m>[0m [90m32 |[0m [36mimport[0m { [33mDesignGuidancePanel[0m } [36mfrom[0m [32m"@/shared/components/design/design-guidance-panel"[0m;
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m33 |[0m [36mimport[0m { [33mDEFAULT_DESIGN_GUIDANCE[0m, saveDesignGuidance } [36mfrom[0m [32m"@/shared/design-guidance"[0m;
+  [90m34 |[0m [36mimport[0m {
+  [90m35 |[0m   [33mLIFECYCLE_STAGES[0m,
+
+Import map: aliased to relative './src/shared/components/design/design-guidance-panel' inside of [project]/
+
+
+Import trace:
+  Server Component:
+    ./src/features/pm/projects/views/pm-projects-view.tsx
+    ./src/app/(pm)/pm/projects/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/features/pm/projects/views/pm-projects-view.tsx:32:1
+Module not found: Can't resolve '@/shared/components/design/design-guidance-panel'
+  [90m30 |[0m   [36mtype[0m [33mDevFlowProjectSummary[0m,
+  [90m31 |[0m } [36mfrom[0m [32m"@/shared/api/devflow-api"[0m;
+[31m[1m>[0m [90m32 |[0m [36mimport[0m { [33mDesignGuidancePanel[0m } [36mfrom[0m [32m"@/shared/components/design/design-guidance-panel"[0m;
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m33 |[0m [36mimport[0m { [33mDEFAULT_DESIGN_GUIDANCE[0m, saveDesignGuidance } [36mfrom[0m [32m"@/shared/design-guidance"[0m;
+  [90m34 |[0m [36mimport[0m {
+  [90m35 |[0m   [33mLIFECYCLE_STAGES[0m,
+
+Import map: aliased to relative './src/shared/components/design/design-guidance-panel' inside of [project]/
+
+
+Import trace:
+  Server Component:
+    ./src/features/pm/projects/views/pm-projects-view.tsx
+    ./src/app/(pm)/pm/projects/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+

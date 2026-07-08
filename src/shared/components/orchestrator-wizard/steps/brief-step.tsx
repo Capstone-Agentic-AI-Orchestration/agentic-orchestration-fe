@@ -1,16 +1,11 @@
-// @ts-nocheck
 "use client";
 
-import { useRef, useState } from "react";
 import {
-  updateDevFlowProject,
-  type DevFlowAutoAnalyzeResult,
-  type DevFlowDesignGuidance,
-} from "@/shared/api/devflow-api";
-import { requestFastBriefAnalysis } from "@/shared/ai/brief-analysis";
-import { Button, Card, Field, Input, Select, Textarea } from "@/shared/components/ui";
+  BRIEF_STACK_OPTIONS,
+  useBriefStepViewModel,
+} from "@/features/orchestration";
+import { Button, Field, Input, Select, Textarea } from "@/shared/components/ui";
 import { DesignGuidancePanel } from "@/shared/components/design/design-guidance-panel";
-import { loadDesignGuidance, saveDesignGuidance } from "@/shared/design-guidance";
 import {
   IconSparkles,
   IconCheck,
@@ -20,89 +15,13 @@ import {
 import { OrchestratorStepNav } from "@/shared/components/orchestrator-wizard/orchestrator-stepper";
 import type { OrchestratorWizardContextValue } from "@/shared/components/orchestrator-wizard/orchestrator-wizard-layout";
 
-const STACK_OPTIONS = [
-  { value: "nextjs-nestjs-supabase", label: "Next.js + NestJS + Supabase" },
-  { value: "nextjs-nestjs-postgres", label: "Next.js + NestJS + PostgreSQL" },
-  { value: "react-express-mongo", label: "React + Express + MongoDB" },
-  { value: "nextjs-supabase", label: "Next.js + Supabase (serverless)" },
-  { value: "react-native-nestjs", label: "React Native + NestJS" },
-];
-
 export function BriefStep({
   ctx,
-  stepId,
 }: {
   ctx: OrchestratorWizardContextValue;
   stepId: string;
 }) {
-  const { project, projectId, refresh } = ctx;
-  const [companyName, setCompanyName] = useState(project?.companyName ?? "");
-  const [brief, setBrief] = useState(project?.brief ?? "");
-  const [stackKey, setStackKey] = useState(project?.stackKey ?? "nextjs-nestjs-supabase");
-  const [designGuidance, setDesignGuidance] = useState<DevFlowDesignGuidance>(() => loadDesignGuidance(projectId));
-  const [analyzing, setAnalyzing] = useState(false);
-  const [analyzeError, setAnalyzeError] = useState("");
-  const [analyzeResult, setAnalyzeResult] = useState<DevFlowAutoAnalyzeResult | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState("");
-  const [saved, setSaved] = useState(false);
-  const analyzeRequestRef = useRef(0);
-
-  const canSave = companyName.trim().length > 0 && brief.trim().length >= 10;
-
-  const handleAnalyze = async () => {
-    const requestId = analyzeRequestRef.current + 1;
-    analyzeRequestRef.current = requestId;
-    const input = {
-      companyName: companyName.trim() || "Unknown company",
-      brief: brief.trim(),
-      stackKey,
-      designGuidance,
-    };
-    setAnalyzing(true);
-    setAnalyzeError("");
-    setAnalyzeResult(null);
-    try {
-      const result = await requestFastBriefAnalysis(input);
-      if (analyzeRequestRef.current !== requestId) return;
-      setAnalyzeResult(result);
-    } catch (err) {
-      if (analyzeRequestRef.current !== requestId) return;
-      const message = err instanceof Error ? err.message : String(err);
-      const details = (err as any)?.details ?? "";
-      const combined = message + " " + details;
-      setAnalyzeError(
-        combined.includes("API key") || combined.includes("not configured") || combined.includes("not available")
-          ? "Auto-analyze requires an LLM API key. Ask an admin to configure a provider (Admin &gt; Providers) with an API key, then try again."
-          : message,
-      );
-    } finally {
-      if (analyzeRequestRef.current === requestId) {
-        setAnalyzing(false);
-      }
-    }
-  };
-
-  const handleApplyEnhanced = () => {
-    if (!analyzeResult) return;
-    setBrief(analyzeResult.enhancedBrief);
-  };
-
-  const handleSave = async () => {
-    setSaving(true);
-    setSaveError("");
-    setSaved(false);
-    try {
-      saveDesignGuidance(projectId, designGuidance);
-      await updateDevFlowProject(projectId, { companyName, brief, stackKey });
-      setSaved(true);
-      await refresh();
-    } catch (err) {
-      setSaveError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setSaving(false);
-    }
-  };
+  const vm = useBriefStepViewModel(ctx);
 
   return (
     <div>
@@ -124,13 +43,13 @@ export function BriefStep({
             Enter a few words about the project below, then click analyze. The AI will rewrite it
             as a professional brief and suggest features.
           </p>
-          {analyzeError && (
+          {vm.analyzeError && (
             <div className="wizard-info-banner warning">
               <IconAlertTriangle size={16} />
-              <span>{analyzeError}</span>
+              <span>{vm.analyzeError}</span>
             </div>
           )}
-          {analyzing && !analyzeResult && (
+          {vm.showAnalyzeSkeleton && (
             <div className="auto-analyze-skeleton" aria-label="Analyzing brief">
               <span className="skeleton auto-analyze-skeleton-line is-wide" />
               <span className="skeleton auto-analyze-skeleton-line" />
@@ -142,15 +61,15 @@ export function BriefStep({
               </div>
             </div>
           )}
-          {analyzeResult && (
+          {vm.analyzeResult && (
             <div className="auto-analyze-result">
               <h4>Enhanced Brief</h4>
               <p className="auto-analyze-result-copy">
-                {analyzeResult.enhancedBrief}
+                {vm.analyzeResult.enhancedBrief}
               </p>
               <h4>Suggested Features</h4>
               <div className="auto-analyze-features">
-                {analyzeResult.suggestedFeatures.map((feature, i) => (
+                {vm.analyzeResult.suggestedFeatures.map((feature, i) => (
                   <span key={i} className="auto-analyze-feature-chip">
                     {feature}
                   </span>
@@ -160,31 +79,31 @@ export function BriefStep({
               <div className="auto-analyze-techstack">
                 <div className="auto-analyze-tech-item">
                   <span className="auto-analyze-tech-label">Frontend</span>
-                  <span className="auto-analyze-tech-value">{analyzeResult.suggestedTechStack.frontend}</span>
+                  <span className="auto-analyze-tech-value">{vm.analyzeResult.suggestedTechStack.frontend}</span>
                 </div>
                 <div className="auto-analyze-tech-item">
                   <span className="auto-analyze-tech-label">Backend</span>
-                  <span className="auto-analyze-tech-value">{analyzeResult.suggestedTechStack.backend}</span>
+                  <span className="auto-analyze-tech-value">{vm.analyzeResult.suggestedTechStack.backend}</span>
                 </div>
                 <div className="auto-analyze-tech-item">
                   <span className="auto-analyze-tech-label">Database</span>
-                  <span className="auto-analyze-tech-value">{analyzeResult.suggestedTechStack.database}</span>
+                  <span className="auto-analyze-tech-value">{vm.analyzeResult.suggestedTechStack.database}</span>
                 </div>
                 <div className="auto-analyze-tech-item">
                   <span className="auto-analyze-tech-label">Styling</span>
-                  <span className="auto-analyze-tech-value">{analyzeResult.suggestedTechStack.styling}</span>
+                  <span className="auto-analyze-tech-value">{vm.analyzeResult.suggestedTechStack.styling}</span>
                 </div>
               </div>
               <div className="auto-analyze-meta">
-                Complexity: <strong>{analyzeResult.complexity}</strong> · Est. files:{" "}
-                <strong>{analyzeResult.estimatedFiles}</strong>
+                Complexity: <strong>{vm.analyzeResult.complexity}</strong> · Est. files:{" "}
+                <strong>{vm.analyzeResult.estimatedFiles}</strong>
               </div>
               <div className="auto-analyze-actions">
-                <Button variant="primary" size="sm" onClick={handleApplyEnhanced}>
+                <Button variant="primary" size="sm" onClick={vm.actions.applyEnhanced}>
                   <IconCheck size={14} />
                   Apply enhanced brief
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => setAnalyzeResult(null)}>
+                <Button variant="ghost" size="sm" onClick={vm.actions.discardAnalysis}>
                   Discard
                 </Button>
               </div>
@@ -193,11 +112,11 @@ export function BriefStep({
           <Button
             variant="secondary"
             size="sm"
-            onClick={handleAnalyze}
-            disabled={analyzing || brief.trim().length < 3}
-            style={{ marginTop: analyzeResult || analyzing ? "14px" : "0" }}
+            onClick={vm.actions.analyze}
+            disabled={vm.analyzing || !vm.canAnalyze}
+            style={{ marginTop: vm.analyzeButtonMarginTop }}
           >
-            {analyzing ? (
+            {vm.analyzing ? (
               <>
                 <IconRefresh size={14} className="spin" />
                 Analyzing…
@@ -217,13 +136,13 @@ export function BriefStep({
         <p className="wizard-step-section-desc">
           Define the company name, project brief, and target tech stack.
         </p>
-        {saveError && (
+        {vm.saveError && (
           <div className="wizard-info-banner warning">
             <IconAlertTriangle size={16} />
-            <span>{saveError}</span>
+            <span>{vm.saveError}</span>
           </div>
         )}
-        {saved && (
+        {vm.saved && (
           <div className="wizard-info-banner success">
             <IconCheck size={16} />
             <span>Project brief saved. Continue to the next step.</span>
@@ -232,25 +151,25 @@ export function BriefStep({
         <div className="wizard-review-stack">
           <Field label="Company name">
             <Input
-              value={companyName}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCompanyName(e.target.value)}
+              value={vm.companyName}
+              onChange={vm.actions.onCompanyNameChange}
               placeholder="e.g. Acme Corp"
             />
           </Field>
           <Field label="Project brief" helper="Describe what the client wants to build. Min 10 characters.">
             <Textarea
-              value={brief}
-              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setBrief(e.target.value)}
+              value={vm.brief}
+              onChange={vm.actions.onBriefChange}
               placeholder="e.g. A task management dashboard for a small team with user auth, project boards, and reporting"
               rows={5}
             />
           </Field>
           <Field label="Tech stack">
             <Select
-              value={stackKey}
-              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setStackKey(e.target.value)}
+              value={vm.stackKey}
+              onChange={vm.actions.onStackKeyChange}
             >
-              {STACK_OPTIONS.map((opt) => (
+              {BRIEF_STACK_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}
                 </option>
@@ -262,15 +181,15 @@ export function BriefStep({
 
       <div className="wizard-step-section">
         <h3 className="wizard-step-section-title">Design Direction</h3>
-        <DesignGuidancePanel value={designGuidance} onChange={setDesignGuidance} />
+        <DesignGuidancePanel value={vm.designGuidance} onChange={vm.actions.setDesignGuidance} />
       </div>
 
       <OrchestratorStepNav
-        projectId={projectId}
+        projectId={vm.projectId}
         currentStep="brief"
         nextLabel="Save & Continue"
-        nextDisabled={!canSave || saving}
-        onComplete={handleSave}
+        nextDisabled={!vm.canSave || vm.saving}
+        onComplete={vm.actions.save}
       />
     </div>
   );
