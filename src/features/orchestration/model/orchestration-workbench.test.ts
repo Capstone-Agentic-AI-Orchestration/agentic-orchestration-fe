@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  buildOrchestrationGuidance,
   buildOrchestrationMetrics,
   hasActiveWorkOrder,
   isLiveOrchestrationRun,
@@ -110,6 +111,23 @@ describe("orchestration workbench model", () => {
 
     expect(visibleOrchestrationEvents(events as never)).toHaveLength(8);
     expect(visibleWorkOrders(workOrders as never)).toHaveLength(5);
+  });
+
+  it("turns orchestration status into one role-aware next-action message", () => {
+    expect(buildOrchestrationGuidance({ status: "GENERATING_CODE", currentNode: "frontend_agent" })).toMatchObject({
+      title: "Frontend Agent",
+      waitingOn: "Waiting on: AI orchestrator",
+      tone: "blue",
+    });
+    expect(buildOrchestrationGuidance({ status: "AWAITING_GATE_1" })).toMatchObject({
+      eyebrow: "Action required",
+      waitingOn: "Waiting on: project manager",
+      tone: "amber",
+    });
+    expect(buildOrchestrationGuidance({ status: "FAILED", error: "Provider unavailable" })).toMatchObject({
+      description: "Provider unavailable",
+      tone: "red",
+    });
   });
 
   it("keeps the dev orchestrator route as a thin feature shell", () => {
@@ -716,6 +734,25 @@ describe("delivery step model", () => {
 });
 
 describe("readiness step model", () => {
+  it("reads the current provider status contract", () => {
+    const state = buildReadinessStepState({
+      providerStatus: {
+        available: true,
+        activeMode: "llm",
+        githubDelivery: { available: true },
+      },
+      llmResult: null,
+      githubResult: null,
+    });
+
+    expect(state).toMatchObject({
+      llmOk: true,
+      githubOk: true,
+      agentMode: "llm",
+      allReady: true,
+    });
+  });
+
   it("derives readiness from provider status defaults", () => {
     const state = buildReadinessStepState({
       providerStatus: {

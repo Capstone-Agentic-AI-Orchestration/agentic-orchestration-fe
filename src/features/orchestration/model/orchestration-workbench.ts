@@ -18,6 +18,14 @@ export interface OrchestrationMetricViewModel {
   sub: string;
 }
 
+export interface OrchestrationGuidanceViewModel {
+  eyebrow: string;
+  title: string;
+  description: string;
+  waitingOn: string;
+  tone: "blue" | "green" | "amber" | "red";
+}
+
 export interface OrchestrationWorkbenchActions {
   refresh: () => void;
   openProjects: () => void;
@@ -57,10 +65,78 @@ export interface OrchestrationWorkbenchViewModel {
   errorMessage: string;
   providerErrorMessage: string;
   metrics: OrchestrationMetricViewModel[];
+  guidance: OrchestrationGuidanceViewModel;
   visibleEvents: DevFlowEventLog[];
   visibleWorkOrders: DevFlowWorkOrder[];
   liveVisualizerLoading: boolean;
   actions: OrchestrationWorkbenchActions;
+}
+
+function humanizeNode(node?: string | null): string {
+  if (!node) return "the next workflow step";
+  return node.replace(/[_-]+/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+export function buildOrchestrationGuidance(input: {
+  status?: string | null;
+  currentNode?: string | null;
+  error?: string | null;
+}): OrchestrationGuidanceViewModel {
+  const currentNode = humanizeNode(input.currentNode);
+
+  switch (input.status) {
+    case "AWAITING_GATE_1":
+      return {
+        eyebrow: "Action required",
+        title: "The project manager is reviewing the AI plan",
+        description: "The run will continue automatically after the plan is approved or sent back for changes.",
+        waitingOn: "Waiting on: project manager",
+        tone: "amber",
+      };
+    case "AWAITING_GATE_2":
+      return {
+        eyebrow: "Action required",
+        title: "The project manager is reviewing the generated build",
+        description: "GitHub delivery remains paused until the build is approved or changes are requested.",
+        waitingOn: "Waiting on: project manager",
+        tone: "amber",
+      };
+    case "PARSING_REQUIREMENTS":
+    case "NEGOTIATING_CONTRACT":
+    case "GENERATING_CODE":
+    case "COMMITTING":
+      return {
+        eyebrow: "AI working",
+        title: currentNode,
+        description: "No action is needed right now. Follow live progress in Pipeline or Agents.",
+        waitingOn: "Waiting on: AI orchestrator",
+        tone: "blue",
+      };
+    case "DELIVERED":
+      return {
+        eyebrow: "Complete",
+        title: "The build has been delivered",
+        description: "Review the generated artifacts and project output for the final handoff.",
+        waitingOn: "Next: review project output",
+        tone: "green",
+      };
+    case "FAILED":
+      return {
+        eyebrow: "Run blocked",
+        title: "The orchestrator needs project-manager attention",
+        description: input.error || "Open Diagnostics for the failure details while the project manager decides whether to retry.",
+        waitingOn: "Waiting on: project manager",
+        tone: "red",
+      };
+    default:
+      return {
+        eyebrow: "Not started",
+        title: "The project is waiting for orchestration",
+        description: "The project manager will complete readiness checks and start the AI workflow.",
+        waitingOn: "Waiting on: project manager",
+        tone: "blue",
+      };
+  }
 }
 
 export function isTerminalProjectStatus(status?: string | null): boolean {

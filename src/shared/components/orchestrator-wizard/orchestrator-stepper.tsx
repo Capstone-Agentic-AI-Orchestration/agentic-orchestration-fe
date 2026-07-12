@@ -62,23 +62,23 @@ export const ORCHESTRATOR_STEPS: OrchestratorStep[] = [
   },
   {
     id: "run",
-    label: "Run Orchestration",
-    shortLabel: "Run",
-    description: "Launch the agent pipeline and monitor live",
+    label: "AI Run",
+    shortLabel: "AI Run",
+    description: "Start the AI workflow, monitor progress, and follow the next approval prompt",
     icon: IconRocket,
   },
   {
     id: "gate-1",
-    label: "Plan Review",
-    shortLabel: "Plan",
-    description: "Review the architecture and project contract before code generation",
+    label: "Plan Approval",
+    shortLabel: "Plan Approval",
+    description: "Approve the proposed plan or request changes before code generation",
     icon: IconClipboard,
   },
   {
     id: "gate-2",
-    label: "Build Review",
-    shortLabel: "Review",
-    description: "Review generated deliverables before GitHub commit",
+    label: "Build Approval",
+    shortLabel: "Build Approval",
+    description: "Approve generated deliverables or request changes before GitHub delivery",
     icon: IconCode,
   },
   {
@@ -102,8 +102,8 @@ const STEP_ORDER = ORCHESTRATOR_STEPS.map((s) => s.id);
 /** Four readable phases so the eight steps don't read as one long list. */
 const PHASES: Array<{ id: string; label: string; steps: OrchestratorStepId[] }> = [
   { id: "setup", label: "Setup", steps: ["brief", "kickoff", "team", "readiness"] },
-  { id: "build", label: "Build", steps: ["run"] },
-  { id: "review", label: "Review", steps: ["gate-1", "gate-2"] },
+  { id: "build", label: "AI Run", steps: ["run"] },
+  { id: "review", label: "Approvals", steps: ["gate-1", "gate-2"] },
   { id: "deliver", label: "Deliver", steps: ["delivery"] },
 ];
 

@@ -1,7 +1,7 @@
 // @ts-nocheck
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Badge, Button, Card, Field, Input, Textarea } from "@/shared/components/ui";
 import { IconMessageCircle, IconPlus, IconRefresh, IconSend } from "@/shared/components/icons";
 import { useDevFlowConversationMessages, useDevFlowConversations } from "@/shared/hooks/use-devflow-collaboration";
@@ -27,10 +27,27 @@ export function ProjectConversationPanel({
   const [newMessage, setNewMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState("");
+  const lastReadRefreshKey = useRef("");
+
+  useEffect(() => {
+    setActiveId(null);
+    setDraft("");
+    setNewTitle("");
+    setNewMessage("");
+    setActionError("");
+    lastReadRefreshKey.current = "";
+  }, [projectId]);
 
   useEffect(() => {
     if (!activeId && conversations[0]) setActiveId(conversations[0].id);
   }, [activeId, conversations]);
+
+  useEffect(() => {
+    const readRefreshKey = projectId && active?.id ? `${projectId}:${active.id}` : "";
+    if (!readRefreshKey || messages.loading || messages.error || lastReadRefreshKey.current === readRefreshKey) return;
+    lastReadRefreshKey.current = readRefreshKey;
+    void refresh();
+  }, [active?.id, messages.error, messages.loading, projectId, refresh]);
 
   const createThread = async () => {
     if (!newTitle.trim()) return;

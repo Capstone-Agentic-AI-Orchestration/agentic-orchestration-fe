@@ -25,8 +25,17 @@ export function ReadinessStep({ ctx }: { ctx: OrchestratorWizardContextValue }) 
           Provider Readiness
         </h3>
         <p className="wizard-step-section-desc">
-          Verify that the LLM provider and GitHub delivery are configured before starting orchestration.
+          Run one preflight check before starting. Orchestration stays locked until both services are ready.
         </p>
+        <Button
+          variant="primary"
+          onClick={vm.actions.verifyAll}
+          disabled={vm.verifyingLlm || vm.verifyingGithub}
+          style={{ marginTop: 14 }}
+        >
+          {vm.verifyingAll ? <IconRefresh size={14} className="spin" /> : <IconZap size={14} />}
+          {vm.verifyingAll ? "Running preflight..." : vm.allReady ? "Run preflight again" : "Run preflight check"}
+        </Button>
       </div>
 
       {vm.error && (
@@ -152,8 +161,8 @@ export function ReadinessStep({ ctx }: { ctx: OrchestratorWizardContextValue }) 
         <div className="wizard-info-banner info">
           <IconAlertTriangle size={16} />
           <span>
-            Providers don&apos;t need to be verified to continue, but orchestration will fail if they
-            aren&apos;t configured. You can verify now or fix issues in Admin &gt; Providers.
+            Complete the preflight check to continue. If a check fails, fix the provider configuration
+            in Admin &gt; Providers, then run the check again.
           </span>
         </div>
       )}
@@ -162,7 +171,7 @@ export function ReadinessStep({ ctx }: { ctx: OrchestratorWizardContextValue }) 
         projectId={vm.projectId}
         currentStep="readiness"
         nextLabel="Continue to Run"
-        nextDisabled={false}
+        nextDisabled={!vm.allReady || vm.verifyingLlm || vm.verifyingGithub}
       />
     </div>
   );

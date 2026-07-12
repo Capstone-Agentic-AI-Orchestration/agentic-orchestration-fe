@@ -9,6 +9,7 @@ import { useOrchestrationStore } from "@/shared/store/orchestration-store";
 import { compactDevFlowError, devflowLifecycleView } from "@/shared/utils/devflow-projects";
 import {
   buildOrchestrationMetrics,
+  buildOrchestrationGuidance,
   isLiveOrchestrationRun,
   orchestrationRefreshIntervalMs,
   shouldPollLiveSnapshot,
@@ -150,6 +151,11 @@ export function useDevOrchestratorViewModel(): OrchestrationWorkbenchViewModel {
       outputsLoading: outputs.loading,
       workOrders: outputs.workOrders,
       artifacts: outputs.artifacts,
+    }),
+    guidance: buildOrchestrationGuidance({
+      status: orchestration.status?.status ?? selectedProject?.status,
+      currentNode: orchestration.status?.currentNode,
+      error: orchestration.error,
     }),
     visibleEvents: visibleOrchestrationEvents(outputs.events),
     visibleWorkOrders: visibleWorkOrders(outputs.workOrders),

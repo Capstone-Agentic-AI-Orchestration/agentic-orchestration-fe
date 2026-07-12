@@ -6,20 +6,22 @@ import { SelectedProjectProvider } from "@/shared/projects/selected-project-cont
 import { ProjectSwitcher } from "@/shared/projects/project-switcher";
 import { DevFlowNotificationBell } from "@/shared/components/notifications/devflow-notification-bell";
 import { ProjectContextStrip } from "@/shared/components/journey";
-import { IconCpu, IconFolder, IconHome, IconSettings } from "@/shared/components/icons";
+import { IconCpu, IconFolder, IconHome, IconMessageCircle, IconSettings } from "@/shared/components/icons";
 
-const DEV_NAV: ShellNavItem[] = [
-  { id: "dashboard", label: "Queue", icon: <IconHome size={17} /> },
+export const DEV_NAV: ShellNavItem[] = [
+  { id: "dashboard", label: "Dashboard", icon: <IconHome size={17} /> },
   { id: "projects", label: "Projects", icon: <IconFolder size={17} />, aliases: ["project"] },
-  { id: "orchestrator", label: "Live run", icon: <IconCpu size={17} /> },
+  { id: "orchestrator", label: "Orchestrator", icon: <IconCpu size={17} /> },
+  { id: "messages", label: "Messages", icon: <IconMessageCircle size={17} /> },
   { id: "settings", label: "Settings", icon: <IconSettings size={17} /> },
 ];
 
-const TITLES: Record<string, string> = {
-  dashboard: "Queue",
+export const DEV_TITLES: Record<string, string> = {
+  dashboard: "Dashboard",
   projects: "Projects",
   project: "Projects",
-  orchestrator: "Live run",
+  orchestrator: "Orchestrator",
+  messages: "Messages",
   settings: "Settings",
 };
 
@@ -31,7 +33,7 @@ export function DevConsoleShell({ children }: { children: ReactNode }) {
         basePath="/dev"
         rolePill="Dev"
         nav={DEV_NAV}
-        titles={TITLES}
+        titles={DEV_TITLES}
         defaultRoute="dashboard"
         searchPlaceholder="Search tasks, repos, files, agents…"
         showSearchHint

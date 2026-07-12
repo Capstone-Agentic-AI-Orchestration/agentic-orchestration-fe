@@ -9,7 +9,6 @@ import {
   IconAlertTriangle,
   IconFileText,
 } from "@/shared/components/icons";
-import { OrchestratorStepNav } from "@/shared/components/orchestrator-wizard/orchestrator-stepper";
 import type { OrchestratorWizardContextValue } from "@/shared/components/orchestrator-wizard/orchestrator-wizard-layout";
 import { DesignGuidancePanel } from "@/shared/components/design/design-guidance-panel";
 
@@ -44,6 +43,16 @@ export function Gate2Step({ ctx }: { ctx: OrchestratorWizardContextValue }) {
           <span>{vm.error}</span>
         </div>
       )}
+
+      <div className="wizard-step-section">
+        <h4 className="wizard-section-label">Decision summary</h4>
+        <div className="wizard-metadata-grid">
+          <div><span>Generated files</span><strong>{vm.artifacts.length}</strong></div>
+          <div><span>Agent groups</span><strong>{vm.artifactGroups.length}</strong></div>
+          <div><span>Destination</span><strong>GitHub</strong></div>
+          <div><span>Decision</span><strong>{vm.isAwaiting ? "Required now" : "Not pending"}</strong></div>
+        </div>
+      </div>
 
       <div className="wizard-step-section">
         <h4 className="wizard-section-label">
@@ -129,19 +138,12 @@ export function Gate2Step({ ctx }: { ctx: OrchestratorWizardContextValue }) {
             </Button>
             <Button variant="danger" onClick={() => vm.actions.approve(false)} disabled={vm.acting}>
               <IconClose size={14} />
-              Reject
+              Request changes
             </Button>
           </div>
         </div>
       )}
 
-      <OrchestratorStepNav
-        projectId={vm.projectId}
-        currentStep="gate-2"
-        nextLabel="Continue to Delivery"
-        nextDisabled={vm.nextDisabled}
-        onComplete={() => vm.actions.approve(true)}
-      />
     </div>
   );
 }

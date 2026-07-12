@@ -18,10 +18,12 @@ export interface ReadinessStepViewModel extends ReadinessStepState {
   githubResult: ProviderVerificationResult | null;
   verifyingLlm: boolean;
   verifyingGithub: boolean;
+  verifyingAll: boolean;
   error: string;
   actions: {
     verifyLlm: () => Promise<void>;
     verifyGithub: () => Promise<void>;
+    verifyAll: () => Promise<void>;
   };
 }
 
@@ -65,6 +67,39 @@ export function useReadinessStepViewModel(ctx: OrchestratorWizardContextValue): 
     }
   };
 
+  const verifyAll = async () => {
+    setVerifyingLlm(true);
+    setVerifyingGithub(true);
+    setError("");
+    const [llm, github] = await Promise.allSettled([
+      verifyDevFlowLlmProvider(projectId),
+      verifyDevFlowGithubDelivery(projectId),
+    ]);
+    const failures: string[] = [];
+
+    if (llm.status === "fulfilled") {
+      setLlmResult(llm.value);
+      if (!llm.value.ok && llm.value.reason) failures.push(llm.value.reason);
+    } else {
+      const reason = llm.reason instanceof Error ? llm.reason.message : String(llm.reason);
+      setLlmResult({ ok: false, reason });
+      failures.push(reason);
+    }
+
+    if (github.status === "fulfilled") {
+      setGithubResult(github.value);
+      if (!github.value.ok && github.value.reason) failures.push(github.value.reason);
+    } else {
+      const reason = github.reason instanceof Error ? github.reason.message : String(github.reason);
+      setGithubResult({ ok: false, reason });
+      failures.push(reason);
+    }
+
+    setError([...new Set(failures)].join(" "));
+    setVerifyingLlm(false);
+    setVerifyingGithub(false);
+  };
+
   return {
     ...state,
     projectId,
@@ -72,10 +107,12 @@ export function useReadinessStepViewModel(ctx: OrchestratorWizardContextValue): 
     githubResult,
     verifyingLlm,
     verifyingGithub,
+    verifyingAll: verifyingLlm && verifyingGithub,
     error,
     actions: {
       verifyLlm,
       verifyGithub,
+      verifyAll,
     },
   };
 }
