@@ -257,37 +257,39 @@ function AppTopBar({
           </div>
         </div>
 
-        {rightSlot}
+        <div className="cs-topbar-actions">
+          {rightSlot}
 
-        <div ref={ref} className="cs-avatar-wrap">
-          <button className="cs-avatar-trigger" onClick={() => setOpen((value) => !value)}>
-            <Avatar initials={profile.initials} size={32} />
-            <IconChevronDown size={14} style={{ color: "var(--text-3)" }} />
-          </button>
-          {open && (
-            <div className="cs-menu">
-              <div className="cs-menu-header">
-                <div style={{ fontWeight: 600, fontSize: 14 }}>{profile.name}</div>
-                <div style={{ fontSize: 12, color: "var(--text-3)" }}>{profile.email}</div>
+          <div ref={ref} className="cs-avatar-wrap">
+            <button className="cs-avatar-trigger" onClick={() => setOpen((value) => !value)}>
+              <Avatar initials={profile.initials} size={32} />
+              <IconChevronDown size={14} style={{ color: "var(--text-3)" }} />
+            </button>
+            {open && (
+              <div className="cs-menu">
+                <div className="cs-menu-header">
+                  <div style={{ fontWeight: 600, fontSize: 14 }}>{profile.name}</div>
+                  <div style={{ fontSize: 12, color: "var(--text-3)" }}>{profile.email}</div>
+                </div>
+                <button
+                  className="cs-menu-item"
+                  onClick={() => {
+                    setOpen(false);
+                    onNavigate("settings");
+                  }}
+                >
+                  <IconUser size={15} /> Profile &amp; preferences
+                </button>
+                <button className="cs-menu-item">
+                  <IconShield size={15} /> Security
+                </button>
+                <div className="cs-menu-sep" />
+                <button className="cs-menu-item cs-menu-item--danger" onClick={() => onNavigate("__signout")}>
+                  <IconLogout size={15} /> Sign out
+                </button>
               </div>
-              <button
-                className="cs-menu-item"
-                onClick={() => {
-                  setOpen(false);
-                  onNavigate("settings");
-                }}
-              >
-                <IconUser size={15} /> Profile &amp; preferences
-              </button>
-              <button className="cs-menu-item">
-                <IconShield size={15} /> Security
-              </button>
-              <div className="cs-menu-sep" />
-              <button className="cs-menu-item cs-menu-item--danger" onClick={() => onNavigate("__signout")}>
-                <IconLogout size={15} /> Sign out
-              </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </header>

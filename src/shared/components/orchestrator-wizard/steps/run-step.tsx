@@ -14,7 +14,7 @@ export function RunStep({ ctx }: { ctx: OrchestratorWizardContextValue }) {
       <div className="wizard-step-section">
         <h3 className="wizard-step-section-title">
           <IconRocket size={16} />
-          Orchestration Run
+          AI Run
         </h3>
         <p className="wizard-step-section-desc">
           Launch the agent pipeline and watch every agent stream its work — tokens, decisions, cost,

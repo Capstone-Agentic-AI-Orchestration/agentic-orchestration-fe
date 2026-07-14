@@ -11,6 +11,8 @@ import type { OrchestratorWizardContextValue } from "@/features/orchestration/vi
 import {
   rerunReadyDevFlowWorkOrders,
   startDevFlowOrchestration,
+  verifyDevFlowGithubDelivery,
+  verifyDevFlowLlmProvider,
 } from "@/shared/api/devflow-api";
 import { loadDesignGuidance } from "@/shared/design-guidance";
 import { useSocketSubscription } from "@/shared/hooks/use-socket-subscription";
@@ -47,6 +49,17 @@ export function useRunStepViewModel(ctx: OrchestratorWizardContextValue): RunSte
     setStarting(true);
     setError("");
     try {
+      const [llm, github] = await Promise.all([
+        verifyDevFlowLlmProvider(projectId),
+        verifyDevFlowGithubDelivery(projectId),
+      ]);
+      if (!llm.ok || !github.ok) {
+        const blockers = [
+          !llm.ok ? `LLM: ${llm.reason || "connection unavailable"}` : "",
+          !github.ok ? `GitHub: ${github.reason || "delivery unavailable"}` : "",
+        ].filter(Boolean);
+        throw new Error(`Preflight failed. ${blockers.join(" ")}`);
+      }
       await startDevFlowOrchestration(projectId, {
         designGuidance: loadDesignGuidance(projectId),
       });

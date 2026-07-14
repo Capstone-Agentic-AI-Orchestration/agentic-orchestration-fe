@@ -13,7 +13,7 @@ import {
   OrchestratorStepper,
   ORCHESTRATOR_STEPS,
 } from "./orchestrator-stepper";
-import { IconArrowLeft, IconArrowRight, IconCompass, IconCheck, IconAlertTriangle } from "@/shared/components/icons";
+import { IconArrowLeft, IconArrowRight, IconCompass, IconAlertTriangle } from "@/shared/components/icons";
 import { Button } from "@/shared/components/ui";
 
 export type { OrchestratorWizardContextValue };
@@ -56,25 +56,6 @@ export function OrchestratorWizardLayout({
             </span>
           </div>
         </div>
-        {!vm.loading && (
-          vm.layout.onTrack ? (
-            <div className="orch-next-pill is-ontrack" title="This is the recommended step for the project's current state">
-              <IconCheck size={13} />
-              You&apos;re on the right step
-            </div>
-          ) : (
-            <button
-              type="button"
-              className="orch-next-pill"
-              onClick={() => router.push(`/pm/orchestrate/${projectId}/${vm.layout.recommendedStep}`)}
-            >
-              <IconCompass size={13} />
-              <span className="orch-next-pill-label">Do this next</span>
-              <strong>{recommendedMeta?.shortLabel ?? vm.layout.recommendedStep}</strong>
-              <IconArrowRight size={13} />
-            </button>
-          )
-        )}
       </header>
 
       <OrchestratorStepper
@@ -83,6 +64,29 @@ export function OrchestratorWizardLayout({
         maxReachedStep={vm.layout.maxReachedStep}
         completedSteps={vm.layout.completedSteps}
       />
+
+      {!vm.loading && !vm.error && (
+        <section className={`orch-guidance-card ${vm.layout.onTrack ? "is-current" : "needs-action"}`}>
+          <span className="orch-guidance-icon"><IconCompass size={18} /></span>
+          <div className="orch-guidance-copy">
+            <span className="orch-guidance-eyebrow">
+              {vm.layout.onTrack ? "Your current task" : "Recommended next action"}
+            </span>
+            <strong>{vm.layout.onTrack ? currentMeta?.label : recommendedMeta?.label}</strong>
+            <p>{vm.layout.onTrack ? currentMeta?.description : recommendedMeta?.description}</p>
+          </div>
+          {!vm.layout.onTrack && (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => router.push(`/pm/orchestrate/${projectId}/${vm.layout.recommendedStep}`)}
+            >
+              Go to {recommendedMeta?.shortLabel ?? "next step"}
+              <IconArrowRight size={13} />
+            </Button>
+          )}
+        </section>
+      )}
 
       <main className="orchestrator-wizard-body">
         {vm.loading ? (

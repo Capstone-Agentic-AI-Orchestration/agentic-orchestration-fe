@@ -126,17 +126,25 @@ export function OrchestrationRunCockpit({
 
       {isFailed && (
         <div className="cockpit-retry reveal">
-          <div className="row gap-2" style={{ alignItems: "center" }}>
-            <IconAlertTriangle size={16} style={{ color: "#FCA5A5" }} />
-            <span style={{ fontSize: 13.5, fontWeight: 600 }}>The run hit an error. Retry the pipeline or rerun ready work orders.</span>
+          <div className="cockpit-retry-copy">
+            <div className="row gap-2" style={{ alignItems: "center" }}>
+              <IconAlertTriangle size={16} style={{ color: "#FCA5A5" }} />
+              <strong>The run is blocked</strong>
+            </div>
+            <p>{error || "Check the latest activity entry to identify which agent or provider stopped the run."}</p>
+            <ol>
+              <li>Review the latest failed event in the activity log.</li>
+              <li>Fix the provider or project input named in the error.</li>
+              <li>Retry the full run, or rerun only work orders that are ready.</li>
+            </ol>
           </div>
-          <div className="row gap-2">
+          <div className="cockpit-retry-actions">
             <button className="btn btn-primary btn-sm magnetic" onClick={onStart} disabled={starting}>
               {starting ? <IconRefresh size={14} className="spin" /> : <IconRefresh size={14} />}
-              Retry run
+              Retry full run
             </button>
             <button className="btn btn-secondary btn-sm" onClick={onRerun} disabled={starting}>
-              Rerun work orders
+              Rerun ready work only
             </button>
           </div>
         </div>

@@ -25,10 +25,12 @@ interface OrchestrationCanvasProps {
   projectId: string;
   /** Whether a run is live (enables controls). */
   live?: boolean;
+  /** Developer views are observational; PM views keep run controls enabled. */
+  showControls?: boolean;
   height?: number;
 }
 
-function CanvasInner({ projectId, live = true, height = 460 }: OrchestrationCanvasProps) {
+function CanvasInner({ projectId, live = true, showControls = true, height = 460 }: OrchestrationCanvasProps) {
   const nodeStates = useOrchestrationStore((s) => s.nodeStates);
   const connectionStatus = useOrchestrationStore((s) => s.connectionStatus);
   const orchestrationState = useOrchestrationStore((s) => s.orchestrationState);
@@ -111,13 +113,19 @@ function CanvasInner({ projectId, live = true, height = 460 }: OrchestrationCanv
       <div style={{ display: "grid", gap: 14, gridTemplateRows: "auto auto 1fr", minWidth: 0 }}>
         <Card style={{ padding: 14 }}>
           <div className="row" style={{ justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-            <div style={{ fontSize: 13, fontWeight: 800 }}>Run controls</div>
+            <div style={{ fontSize: 13, fontWeight: 800 }}>{showControls ? "Run controls" : "Pipeline status"}</div>
             <span className="row" style={{ gap: 6, alignItems: "center", color: "var(--text-3)", fontSize: 11 }}>
               <span style={{ width: 7, height: 7, borderRadius: 999, background: connTone }} />
               {connectionStatus}
             </span>
           </div>
-          <RunControls projectId={projectId} selectedNodeId={selectedId} disabled={!live} />
+          {showControls ? (
+            <RunControls projectId={projectId} selectedNodeId={selectedId} disabled={!live} />
+          ) : (
+            <p style={{ margin: 0, color: "var(--text-2)", fontSize: 12, lineHeight: 1.5 }}>
+              Read-only view. The project manager controls the run and approval gates.
+            </p>
+          )}
           {orchestrationState && (
             <div className="mono" style={{ color: "var(--text-3)", fontSize: 10.5, marginTop: 10 }}>
               {orchestrationState.status} · {orchestrationState.currentNode}
