@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev --port 3000",
     "build": "next build",
+    "build:intake-template": "node tools/build-intake-template.mjs",
     "start": "next start --port 3000",
     "lint": "eslint",
     "test": "jest",
@@ -39,6 +40,7 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@types/three": "^0.171.0",
+    "docx": "^9.5.1",
     "eslint": "^9.0.0",
     "eslint-config-next": "16.2.6",
     "jest": "^30.3.0",

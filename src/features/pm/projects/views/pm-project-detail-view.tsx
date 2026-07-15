@@ -567,6 +567,9 @@ function BackendProjectDetail({ project, onBack }) {
             <Button variant="secondary" size="sm" icon={<IconWorkflow size={13} />} onClick={() => router.push(`/pm/orchestrate/${detail.id}/brief`)}>
               Guided wizard
             </Button>
+            <Button variant="secondary" size="sm" icon={<IconClipboard size={13} />} onClick={() => router.push(`/pm/project/${detail.id}/intake`)}>
+              Review intake
+            </Button>
           </div>
         }
       />

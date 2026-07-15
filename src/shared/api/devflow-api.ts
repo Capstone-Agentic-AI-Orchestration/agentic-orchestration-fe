@@ -840,6 +840,100 @@ export interface DevFlowCollaborationDocument {
   reviewedBy: DevFlowProfile | null;
 }
 
+export type DevFlowProjectIntakeStatus = "DRAFT" | "SUBMITTED" | "CHANGES_REQUESTED" | "READY" | "LOCKED" | "SUPERSEDED";
+export type DevFlowFeaturePriority = "MUST_HAVE" | "SHOULD_HAVE" | "NICE_TO_HAVE";
+
+export interface DevFlowClientIntakePayload {
+  overview: {
+    projectName: string;
+    businessGoal: string;
+    successMeasures: string[];
+    primaryContact: string;
+    approver: string;
+    targetLaunch: string;
+  };
+  roles: Array<{ name: string; responsibilities: string[]; permissions: string[] }>;
+  features: Array<{
+    title: string;
+    purpose: string;
+    primaryRole: string;
+    priority: DevFlowFeaturePriority;
+    workflow: string;
+    businessRules: string[];
+    acceptanceCriteria: string[];
+  }>;
+  workflows: Array<{
+    title: string;
+    startCondition: string;
+    actor: string;
+    steps: string[];
+    decisionPoints: string[];
+    errorCases: string[];
+    outcome: string;
+  }>;
+  dataAndIntegrations: {
+    entities: Array<{ name: string; fields: string[]; accessRules: string[] }>;
+    integrations: Array<{ name: string; purpose: string; owner: string }>;
+    dataNotApplicable?: boolean;
+    integrationsNotApplicable?: boolean;
+  };
+  experienceAndDelivery: {
+    designNotes?: string;
+    securityRequirements: string[];
+    constraints: string[];
+    milestones: string[];
+    outOfScope: string[];
+    futurePhase: string[];
+    documentsNotApplicable?: boolean;
+  };
+}
+
+export interface DevFlowIntakeComment {
+  id: string;
+  section: string;
+  message: string;
+  resolvedAt: string | null;
+  createdAt: string;
+  createdBy: Pick<DevFlowProfile, "id" | "fullName" | "email" | "role"> | null;
+}
+
+export interface DevFlowIntakeDocument extends DevFlowCollaborationDocument {
+  mimeType: string | null;
+  sizeBytes: number | null;
+  sha256: string | null;
+  extraction: {
+    status: "PENDING" | "EXTRACTING" | "READY" | "FAILED";
+    error: string | null;
+    attempts: number;
+    updatedAt: string;
+  } | null;
+}
+
+export interface DevFlowProjectIntake {
+  id: string;
+  projectId: string;
+  status: DevFlowProjectIntakeStatus;
+  version: number;
+  payload: DevFlowClientIntakePayload;
+  reviewNote: string | null;
+  submittedAt: string | null;
+  comments: DevFlowIntakeComment[];
+}
+
+export interface DevFlowIntakeReadiness {
+  blockers: string[];
+  readyForSubmission: boolean;
+  readyForLock: boolean;
+  counts: { uploaded: number; extracting: number; failed: number; ready: number };
+}
+
+export interface DevFlowProjectIntakeResponse {
+  intake: DevFlowProjectIntake;
+  documents?: DevFlowIntakeDocument[];
+  readiness: DevFlowIntakeReadiness;
+  templateMarkdown?: string;
+}
+
 export interface DevFlowEventLog {
   id: string;
   projectId: string;
@@ -1103,6 +1197,42 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   clearTimeout(timeoutId);
+
+  if (!response.ok) {
+    const rawBody = await response.text().catch(() => "");
+    const parsed = parseApiErrorBody(rawBody);
+    throw new DevFlowApiError({
+      status: response.status,
+      kind: kindForStatus(response.status),
+      message: messageForStatus(response.status, parsed.message),
+      details: parsed.message,
+      rawBody,
+    });
+  }
+
+  return response.json() as Promise<T>;
+}
+
+async function requestFormData<T>(path: string, formData: FormData): Promise<T> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}${path}`, {
+      method: "POST",
+      headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : undefined,
+      body: formData,
+    });
+  } catch (error) {
+    throw new DevFlowApiError({
+      status: 0,
+      kind: "network",
+      message: "Cannot reach the DevFlow API. Check that the backend is running and try again.",
+      details: error instanceof Error ? error.message : String(error),
+    });
+  }
 
   if (!response.ok) {
     const rawBody = await response.text().catch(() => "");
@@ -1921,4 +2051,89 @@ export function approveDevFlowGate2(projectId: string, approved: boolean, notes?
     method: "POST",
     body: JSON.stringify({ approved, notes }),
   });
+}
+
+export function getDevFlowProjectIntake(projectId: string): Promise<DevFlowProjectIntakeResponse> {
+  return request<DevFlowProjectIntakeResponse>(`/projects/${projectId}/intake`);
+}
+
+export function saveDevFlowProjectIntakeDraft(
+  projectId: string,
+  payload: DevFlowClientIntakePayload,
+): Promise<DevFlowProjectIntakeResponse> {
+  return request<DevFlowProjectIntakeResponse>(`/projects/${projectId}/intake/draft`, {
+    method: "POST",
+    body: JSON.stringify({ payload }),
+  });
+}
+
+export function submitDevFlowProjectIntake(projectId: string): Promise<DevFlowProjectIntakeResponse> {
+  return request<DevFlowProjectIntakeResponse>(`/projects/${projectId}/intake/submit`, { method: "POST" });
+}
+
+export function requestDevFlowProjectIntakeChanges(
+  projectId: string,
+  input: { section: string; message: string },
+): Promise<DevFlowProjectIntakeResponse> {
+  return request<DevFlowProjectIntakeResponse>(`/projects/${projectId}/intake/request-changes`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function markDevFlowProjectIntakeReady(
+  projectId: string,
+  pmNotes?: string,
+): Promise<DevFlowProjectIntakeResponse> {
+  return request<DevFlowProjectIntakeResponse>(`/projects/${projectId}/intake/ready`, {
+    method: "POST",
+    body: JSON.stringify({ note: pmNotes }),
+  });
+}
+
+export function lockDevFlowProjectIntake(
+  projectId: string,
+  pmNotes?: string,
+): Promise<DevFlowProjectIntakeResponse> {
+  return request<DevFlowProjectIntakeResponse>(`/projects/${projectId}/intake/lock`, {
+    method: "POST",
+    body: JSON.stringify({ pmNotes }),
+  });
+}
+
+export function uploadDevFlowProjectIntakeDocument(
+  projectId: string,
+  file: File,
+  options: { title?: string; description?: string; kind?: DevFlowCollaborationDocumentKind } = {},
+): Promise<{ document: DevFlowIntakeDocument }> {
+  const formData = new FormData();
+  formData.set("file", file);
+  if (options.title) formData.set("title", options.title);
+  if (options.description) formData.set("description", options.description);
+  if (options.kind) formData.set("kind", options.kind);
+  return requestFormData<{ document: DevFlowIntakeDocument }>(`/projects/${projectId}/documents/upload`, formData);
+}
+
+export function retryDevFlowProjectIntakeDocumentExtraction(
+  projectId: string,
+  documentId: string,
+): Promise<{ document: DevFlowIntakeDocument }> {
+  return request<{ document: DevFlowIntakeDocument }>(`/projects/${projectId}/documents/${documentId}/retry-extraction`, { method: "POST" });
+}
+
+export async function downloadDevFlowProjectIntakeTemplate(projectId = "template"): Promise<void> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const response = await fetch(`${API_URL}/projects/${projectId}/intake/template`, {
+    headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : undefined,
+  });
+  if (!response.ok) throw new Error("Unable to download the intake template.");
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = "Client-Project-Intake-Template.md";
+  anchor.click();
+  URL.revokeObjectURL(url);
 }

@@ -7,15 +7,17 @@ import { ProjectSwitcher } from "@/shared/projects/project-switcher";
 import { DevFlowNotificationBell } from "@/shared/components/notifications/devflow-notification-bell";
 import { ProjectContextStrip } from "@/shared/components/journey";
 import { devflowLifecycleView } from "@/shared/utils/devflow-projects";
-import { IconHome, IconLayout } from "@/shared/components/icons";
+import { IconHome, IconLayout, IconClipboard } from "@/shared/components/icons";
 
 const CLIENT_NAV: ShellNavItem[] = [
   { id: "dashboard", label: "Project", icon: <IconHome size={18} /> },
+  { id: "intake", label: "Requirements", icon: <IconClipboard size={18} /> },
   { id: "product", label: "Deliverables", icon: <IconLayout size={18} /> },
 ];
 
 const TITLES: Record<string, string> = {
   dashboard: "Project",
+  intake: "Requirements intake",
   product: "Deliverables",
 };
 
