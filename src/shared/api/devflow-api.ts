@@ -187,6 +187,8 @@ export interface DevFlowAuthUser {
   id: string;
   email: string | null;
   fullName: string | null;
+  githubLogin?: string | null;
+  avatarUrl?: string | null;
   role: DevFlowUserRole;
   status?: DevFlowProfileStatus;
 }
@@ -1023,6 +1025,94 @@ export interface CreateDevFlowProjectInput {
   brief: string;
   stackKey: string;
   designGuidance?: DevFlowDesignGuidance;
+  groupId?: string;
+  repositoryName?: string;
+  repositoryDescription?: string;
+}
+
+export type DevFlowGroupRole = "LEAD" | "DELEGATED_LEAD" | "MEMBER" | "VIEWER";
+export type DevFlowGroupStatus = "ACTIVE" | "ARCHIVED";
+export type DevFlowGroupInvitationStatus = "PENDING" | "ACCEPTED" | "DECLINED" | "REVOKED";
+export type DevFlowRepositoryStatus = "PENDING" | "ACTIVE" | "FAILED" | "ARCHIVED";
+export type DevFlowRepositoryAssignmentState = "PENDING" | "ACTIVE" | "REVOKING" | "REVOKED" | "FAILED";
+
+export interface DevFlowGroupPerson {
+  id: string;
+  email: string | null;
+  fullName: string | null;
+  githubLogin?: string | null;
+  avatarUrl?: string | null;
+  role?: DevFlowUserRole;
+}
+
+export interface DevFlowGroupMember {
+  id: string;
+  groupId: string;
+  userId: string;
+  role: DevFlowGroupRole;
+  status: "ACTIVE" | "REMOVED";
+  createdAt: string;
+  updatedAt: string;
+  user: DevFlowGroupPerson;
+}
+
+export interface DevFlowGroup {
+  id: string;
+  name: string;
+  description: string | null;
+  businessUnit: string | null;
+  status: DevFlowGroupStatus;
+  ownerId: string;
+  githubInstallationId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  owner: DevFlowGroupPerson;
+  members: DevFlowGroupMember[];
+  _count: { projects: number; repositories: number; invitations: number };
+}
+
+export interface DevFlowGroupInvitation {
+  id: string;
+  groupId: string;
+  invitedUserId: string;
+  role: DevFlowGroupRole;
+  status: DevFlowGroupInvitationStatus;
+  createdAt: string;
+  group?: Pick<DevFlowGroup, "id" | "name" | "description" | "businessUnit">;
+  invitedUser?: DevFlowGroupPerson;
+  invitedBy: DevFlowGroupPerson;
+}
+
+export interface DevFlowRepositoryAssignment {
+  id: string;
+  repositoryId: string;
+  userId: string;
+  desiredState: "ASSIGNED" | "UNASSIGNED";
+  effectiveState: DevFlowRepositoryAssignmentState;
+  lastError: string | null;
+  lastSyncedAt: string | null;
+  user: DevFlowGroupPerson;
+  assignedBy: DevFlowGroupPerson;
+}
+
+export interface DevFlowRepository {
+  id: string;
+  groupId: string;
+  projectId: string;
+  name: string;
+  fullName: string | null;
+  htmlUrl: string | null;
+  cloneUrl: string | null;
+  defaultBranch: string;
+  visibility: string;
+  status: DevFlowRepositoryStatus;
+  lastError: string | null;
+  provisionedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  group: Pick<DevFlowGroup, "id" | "name" | "status">;
+  project: Pick<DevFlowProjectDetail, "id" | "companyName" | "stackKey" | "status" | "repoUrl">;
+  assignments: DevFlowRepositoryAssignment[];
 }
 
 export interface CreateDevFlowInquiryInput {
@@ -1166,7 +1256,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   } = await supabase.auth.getSession();
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 15_000);
+  const method = (init?.method ?? "GET").toUpperCase();
+  const provisionsRepository = method === "POST" && (path === "/projects" || path === "/repositories");
+  const timeoutMs = provisionsRepository ? 60_000 : 15_000;
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const idempotencyKey = method === "GET"
+    ? null
+    : globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
   let response: Response;
   try {
@@ -1176,6 +1272,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       headers: {
         "Content-Type": "application/json",
         ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
         ...init?.headers,
       },
     });
@@ -1184,7 +1281,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       throw new DevFlowApiError({
         status: 0,
         kind: "network",
-        message: "The DevFlow API did not respond within 15 seconds. Check that the backend is running and try again.",
+        message: `The DevFlow API did not respond within ${timeoutMs / 1000} seconds. Check that the backend is running and try again.`,
         details: "Request timed out",
       });
     }
@@ -1940,6 +2037,114 @@ export function createDevFlowProject(input: CreateDevFlowProjectInput): Promise<
     method: "POST",
     body: JSON.stringify(input),
   });
+}
+
+export function listDevFlowGroups(): Promise<DevFlowGroup[]> {
+  return request<DevFlowGroup[]>("/groups");
+}
+
+export function createDevFlowGroup(input: {
+  name: string;
+  description?: string;
+  businessUnit?: string;
+}): Promise<DevFlowGroup> {
+  return request<DevFlowGroup>("/groups", { method: "POST", body: JSON.stringify(input) });
+}
+
+export function updateDevFlowGroup(
+  groupId: string,
+  input: { name?: string; description?: string; businessUnit?: string },
+): Promise<DevFlowGroup> {
+  return request<DevFlowGroup>(`/groups/${groupId}`, { method: "PATCH", body: JSON.stringify(input) });
+}
+
+export function archiveDevFlowGroup(groupId: string): Promise<DevFlowGroup> {
+  return request<DevFlowGroup>(`/groups/${groupId}/archive`, { method: "POST" });
+}
+
+export function reopenDevFlowGroup(groupId: string): Promise<DevFlowGroup> {
+  return request<DevFlowGroup>(`/groups/${groupId}/reopen`, { method: "POST" });
+}
+
+export function listDevFlowGroupEligibleUsers(groupId: string): Promise<DevFlowGroupPerson[]> {
+  return request<DevFlowGroupPerson[]>(`/groups/${groupId}/eligible-users`);
+}
+
+export function inviteDevFlowGroupMember(
+  groupId: string,
+  input: { userId: string; role: Exclude<DevFlowGroupRole, "LEAD"> },
+): Promise<DevFlowGroupInvitation> {
+  return request<DevFlowGroupInvitation>(`/groups/${groupId}/invitations`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function listMyDevFlowGroupInvitations(): Promise<DevFlowGroupInvitation[]> {
+  return request<DevFlowGroupInvitation[]>("/groups/invitations/mine");
+}
+
+export function respondToDevFlowGroupInvitation(
+  invitationId: string,
+  response: "accept" | "decline",
+): Promise<{ accepted: boolean; groupId: string }> {
+  return request(`/groups/invitations/${invitationId}/${response}`, { method: "POST" });
+}
+
+export function updateDevFlowGroupMemberRole(
+  groupId: string,
+  userId: string,
+  role: Exclude<DevFlowGroupRole, "LEAD">,
+): Promise<DevFlowGroupMember> {
+  return request<DevFlowGroupMember>(`/groups/${groupId}/members/${userId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ role }),
+  });
+}
+
+export function removeDevFlowGroupMember(groupId: string, userId: string): Promise<{ removed: true }> {
+  return request<{ removed: true }>(`/groups/${groupId}/members/${userId}`, { method: "DELETE" });
+}
+
+export function listDevFlowRepositories(): Promise<DevFlowRepository[]> {
+  return request<DevFlowRepository[]>("/repositories");
+}
+
+export function createDevFlowRepository(input: {
+  groupId: string;
+  projectId: string;
+  name: string;
+  description?: string;
+}): Promise<DevFlowRepository> {
+  return request<DevFlowRepository>("/repositories", { method: "POST", body: JSON.stringify(input) });
+}
+
+export function assignDevFlowRepository(repositoryId: string, userId: string): Promise<DevFlowRepositoryAssignment> {
+  return request<DevFlowRepositoryAssignment>(`/repositories/${repositoryId}/assignments`, {
+    method: "POST",
+    body: JSON.stringify({ userId }),
+  });
+}
+
+export function revokeDevFlowRepositoryAssignment(repositoryId: string, userId: string): Promise<DevFlowRepositoryAssignment> {
+  return request<DevFlowRepositoryAssignment>(`/repositories/${repositoryId}/assignments/${userId}`, { method: "DELETE" });
+}
+
+export function reconcileDevFlowRepositoryAssignment(repositoryId: string, userId: string): Promise<DevFlowRepositoryAssignment> {
+  return request<DevFlowRepositoryAssignment>(`/repositories/${repositoryId}/assignments/${userId}/reconcile`, { method: "POST" });
+}
+
+export function getDevFlowGithubStatus(): Promise<{
+  configured: boolean;
+  available: boolean;
+  owner: string | null;
+  installUrl: string | null;
+  provisioningMode: "plain-repository";
+  ciCdConfigured: false;
+  missingRequirements: string[];
+  reason: string | null;
+}> {
+  return request("/github/status");
 }
 
 export type DevFlowAutoAnalyzeResult = {

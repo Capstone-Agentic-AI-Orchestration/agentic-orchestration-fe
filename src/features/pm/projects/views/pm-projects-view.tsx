@@ -23,10 +23,12 @@ import {
 } from "@/shared/components/icons";
 import {
   createDevFlowProject,
+  listDevFlowGroups,
   listDevFlowProjects,
   type DevFlowAutoAnalyzeResult,
   type DevFlowDesignGuidance,
   type DevFlowProjectSummary,
+  type DevFlowGroup,
 } from "@/shared/api/devflow-api";
 import { requestFastBriefAnalysis } from "@/shared/ai/brief-analysis";
 import { DesignGuidancePanel } from "@/shared/components/design/design-guidance-panel";
@@ -254,7 +256,8 @@ function NewProjectWizardModal({
 }) {
   const [stepIndex, setStepIndex] = useState(0);
   const [creating, setCreating] = useState(false);
-  const [form, setForm] = useState({ companyName: "", brief: "", stackKey: "nextjs-nestjs-supabase" });
+  const [form, setForm] = useState({ companyName: "", brief: "", stackKey: "nextjs-nestjs-supabase", groupId: "", repositoryName: "" });
+  const [groups, setGroups] = useState<DevFlowGroup[]>([]);
   const [designGuidance, setDesignGuidance] = useState<DevFlowDesignGuidance>(DEFAULT_DESIGN_GUIDANCE);
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeResult, setAnalyzeResult] = useState<DevFlowAutoAnalyzeResult | null>(null);
@@ -263,7 +266,7 @@ function NewProjectWizardModal({
   const analyzeRequestRef = useRef(0);
 
   const activeStep = CREATE_PROJECT_STEPS[stepIndex];
-  const projectReady = form.companyName.trim().length > 0 && form.stackKey.trim().length > 0;
+  const projectReady = form.companyName.trim().length > 0 && form.stackKey.trim().length > 0 && form.groupId.length > 0 && form.repositoryName.trim().length > 0;
   const briefReady = form.brief.trim().length >= 10;
   const canCreate = projectReady && briefReady;
   const canContinue =
@@ -275,7 +278,7 @@ function NewProjectWizardModal({
   const resetWizard = () => {
     setStepIndex(0);
     setCreating(false);
-    setForm({ companyName: "", brief: "", stackKey: "nextjs-nestjs-supabase" });
+    setForm({ companyName: "", brief: "", stackKey: "nextjs-nestjs-supabase", groupId: "", repositoryName: "" });
     setDesignGuidance(DEFAULT_DESIGN_GUIDANCE);
     setAnalyzing(false);
     setAnalyzeResult(null);
@@ -284,7 +287,16 @@ function NewProjectWizardModal({
   };
 
   useEffect(() => {
-    if (open) resetWizard();
+    if (open) {
+      resetWizard();
+      listDevFlowGroups()
+        .then((items) => {
+          const active = items.filter((group) => group.status === "ACTIVE");
+          setGroups(active);
+          if (active[0]) setForm((current) => ({ ...current, groupId: active[0].id }));
+        })
+        .catch((error) => setCreateError(error instanceof Error ? error.message : String(error)));
+    }
   }, [open]);
 
   const handleAnalyze = async () => {
@@ -323,15 +335,23 @@ function NewProjectWizardModal({
     const companyName = form.companyName.trim();
     const brief = form.brief.trim();
     const stackKey = form.stackKey.trim();
-    if (!companyName || brief.length < 10 || !stackKey) {
-      setCreateError("Company, stack, and a brief of at least 10 characters are required.");
+    const repositoryName = form.repositoryName.trim();
+    if (!companyName || brief.length < 10 || !stackKey || !form.groupId || !repositoryName) {
+      setCreateError("Company, group, repository name, stack, and a brief of at least 10 characters are required.");
       return;
     }
     setCreating(true);
     setCreateError("");
     onError("");
     try {
-      const result = await createDevFlowProject({ companyName, brief, stackKey, designGuidance });
+      const result = await createDevFlowProject({
+        companyName,
+        brief,
+        stackKey,
+        groupId: form.groupId,
+        repositoryName,
+        repositoryDescription: `${companyName} workspace created by DevFlow`,
+      });
       if (result?.id) saveDesignGuidance(result.id, designGuidance);
       resetWizard();
       await onCreated(result?.id);
@@ -433,7 +453,26 @@ function NewProjectWizardModal({
                     <option value="nextjs-only">Next.js only</option>
                   </Select>
                 </Field>
+                <Field label="Delivery group">
+                  <Select
+                    value={form.groupId}
+                    onChange={(event) => setForm((current) => ({ ...current, groupId: event.target.value }))}
+                  >
+                    <option value="">Select a group</option>
+                    {groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}
+                  </Select>
+                </Field>
+                <Field label="GitHub repository" helper="A private repository with folders only. CI/CD is not added.">
+                  <Input
+                    value={form.repositoryName}
+                    onChange={(event) => setForm((current) => ({ ...current, repositoryName: event.target.value.toLowerCase().replace(/[^a-z0-9._-]+/g, "-") }))}
+                    placeholder="acme-logistics"
+                  />
+                </Field>
               </div>
+              {groups.length === 0 && (
+                <div className="wizard-info-banner warning"><IconAlertTriangle size={16} /><span>Create an active group under Groups &amp; repos before starting a project.</span></div>
+              )}
             </div>
           )}
 
@@ -512,6 +551,14 @@ function NewProjectWizardModal({
                 <div className="newproj-summary-card">
                   <span>Stack</span>
                   <strong>{stackLabel(form.stackKey)}</strong>
+                </div>
+                <div className="newproj-summary-card">
+                  <span>Group</span>
+                  <strong>{groups.find((group) => group.id === form.groupId)?.name || "Not set"}</strong>
+                </div>
+                <div className="newproj-summary-card">
+                  <span>Repository</span>
+                  <strong>{form.repositoryName || "Not set"}</strong>
                 </div>
                 <div className="newproj-summary-card wide">
                   <span>Design</span>

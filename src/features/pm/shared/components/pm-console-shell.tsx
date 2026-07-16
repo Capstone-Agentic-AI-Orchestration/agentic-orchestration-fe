@@ -6,10 +6,11 @@ import { SelectedProjectProvider } from "@/shared/projects/selected-project-cont
 import { ProjectSwitcher } from "@/shared/projects/project-switcher";
 import { DevFlowNotificationBell } from "@/shared/components/notifications/devflow-notification-bell";
 import { ProjectContextStrip } from "@/shared/components/journey";
-import { IconFolder, IconSettings } from "@/shared/components/icons";
+import { IconFolder, IconSettings, IconUsers } from "@/shared/components/icons";
 
 const PM_NAV: ShellNavItem[] = [
   { id: "projects", label: "Projects", icon: <IconFolder size={17} />, aliases: ["project", "orchestrate"] },
+  { id: "groups", label: "Groups & repos", icon: <IconUsers size={17} /> },
   { id: "settings", label: "Settings", icon: <IconSettings size={17} /> },
 ];
 
@@ -17,6 +18,7 @@ const TITLES: Record<string, string> = {
   projects: "Projects",
   project: "Projects",
   orchestrate: "Projects",
+  groups: "Groups & repositories",
   settings: "Settings",
 };
 

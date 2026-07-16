@@ -6,11 +6,13 @@ import { SelectedProjectProvider } from "@/shared/projects/selected-project-cont
 import { ProjectSwitcher } from "@/shared/projects/project-switcher";
 import { DevFlowNotificationBell } from "@/shared/components/notifications/devflow-notification-bell";
 import { ProjectContextStrip } from "@/shared/components/journey";
-import { IconCpu, IconFolder, IconHome, IconMessageCircle, IconSettings } from "@/shared/components/icons";
+import { IconCpu, IconFolder, IconGitHub, IconHome, IconMessageCircle, IconSettings, IconUsers } from "@/shared/components/icons";
 
 export const DEV_NAV: ShellNavItem[] = [
   { id: "dashboard", label: "Dashboard", icon: <IconHome size={17} /> },
   { id: "projects", label: "Projects", icon: <IconFolder size={17} />, aliases: ["project"] },
+  { id: "groups", label: "Groups", icon: <IconUsers size={17} /> },
+  { id: "repositories", label: "Repositories", icon: <IconGitHub size={17} /> },
   { id: "orchestrator", label: "Orchestrator", icon: <IconCpu size={17} /> },
   { id: "messages", label: "Messages", icon: <IconMessageCircle size={17} /> },
   { id: "settings", label: "Settings", icon: <IconSettings size={17} /> },
@@ -20,6 +22,8 @@ export const DEV_TITLES: Record<string, string> = {
   dashboard: "Dashboard",
   projects: "Projects",
   project: "Projects",
+  groups: "Groups",
+  repositories: "Repositories",
   orchestrator: "Orchestrator",
   messages: "Messages",
   settings: "Settings",
