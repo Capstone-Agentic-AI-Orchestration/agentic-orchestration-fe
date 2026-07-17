@@ -136,7 +136,8 @@ export type DevFlowNotificationType =
   | "WORK_ORDER_STATUS_CHANGED"
   | "COLLAB_MESSAGE_SENT"
   | "COLLAB_DOCUMENT_UPLOADED"
-  | "COLLAB_DOCUMENT_REVIEWED";
+  | "COLLAB_DOCUMENT_REVIEWED"
+  | "GROUP_INVITATION_SENT";
 
 export type DevFlowProjectTimelineEventType =
   | "PROJECT_CREATED"
@@ -165,7 +166,8 @@ export type DevFlowProjectTimelineEventType =
   | "COLLAB_CONVERSATION_CREATED"
   | "COLLAB_MESSAGE_SENT"
   | "COLLAB_DOCUMENT_UPLOADED"
-  | "COLLAB_DOCUMENT_REVIEWED";
+  | "COLLAB_DOCUMENT_REVIEWED"
+  | "GROUP_INVITATION_SENT";
 
 export type DevFlowProjectTimelineVisibility = "INTERNAL" | "TEAM" | "CLIENT";
 
@@ -1037,12 +1039,15 @@ export type DevFlowRepositoryStatus = "PENDING" | "ACTIVE" | "FAILED" | "ARCHIVE
 export type DevFlowRepositoryAssignmentState = "PENDING" | "ACTIVE" | "REVOKING" | "REVOKED" | "FAILED";
 
 export interface DevFlowGroupPerson {
-  id: string;
+  /** DevFlow profile id — null when the person has not signed into DevFlow yet. */
+  id: string | null;
   email: string | null;
   fullName: string | null;
   githubLogin?: string | null;
   avatarUrl?: string | null;
   role?: DevFlowUserRole;
+  /** True when they have a DevFlow profile and can be invited directly. */
+  onSystem?: boolean;
 }
 
 export interface DevFlowGroupMember {

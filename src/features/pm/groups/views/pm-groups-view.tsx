@@ -206,7 +206,20 @@ export function PMGroupsView() {
                 <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 180px auto", gap: 10, marginTop: 18 }}>
                   <Select value={invite.userId} onChange={(event) => setInvite({ ...invite, userId: event.target.value })}>
                     <option value="">Select a PM or developer</option>
-                    {eligible.map((person) => <option key={person.id} value={person.id}>{person.fullName || person.email} · {person.role}</option>)}
+                    {eligible.map((person) => {
+                      const notOnSystem = person.onSystem === false || !person.id;
+                      return (
+                        <option
+                          key={person.id ?? person.githubLogin ?? person.email}
+                          value={person.id ?? ""}
+                          disabled={notOnSystem}
+                        >
+                          {notOnSystem
+                            ? `${person.githubLogin ?? person.email} · ${person.role} — not on DevFlow yet`
+                            : `${person.fullName || person.email || person.githubLogin} · ${person.role}`}
+                        </option>
+                      );
+                    })}
                   </Select>
                   <Select value={invite.role} onChange={(event) => setInvite({ ...invite, role: event.target.value as Exclude<DevFlowGroupRole, "LEAD"> })}>
                     {MANAGED_ROLES.map((role) => <option key={role} value={role}>{role.replaceAll("_", " ")}</option>)}
