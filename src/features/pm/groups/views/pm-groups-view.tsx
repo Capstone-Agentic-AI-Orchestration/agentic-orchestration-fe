@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Badge, Button, Card, Field, Input, Select, Textarea } from "@/shared/components/ui";
+import { useRouter } from "next/navigation";
+import { Badge, Button, Card, Field, Input, Select, Textarea, useToast } from "@/shared/components/ui";
 import { IconGitHub, IconPlus, IconRefresh, IconUsers } from "@/shared/components/icons";
 import {
   archiveDevFlowGroup,
@@ -35,6 +36,8 @@ export function PMGroupsView() {
   const [githubStatus, setGithubStatus] = useState<Awaited<ReturnType<typeof getDevFlowGithubStatus>> | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const toast = useToast();
+  const router = useRouter();
 
   const selected = useMemo(
     () => groups.find((group) => group.id === selectedId) ?? groups[0] ?? null,
@@ -166,14 +169,19 @@ export function PMGroupsView() {
                   <h2 style={{ marginTop: 6 }}>{selected.name}</h2>
                   <p style={{ color: "var(--text-2)" }}>{selected.description || "No group description yet."}</p>
                 </div>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  disabled={busy}
-                  onClick={() => void run(() => selected.status === "ACTIVE" ? archiveDevFlowGroup(selected.id) : reopenDevFlowGroup(selected.id))}
-                >
-                  {selected.status === "ACTIVE" ? "Archive" : "Reopen"}
-                </Button>
+                <div className="row gap-2">
+                  <Button variant="primary" size="sm" onClick={() => router.push(`/pm/team/${selected.id}`)}>
+                    Open team platform →
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    disabled={busy}
+                    onClick={() => void run(() => selected.status === "ACTIVE" ? archiveDevFlowGroup(selected.id) : reopenDevFlowGroup(selected.id))}
+                  >
+                    {selected.status === "ACTIVE" ? "Archive" : "Reopen"}
+                  </Button>
+                </div>
               </div>
             </Card>
 
@@ -225,8 +233,13 @@ export function PMGroupsView() {
                     {MANAGED_ROLES.map((role) => <option key={role} value={role}>{role.replaceAll("_", " ")}</option>)}
                   </Select>
                   <Button variant="primary" disabled={busy || !invite.userId} onClick={() => void run(async () => {
+                    const invitee = eligible.find((person) => person.id === invite.userId);
                     await inviteDevFlowGroupMember(selected.id, invite);
                     setInvite({ userId: "", role: "MEMBER" });
+                    toast.success(
+                      "Invitation sent",
+                      `${invitee?.fullName || invitee?.email || invitee?.githubLogin || "The member"} was invited to ${selected.name}. They'll see it in their notifications.`,
+                    );
                   })}>Invite</Button>
                 </div>
               )}

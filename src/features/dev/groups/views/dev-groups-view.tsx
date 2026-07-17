@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Badge, Button, Card } from "@/shared/components/ui";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Badge, Button, Card, useToast } from "@/shared/components/ui";
 import { IconRefresh, IconUsers } from "@/shared/components/icons";
 import {
   listDevFlowGroups,
@@ -11,31 +11,71 @@ import {
   type DevFlowGroupInvitation,
 } from "@/shared/api/devflow-api";
 
+const POLL_INTERVAL_MS = 20_000;
+
 export function DevGroupsView() {
   const [groups, setGroups] = useState<DevFlowGroup[]>([]);
   const [invitations, setInvitations] = useState<DevFlowGroupInvitation[]>([]);
   const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const toast = useToast();
+  const prevInviteIds = useRef<Set<string>>(new Set());
 
-  const refresh = async () => {
-    setError("");
+  // `silent` refreshes (polling / focus) don't toggle the loading state, so the
+  // list never flickers to a spinner while it's already showing content.
+  const refresh = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
-      const [nextGroups, nextInvitations] = await Promise.all([listDevFlowGroups(), listMyDevFlowGroupInvitations()]);
+      const [nextGroups, nextInvitations] = await Promise.all([
+        listDevFlowGroups(),
+        listMyDevFlowGroupInvitations(),
+      ]);
       setGroups(nextGroups);
       setInvitations(nextInvitations);
+      setError("");
+
+      // Surface newly-arrived invitations (e.g. discovered by polling) as a toast.
+      const nextIds = new Set(nextInvitations.map((i) => i.id));
+      if (prevInviteIds.current.size > 0) {
+        const fresh = nextInvitations.filter((i) => !prevInviteIds.current.has(i.id));
+        if (fresh.length > 0) {
+          toast.info(
+            fresh.length === 1 ? "New team invitation" : `${fresh.length} new team invitations`,
+            fresh.length === 1 ? `You've been invited to ${fresh[0].group?.name ?? "a group"}.` : undefined,
+          );
+        }
+      }
+      prevInviteIds.current = nextIds;
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : String(requestError));
+    } finally {
+      if (!silent) setLoading(false);
     }
-  };
+  }, [toast]);
 
-  useEffect(() => { void refresh(); }, []);
+  // Initial load, background polling, and a refresh when the tab regains focus —
+  // so an invitation sent while the developer is on this page shows up on its own.
+  useEffect(() => {
+    void refresh();
+    const timer = setInterval(() => void refresh(true), POLL_INTERVAL_MS);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void refresh(true);
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [refresh]);
 
   const respond = async (invitationId: string, response: "accept" | "decline") => {
     setBusy(true);
     setError("");
     try {
       await respondToDevFlowGroupInvitation(invitationId, response);
-      await refresh();
+      await refresh(true);
+      toast.success(response === "accept" ? "Joined the team" : "Invitation declined");
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : String(requestError));
     } finally {
@@ -43,13 +83,27 @@ export function DevGroupsView() {
     }
   };
 
+  const nothingYet = groups.length === 0 && invitations.length === 0;
+
   return (
     <div data-screen-label="Developer - Groups">
       <div className="row" style={{ justifyContent: "space-between", marginBottom: 18 }}>
-        <div><span className="eyebrow"><IconUsers size={14} /> Internal groups</span><h1 style={{ marginTop: 8 }}>Your delivery groups</h1><p style={{ color: "var(--text-2)" }}>Accept PM invitations and see the internal teams you work with.</p></div>
-        <Button variant="secondary" size="sm" icon={<IconRefresh size={14} />} onClick={() => void refresh()}>Refresh</Button>
+        <div>
+          <span className="eyebrow"><IconUsers size={14} /> Internal groups</span>
+          <h1 style={{ marginTop: 8 }}>Your delivery groups</h1>
+          <p style={{ color: "var(--text-2)" }}>Accept PM invitations and see the internal teams you work with.</p>
+        </div>
+        <Button variant="secondary" size="sm" icon={<IconRefresh size={14} />} disabled={loading} onClick={() => void refresh()}>
+          {loading ? "Refreshing…" : "Refresh"}
+        </Button>
       </div>
+
       {error && <Card style={{ padding: 14, color: "#FCA5A5", marginBottom: 14 }}>{error}</Card>}
+
+      {loading && nothingYet && (
+        <Card style={{ padding: 24 }}><strong>Loading your groups…</strong><p style={{ color: "var(--text-3)", marginTop: 6 }}>Checking for pending invitations.</p></Card>
+      )}
+
       {invitations.length > 0 && (
         <Card style={{ padding: 20, marginBottom: 16 }}>
           <strong>Pending invitations</strong>
@@ -61,6 +115,7 @@ export function DevGroupsView() {
           ))}
         </Card>
       )}
+
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 14 }}>
         {groups.map((group) => (
           <Card key={group.id} style={{ padding: 20 }}>
@@ -72,7 +127,7 @@ export function DevGroupsView() {
             </div>
           </Card>
         ))}
-        {groups.length === 0 && invitations.length === 0 && <Card style={{ padding: 24 }}><strong>No groups yet</strong><p style={{ color: "var(--text-3)", marginTop: 6 }}>A project manager must invite you before a group appears here.</p></Card>}
+        {!loading && nothingYet && <Card style={{ padding: 24 }}><strong>No groups yet</strong><p style={{ color: "var(--text-3)", marginTop: 6 }}>A project manager must invite you before a group appears here.</p></Card>}
       </div>
     </div>
   );
