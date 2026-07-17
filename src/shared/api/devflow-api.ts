@@ -308,6 +308,7 @@ export interface DevFlowProjectSummary {
   status: DevFlowProjectStatus;
   createdAt: string;
   updatedAt: string;
+  groupId: string | null;
   lifecycle: DevFlowProjectLifecycle;
 }
 
@@ -1389,6 +1390,17 @@ function fileNameFromDisposition(disposition: string | null): string | null {
   if (utf8Match?.[1]) return decodeURIComponent(utf8Match[1]);
   const match = disposition.match(/filename="?([^";]+)"?/i);
   return match?.[1] || null;
+}
+
+/** Developer-initiated orchestration start: the prompt is the build requirement. */
+export function startDevFlowOrchestrationFromPrompt(
+  projectId: string,
+  prompt: string,
+): Promise<{ accepted: boolean; runId: string }> {
+  return request(`/projects/${projectId}/orchestration/start-from-prompt`, {
+    method: "POST",
+    body: JSON.stringify({ prompt }),
+  });
 }
 
 export function listDevFlowProjects(): Promise<DevFlowProjectSummary[]> {

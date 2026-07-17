@@ -3,7 +3,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Badge, Button, Card } from "@/shared/components/ui";
+import { Badge, Button, Card, Textarea, useToast } from "@/shared/components/ui";
+import { startDevFlowOrchestrationFromPrompt } from "@/shared/api/devflow-api";
 import {
   IconActivity,
   IconArrowLeft,
@@ -158,18 +159,71 @@ export function DevProjectDetailView({ projectId }) {
   );
 }
 
+function DevStartBuildCard({ projectId, runId, onStarted }) {
+  const [prompt, setPrompt] = useState("");
+  const [busy, setBusy] = useState(false);
+  const toast = useToast();
+  const ready = prompt.trim().length >= 10;
+
+  const start = async () => {
+    setBusy(true);
+    try {
+      await startDevFlowOrchestrationFromPrompt(projectId, prompt.trim());
+      toast.success("Orchestration started", "The AI agents are building against this project's repository.");
+      setPrompt("");
+      onStarted?.();
+    } catch (error) {
+      toast.error("Could not start orchestration", error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (runId) {
+    return (
+      <Card style={{ padding: 20, marginBottom: 16, border: "1px solid rgba(52,211,153,.28)" }}>
+        <strong>Orchestration running</strong>
+        <p style={{ color: "var(--text-3)", marginTop: 6 }}>A run is already in progress for this project. Open the orchestrator to follow the agents.</p>
+      </Card>
+    );
+  }
+
+  return (
+    <Card style={{ padding: 20, marginBottom: 16, border: "1px solid rgba(79,139,255,.28)" }}>
+      <strong>Start build</strong>
+      <p style={{ color: "var(--text-3)", margin: "6px 0 12px" }}>
+        Describe what to build. Your prompt starts the orchestration and the AI agents build it directly in this project&apos;s GitHub repository.
+      </p>
+      <Textarea
+        value={prompt}
+        onChange={(event) => setPrompt(event.target.value)}
+        placeholder="e.g. A REST API with GitHub-based auth and a projects CRUD, plus a Next.js dashboard to manage them."
+        rows={4}
+      />
+      <div style={{ marginTop: 12 }}>
+        <Button variant="primary" disabled={busy || !ready} onClick={() => void start()}>
+          {busy ? "Starting…" : "Start build"}
+        </Button>
+      </div>
+    </Card>
+  );
+}
+
 function BackendDevProjectDetail({ project, onBack, onOpenOrchestrator }) {
   const vm = useDevProjectDetailViewModel({ project, onBack, onOpenOrchestrator });
   const outputs = vm.outputs;
 
   return (
-    <DevProjectDetailContentView
+    <>
+      <DevStartBuildCard projectId={project.id} runId={project.runId} onStarted={outputs.refresh} />
+      <DevProjectDetailContentView
       vm={vm}
       workOrders={<DevBackendWorkOrders workOrders={outputs.workOrders} loading={outputs.loading} error={outputs.error} />}
       tasks={<DevBackendTasks projectId={project.id} tasks={outputs.tasks} loading={outputs.loading} error={outputs.error} onChanged={outputs.refresh} />}
       timeline={<DevFlowProjectTimeline timeline={outputs.timeline} loading={outputs.loading} error={outputs.error} emptyText="No project timeline events yet." compactError={compactDevFlowError} />}
       artifacts={<DevBackendArtifacts artifacts={outputs.artifacts} loading={outputs.loading} error={outputs.error} />}
     />
+    </>
   );
 }
 
