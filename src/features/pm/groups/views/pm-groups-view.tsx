@@ -31,6 +31,7 @@ export function PMGroupsView() {
   const [selectedId, setSelectedId] = useState("");
   const [eligible, setEligible] = useState<DevFlowGroupPerson[]>([]);
   const [form, setForm] = useState({ name: "", businessUnit: "", description: "" });
+  const [showCreate, setShowCreate] = useState(false);
   const [invite, setInvite] = useState({ userId: "", role: "MEMBER" as Exclude<DevFlowGroupRole, "LEAD"> });
   const [assignmentUsers, setAssignmentUsers] = useState<Record<string, string>>({});
   const [githubStatus, setGithubStatus] = useState<Awaited<ReturnType<typeof getDevFlowGithubStatus>> | null>(null);
@@ -84,6 +85,8 @@ export function PMGroupsView() {
         description: form.description.trim() || undefined,
       });
       setForm({ name: "", businessUnit: "", description: "" });
+      setShowCreate(false);
+      toast.success("Group created", `${group.name} is ready.`);
       await refresh(group.id);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : String(requestError));
@@ -124,19 +127,30 @@ export function PMGroupsView() {
 
       <div style={{ display: "grid", gridTemplateColumns: "minmax(260px, .8fr) minmax(0, 2fr)", gap: 18, alignItems: "start" }}>
         <div style={{ display: "grid", gap: 14 }}>
-          <Card style={{ padding: 18 }}>
-            <div className="row gap-2" style={{ marginBottom: 14 }}><IconPlus size={15} /><strong>Create group</strong></div>
-            <div style={{ display: "grid", gap: 12 }}>
-              <Field label="Group name"><Input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="Platform delivery" /></Field>
-              <Field label="Business unit"><Input value={form.businessUnit} onChange={(event) => setForm({ ...form, businessUnit: event.target.value })} placeholder="Engineering" /></Field>
-              <Field label="Description"><Textarea rows={3} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} placeholder="What this group owns" /></Field>
-              <Button variant="primary" onClick={() => void createGroup()} disabled={busy || form.name.trim().length < 2}>Create group</Button>
+          <Card style={{ padding: 14 }}>
+            <div className="row" style={{ justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <strong>Internal groups</strong>
+              <Button
+                variant={showCreate ? "ghost" : "primary"}
+                size="sm"
+                icon={showCreate ? undefined : <IconPlus size={14} />}
+                onClick={() => setShowCreate((value) => !value)}
+              >
+                {showCreate ? "Cancel" : "New group"}
+              </Button>
             </div>
-          </Card>
 
-          <Card style={{ padding: 10 }}>
+            {showCreate && (
+              <div style={{ display: "grid", gap: 10, marginBottom: 14, paddingBottom: 14, borderBottom: "1px solid var(--border)" }}>
+                <Field label="Group name"><Input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="Platform delivery" /></Field>
+                <Field label="Business unit"><Input value={form.businessUnit} onChange={(event) => setForm({ ...form, businessUnit: event.target.value })} placeholder="Engineering" /></Field>
+                <Field label="Description"><Textarea rows={3} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} placeholder="What this group owns" /></Field>
+                <Button variant="primary" onClick={() => void createGroup()} disabled={busy || form.name.trim().length < 2}>Create group</Button>
+              </div>
+            )}
+
             {groups.length === 0 ? (
-              <p style={{ color: "var(--text-3)", padding: 10 }}>No internal groups yet.</p>
+              <p style={{ color: "var(--text-3)", padding: "6px 4px" }}>No internal groups yet. Click <strong>New group</strong> to create one.</p>
             ) : groups.map((group) => (
               <button
                 key={group.id}
