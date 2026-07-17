@@ -100,7 +100,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signInWithOAuth = useCallback(async (provider: DevFlowOAuthProvider, nextPath?: string | null) => {
-    const redirectPath = process.env.NEXT_PUBLIC_AUTH_REDIRECT_PATH || "/client/sign-in";
+    // Return the user to the SAME sign-in page they started on (dev/pm/client),
+    // each of which routes onward by role. Falls back to the configured path.
+    const redirectPath =
+      (typeof window !== "undefined" && window.location.pathname) ||
+      process.env.NEXT_PUBLIC_AUTH_REDIRECT_PATH ||
+      "/client/sign-in";
     const redirectUrl = new URL(redirectPath, window.location.origin);
     if (nextPath) redirectUrl.searchParams.set("next", nextPath);
 
