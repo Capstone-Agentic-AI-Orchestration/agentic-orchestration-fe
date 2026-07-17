@@ -7,6 +7,14 @@ import { compactDevFlowError } from "@/shared/utils/devflow-projects";
 import { useAuth } from "./auth-provider";
 import { homePathForRole } from "./role-routing";
 
+/** Route an unauthenticated visitor to the sign-in page for the workspace they
+ *  were trying to reach, so the dedicated /dev and /pm entry points get used. */
+function signInPathForPathname(pathname: string): string {
+  if (pathname === "/dev" || pathname.startsWith("/dev/")) return "/dev/sign-in";
+  if (pathname === "/pm" || pathname.startsWith("/pm/")) return "/pm/sign-in";
+  return "/client/sign-in";
+}
+
 export function RequireAuth({
   allowedRoles,
   children,
@@ -22,7 +30,7 @@ export function RequireAuth({
 
   useEffect(() => {
     if (!initialized || user) return;
-    router.replace(`/client/sign-in?next=${encodeURIComponent(pathname)}`);
+    router.replace(`${signInPathForPathname(pathname)}?next=${encodeURIComponent(pathname)}`);
   }, [initialized, pathname, router, user]);
 
   useEffect(() => {
@@ -70,7 +78,7 @@ export function RequireAuth({
 
   const returnToSignIn = async () => {
     await signOut().catch(() => null);
-    router.replace(`/client/sign-in?next=${encodeURIComponent(pathname)}`);
+    router.replace(`${signInPathForPathname(pathname)}?next=${encodeURIComponent(pathname)}`);
   };
 
   if (!initialized) {
