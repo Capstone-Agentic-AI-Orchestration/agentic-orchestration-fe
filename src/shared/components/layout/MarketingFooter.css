@@ -20,11 +20,10 @@
   gap: 12px;
 }
 
-.mfoot-logo {
-  font-family: "Geist Mono", ui-monospace, monospace;
-  font-size: 14px;
-  letter-spacing: 0.04em;
-  color: var(--text);
+.mfoot-logo-img {
+  height: 30px;
+  width: auto;
+  display: block;
 }
 
 .mfoot-tagline {

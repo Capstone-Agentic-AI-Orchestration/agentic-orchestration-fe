@@ -5,6 +5,7 @@
  * 3 columns: brand + product + legal.
  */
 
+import Image from "next/image";
 import "./MarketingFooter.css";
 
 export function MarketingFooter() {
@@ -12,33 +13,40 @@ export function MarketingFooter() {
     <footer className="mfoot">
       <div className="mfoot-inner">
         <div className="mfoot-brand">
-          <span className="mfoot-logo">devflow</span>
+          <Image
+            src="/assets/alpha-logo-full.png"
+            alt="Alphaexplora"
+            width={150}
+            height={50}
+            className="mfoot-logo-img"
+          />
           <p className="mfoot-tagline">
-            One prompt. Build everything.
+            Architecting the digital frontier.
           </p>
         </div>
 
         <div className="mfoot-cols">
           <div className="mfoot-col">
-            <h4>Product</h4>
+            <h4>Studio</h4>
             <ul>
-              <li><a href="#how-it-works">How it works</a></li>
-              <li><a href="#cta">Get started</a></li>
+              <li><a href="#services">Services</a></li>
+              <li><a href="#how-it-works">How we work</a></li>
+              <li><a href="#cta">Start a project</a></li>
             </ul>
           </div>
 
           <div className="mfoot-col">
-            <h4>Company</h4>
+            <h4>Contact</h4>
             <ul>
-              <li><a href="https://alphaexplora.com" target="_blank" rel="noopener noreferrer">Alphaexplora</a></li>
-              <li><a href="mailto:hello@alphaexplora.com">Contact</a></li>
+              <li><a href="mailto:hello@alphaexplora.com">hello@alphaexplora.com</a></li>
+              <li><a href="https://alphaexplora.com" target="_blank" rel="noopener noreferrer">alphaexplora.com</a></li>
             </ul>
           </div>
         </div>
 
         <div className="mfoot-bottom">
           <span>© {new Date().getFullYear()} Alphaexplora</span>
-          <span className="mfoot-meta">Built with LangGraph</span>
+          <span className="mfoot-meta">Enterprise software · Philippines</span>
         </div>
       </div>
     </footer>

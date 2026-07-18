@@ -39,16 +39,16 @@
   text-decoration: none;
 }
 
-.mnav-logo-mark {
-  font-size: 18px;
-  line-height: 1;
-  color: var(--text);
+.mnav-logo-img {
+  height: 24px;
+  width: auto;
+  display: block;
 }
 
-.mnav-logo-word {
-  font-family: "Geist Mono", ui-monospace, monospace;
-  font-size: 13px;
-  letter-spacing: 0.04em;
+@media (max-width: 768px) {
+  .mnav-logo-img {
+    height: 21px;
+  }
 }
 
 .mnav-links {
