@@ -1,10 +1,12 @@
 // @ts-nocheck
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge, Button, Card, Textarea, useToast } from "@/shared/components/ui";
 import { startDevFlowOrchestrationFromPrompt } from "@/shared/api/devflow-api";
+import { useSelectedDevFlowProject } from "@/shared/projects/selected-project-context";
+import { DevOrchestratorWorkbench } from "@/features/orchestration";
 import {
   IconActivity,
   IconArrowLeft,
@@ -132,7 +134,7 @@ export function DevProjectDetailView({ projectId }) {
   const { project: backendProject, loading: backendLoading, error: backendError } = useDevFlowProject(projectId);
 
   if (backendProject) {
-    return <BackendDevProjectDetail project={backendProject} onBack={() => router.push("/dev/projects")} onOpenOrchestrator={() => router.push("/dev/orchestrator")} />;
+    return <BackendDevProjectDetail project={backendProject} onBack={() => router.push("/dev/projects")} />;
   }
 
   if (backendLoading) {
@@ -209,21 +211,52 @@ function DevStartBuildCard({ projectId, runId, onStarted }) {
   );
 }
 
-function BackendDevProjectDetail({ project, onBack, onOpenOrchestrator }) {
-  const vm = useDevProjectDetailViewModel({ project, onBack, onOpenOrchestrator });
+function BackendDevProjectDetail({ project, onBack }) {
+  const [tab, setTab] = useState("workspace"); // "workspace" | "orchestration"
+  const { setSelectedProjectId } = useSelectedDevFlowProject();
+  // Scope the embedded orchestration workbench to this project.
+  useEffect(() => { setSelectedProjectId(project.id); }, [project.id, setSelectedProjectId]);
+
+  // "Open orchestrator" now switches to the in-project Orchestration tab.
+  const vm = useDevProjectDetailViewModel({ project, onBack, onOpenOrchestrator: () => setTab("orchestration") });
   const outputs = vm.outputs;
 
+  const tabButton = (id, label) => (
+    <button
+      type="button"
+      onClick={() => setTab(id)}
+      style={{
+        background: "none", border: 0, borderBottom: tab === id ? "2px solid #4F8BFF" : "2px solid transparent",
+        color: tab === id ? "white" : "var(--text-2)", padding: "8px 4px", marginRight: 18,
+        fontFamily: "inherit", fontSize: 14, fontWeight: 600, cursor: "pointer",
+      }}
+    >
+      {label}
+    </button>
+  );
+
   return (
-    <>
-      <DevStartBuildCard projectId={project.id} runId={project.runId} onStarted={outputs.refresh} />
-      <DevProjectDetailContentView
-      vm={vm}
-      workOrders={<DevBackendWorkOrders workOrders={outputs.workOrders} loading={outputs.loading} error={outputs.error} />}
-      tasks={<DevBackendTasks projectId={project.id} tasks={outputs.tasks} loading={outputs.loading} error={outputs.error} onChanged={outputs.refresh} />}
-      timeline={<DevFlowProjectTimeline timeline={outputs.timeline} loading={outputs.loading} error={outputs.error} emptyText="No project timeline events yet." compactError={compactDevFlowError} />}
-      artifacts={<DevBackendArtifacts artifacts={outputs.artifacts} loading={outputs.loading} error={outputs.error} />}
-    />
-    </>
+    <div>
+      <div className="row" style={{ borderBottom: "1px solid var(--border)", marginBottom: 18 }}>
+        {tabButton("workspace", "Workspace")}
+        {tabButton("orchestration", "Orchestration")}
+      </div>
+
+      {tab === "workspace" ? (
+        <DevProjectDetailContentView
+          vm={vm}
+          workOrders={<DevBackendWorkOrders workOrders={outputs.workOrders} loading={outputs.loading} error={outputs.error} />}
+          tasks={<DevBackendTasks projectId={project.id} tasks={outputs.tasks} loading={outputs.loading} error={outputs.error} onChanged={outputs.refresh} />}
+          timeline={<DevFlowProjectTimeline timeline={outputs.timeline} loading={outputs.loading} error={outputs.error} emptyText="No project timeline events yet." compactError={compactDevFlowError} />}
+          artifacts={<DevBackendArtifacts artifacts={outputs.artifacts} loading={outputs.loading} error={outputs.error} />}
+        />
+      ) : (
+        <div style={{ display: "grid", gap: 18 }}>
+          <DevStartBuildCard projectId={project.id} runId={project.runId} onStarted={outputs.refresh} />
+          <DevOrchestratorWorkbench />
+        </div>
+      )}
+    </div>
   );
 }
 

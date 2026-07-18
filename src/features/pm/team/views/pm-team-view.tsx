@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Badge, Button, Card, Field, Input, Textarea, useToast } from "@/shared/components/ui";
+import { Badge, Button, Card, Field, Input, Select, Textarea, useToast } from "@/shared/components/ui";
 import { IconArrowLeft, IconGitHub, IconPlus, IconRefresh, IconUsers } from "@/shared/components/icons";
 import {
   createDevFlowProject,
@@ -15,7 +15,22 @@ import {
 } from "@/shared/api/devflow-api";
 import { pmProjectOrchestrateRoute } from "@/features/pm/projects/model/pm-projects-list";
 
-const EMPTY_FORM = { companyName: "", brief: "", stackKey: "nextjs-nestjs-supabase", repositoryName: "" };
+const EMPTY_FORM = {
+  companyName: "",
+  brief: "",
+  stackKey: "nextjs-nestjs-supabase",
+  repositoryName: "",
+  includeMobile: false,
+  backendStack: "nest",
+  frontendStack: "next",
+  mobileStack: "expo",
+};
+
+const STACK_LABELS: Record<string, string> = {
+  nest: "NestJS", node: "Node / Express",
+  next: "Next.js", react: "React (Vite)",
+  expo: "Expo", "react-native": "React Native CLI",
+};
 
 export function PMTeamView({ groupId }: { groupId: string }) {
   const router = useRouter();
@@ -71,10 +86,14 @@ export function PMTeamView({ groupId }: { groupId: string }) {
         groupId,
         repositoryName: form.repositoryName.trim(),
         repositoryDescription: `${companyName} workspace created by DevFlow`,
+        includeMobile: form.includeMobile,
+        backendStack: form.backendStack,
+        frontendStack: form.frontendStack,
+        mobileStack: form.mobileStack,
       });
       toast.success(
-        "Project & repository created",
-        `${companyName}'s GitHub repository is being provisioned. A developer starts orchestration from their workspace once it's ready.`,
+        "Project & repositories created",
+        `Provisioning ${form.repositoryName.trim()}-be, ${form.repositoryName.trim()}-fe${form.includeMobile ? ", " + form.repositoryName.trim() + "-mobile" : ""}. A developer starts orchestration once they're ready.`,
       );
       setForm(EMPTY_FORM);
       await refresh();
@@ -121,11 +140,41 @@ export function PMTeamView({ groupId }: { groupId: string }) {
           <p style={{ color: "var(--text-3)", fontSize: 13, marginBottom: 14 }}>Projects created here belong to <strong>{group?.name ?? "this team"}</strong> and use its GitHub repositories.</p>
           <div style={{ display: "grid", gap: 12 }}>
             <Field label="Company / project name"><Input value={form.companyName} onChange={(e) => setForm({ ...form, companyName: e.target.value })} placeholder="Acme Inc." /></Field>
-            <Field label="Repository name"><Input value={form.repositoryName} onChange={(e) => setForm({ ...form, repositoryName: e.target.value })} placeholder="acme-platform" /></Field>
-            <Field label="Stack"><Input value={form.stackKey} onChange={(e) => setForm({ ...form, stackKey: e.target.value })} placeholder="nextjs-nestjs-supabase" /></Field>
+            <Field label="Repository base name">
+              <Input value={form.repositoryName} onChange={(e) => setForm({ ...form, repositoryName: e.target.value })} placeholder="acme-platform" />
+            </Field>
+            <p style={{ color: "var(--text-3)", fontSize: 12, marginTop: -6 }}>
+              Creates <strong>{(form.repositoryName || "acme-platform").replace(/-(be|fe|backend|frontend|mobile|api|web)$/i, "")}-be</strong> and <strong>{(form.repositoryName || "acme-platform").replace(/-(be|fe|backend|frontend|mobile|api|web)$/i, "")}-fe</strong>{form.includeMobile ? " and -mobile" : ""}, each scaffolded (MVVM + .gitignore).
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <Field label="Backend stack">
+                <Select value={form.backendStack} onChange={(e) => setForm({ ...form, backendStack: e.target.value })}>
+                  <option value="nest">{STACK_LABELS.nest}</option>
+                  <option value="node">{STACK_LABELS.node}</option>
+                </Select>
+              </Field>
+              <Field label="Frontend stack">
+                <Select value={form.frontendStack} onChange={(e) => setForm({ ...form, frontendStack: e.target.value })}>
+                  <option value="next">{STACK_LABELS.next}</option>
+                  <option value="react">{STACK_LABELS.react}</option>
+                </Select>
+              </Field>
+            </div>
             <Field label="Brief"><Textarea value={form.brief} onChange={(e) => setForm({ ...form, brief: e.target.value })} placeholder="What should this project deliver? (min 10 characters)" rows={4} /></Field>
+            <label className="row gap-2" style={{ alignItems: "center", cursor: "pointer", fontSize: 13, color: "var(--text-2)" }}>
+              <input type="checkbox" checked={form.includeMobile} onChange={(e) => setForm({ ...form, includeMobile: e.target.checked })} />
+              Also create a mobile app repo
+            </label>
+            {form.includeMobile && (
+              <Field label="Mobile stack">
+                <Select value={form.mobileStack} onChange={(e) => setForm({ ...form, mobileStack: e.target.value })}>
+                  <option value="expo">{STACK_LABELS.expo}</option>
+                  <option value="react-native">{STACK_LABELS["react-native"]}</option>
+                </Select>
+              </Field>
+            )}
             <Button variant="primary" disabled={creating || !ready} onClick={() => void createProject()}>
-              {creating ? "Creating…" : "Create project & repository"}
+              {creating ? "Creating…" : `Create project & repos${form.includeMobile ? " (3)" : " (2)"}`}
             </Button>
           </div>
         </Card>

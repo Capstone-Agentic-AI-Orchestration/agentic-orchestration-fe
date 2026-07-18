@@ -274,9 +274,16 @@ export function PMGroupsView() {
                     <div className="row gap-2" style={{ marginTop: 10 }}>
                       <Select value={assignmentUsers[repository.id] || ""} onChange={(event) => setAssignmentUsers({ ...assignmentUsers, [repository.id]: event.target.value })}>
                         <option value="">Assign a developer</option>
-                        {developers.map((member) => <option key={member.userId} value={member.userId}>{member.user.fullName || member.user.email}</option>)}
+                        {developers
+                          .filter((member) => !repository.assignments.some((a) => a.desiredState === "ASSIGNED" && a.userId === member.userId))
+                          .map((member) => <option key={member.userId} value={member.userId}>{member.user.fullName || member.user.email}</option>)}
                       </Select>
-                      <Button variant="secondary" size="sm" disabled={busy || !assignmentUsers[repository.id]} onClick={() => void run(() => assignDevFlowRepository(repository.id, assignmentUsers[repository.id]))}>Grant access</Button>
+                      <Button variant="secondary" size="sm" disabled={busy || !assignmentUsers[repository.id]} onClick={() => void run(async () => {
+                        const devName = developers.find((m) => m.userId === assignmentUsers[repository.id])?.user.fullName;
+                        await assignDevFlowRepository(repository.id, assignmentUsers[repository.id]);
+                        setAssignmentUsers((prev) => ({ ...prev, [repository.id]: "" }));
+                        toast.success("Developer granted access", `${devName || "The developer"} can now see ${repository.name} in their workspace.`);
+                      })}>Grant access</Button>
                     </div>
                   )}
                   {repository.assignments.filter((assignment) => assignment.desiredState === "ASSIGNED").length > 0 && (

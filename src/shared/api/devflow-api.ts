@@ -1031,6 +1031,12 @@ export interface CreateDevFlowProjectInput {
   groupId?: string;
   repositoryName?: string;
   repositoryDescription?: string;
+  /** When true, also provision a mobile (Expo/React Native) repository. */
+  includeMobile?: boolean;
+  /** Per-repo tech stack. backend: nest|node; frontend: next|react; mobile: expo|react-native. */
+  backendStack?: string;
+  frontendStack?: string;
+  mobileStack?: string;
 }
 
 export type DevFlowGroupRole = "LEAD" | "DELEGATED_LEAD" | "MEMBER" | "VIEWER";
