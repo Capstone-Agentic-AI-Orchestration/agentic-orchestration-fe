@@ -153,14 +153,8 @@ export function PersonaSignInView({ persona, title, subtitle, homePath, accent }
           </form>
         </div>
 
-        <button
-          type="button"
-          className="auth-link auth-link-btn"
-          onClick={() => router.push("/client/sign-in")}
-          style={{ marginTop: 18, fontSize: 13, color: "var(--text-2)" }}
-        >
-          Not a {personaLabel.toLowerCase()}? Go to client sign in
-        </button>
+        {/* The client sign-in lives in the separate Alphaexplora client app, so
+            this internal console no longer links to it. */}
       </div>
     </div>
   );

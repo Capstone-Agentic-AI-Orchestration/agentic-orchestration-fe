@@ -23,17 +23,19 @@ export function ProjectContextStrip({ role }: { role: Exclude<JourneyRole, "visi
     nextAction: selectedProjectLoading ? "Wait for project data to load." : "Start a new project brief.",
   };
 
+  // Console roles only (pm/dev/admin). The client workspace lives in the
+  // separate Alphaexplora client app, so the fallback stays inside admin.
   const projectHref = selectedProject?.id
     ? role === "pm"
       ? `/pm/project/${selectedProject.id}`
       : role === "dev"
         ? `/dev/project/${selectedProject.id}`
-        : "/client/product"
+        : "/admin/projects"
     : role === "pm"
       ? "/pm/projects"
       : role === "dev"
         ? "/dev/projects"
-        : "/client/dashboard";
+        : "/admin/projects";
 
   return (
     <section className={`project-context-strip health-${displayContext.health}`} aria-label="Current project context">
