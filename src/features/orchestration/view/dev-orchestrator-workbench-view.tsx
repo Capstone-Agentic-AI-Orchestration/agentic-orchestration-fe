@@ -68,8 +68,8 @@ export function DevOrchestratorWorkbenchView({ vm }: { vm: OrchestrationWorkbenc
           {activeTab === "overview" && <Overview vm={vm} />}
           {activeTab === "pipeline" && (
             <Card style={{ padding: 18 }}>
-              <SectionHeading title="Live pipeline" detail="Select a node to inspect its status and telemetry. Run controls remain with the project manager." />
-              <OrchestrationCanvas projectId={vm.selectedProject.id} live={vm.isLiveRun} showControls={false} />
+              <SectionHeading title="Live pipeline" detail="Inspect nodes and drive the run — approve gates, pause, resume, or retry." />
+              <OrchestrationCanvas projectId={vm.selectedProject.id} live={vm.isLiveRun} showControls />
             </Card>
           )}
           {activeTab === "agents" && (

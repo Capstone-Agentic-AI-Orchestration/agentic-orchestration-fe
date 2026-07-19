@@ -56,10 +56,12 @@ describe("developer navigation and messages", () => {
     mockSelectedProjectState = selectedProjectState();
   });
 
-  it("uses the five approved developer navigation items in order", () => {
+  it("uses the seven approved developer navigation items in order", () => {
     expect(DEV_NAV.map((item) => ({ id: item.id, label: item.label }))).toEqual([
       { id: "dashboard", label: "Dashboard" },
       { id: "projects", label: "Projects" },
+      { id: "groups", label: "Groups" },
+      { id: "repositories", label: "Repositories" },
       { id: "orchestrator", label: "Orchestrator" },
       { id: "messages", label: "Messages" },
       { id: "settings", label: "Settings" },

@@ -16,6 +16,8 @@ export class DevFlowApiError extends Error {
   kind: DevFlowApiErrorKind;
   details: string | null;
   rawBody: string;
+  /** Machine-readable error code from the API body (e.g. "ACCOUNT_PENDING_APPROVAL"), when present. */
+  code: string | null;
 
   constructor(input: {
     status: number;
@@ -23,6 +25,7 @@ export class DevFlowApiError extends Error {
     message: string;
     details?: string | null;
     rawBody?: string;
+    code?: string | null;
   }) {
     super(input.message);
     this.name = "DevFlowApiError";
@@ -30,8 +33,12 @@ export class DevFlowApiError extends Error {
     this.kind = input.kind;
     this.details = input.details ?? null;
     this.rawBody = input.rawBody ?? "";
+    this.code = input.code ?? null;
   }
 }
+
+/** Distinct code the API returns when a signed-in client is awaiting PM approval. */
+export const ACCOUNT_PENDING_APPROVAL = "ACCOUNT_PENDING_APPROVAL";
 
 export type DevFlowProjectStatus =
   | "PENDING"
@@ -45,7 +52,7 @@ export type DevFlowProjectStatus =
   | "FAILED";
 
 export type DevFlowUserRole = "CLIENT" | "PM" | "DEV" | "ADMIN";
-export type DevFlowProfileStatus = "ACTIVE" | "SUSPENDED";
+export type DevFlowProfileStatus = "PENDING" | "ACTIVE" | "SUSPENDED";
 
 export type DevFlowInquiryStatus = "NEW" | "APPROVED" | "REJECTED";
 
@@ -136,7 +143,8 @@ export type DevFlowNotificationType =
   | "WORK_ORDER_STATUS_CHANGED"
   | "COLLAB_MESSAGE_SENT"
   | "COLLAB_DOCUMENT_UPLOADED"
-  | "COLLAB_DOCUMENT_REVIEWED";
+  | "COLLAB_DOCUMENT_REVIEWED"
+  | "GROUP_INVITATION_SENT";
 
 export type DevFlowProjectTimelineEventType =
   | "PROJECT_CREATED"
@@ -165,7 +173,8 @@ export type DevFlowProjectTimelineEventType =
   | "COLLAB_CONVERSATION_CREATED"
   | "COLLAB_MESSAGE_SENT"
   | "COLLAB_DOCUMENT_UPLOADED"
-  | "COLLAB_DOCUMENT_REVIEWED";
+  | "COLLAB_DOCUMENT_REVIEWED"
+  | "GROUP_INVITATION_SENT";
 
 export type DevFlowProjectTimelineVisibility = "INTERNAL" | "TEAM" | "CLIENT";
 
@@ -187,6 +196,8 @@ export interface DevFlowAuthUser {
   id: string;
   email: string | null;
   fullName: string | null;
+  githubLogin?: string | null;
+  avatarUrl?: string | null;
   role: DevFlowUserRole;
   status?: DevFlowProfileStatus;
 }
@@ -304,6 +315,7 @@ export interface DevFlowProjectSummary {
   status: DevFlowProjectStatus;
   createdAt: string;
   updatedAt: string;
+  groupId: string | null;
   lifecycle: DevFlowProjectLifecycle;
 }
 
@@ -1023,6 +1035,103 @@ export interface CreateDevFlowProjectInput {
   brief: string;
   stackKey: string;
   designGuidance?: DevFlowDesignGuidance;
+  groupId?: string;
+  repositoryName?: string;
+  repositoryDescription?: string;
+  /** When true, also provision a mobile (Expo/React Native) repository. */
+  includeMobile?: boolean;
+  /** Per-repo tech stack. backend: nest|node; frontend: next|react; mobile: expo|react-native. */
+  backendStack?: string;
+  frontendStack?: string;
+  mobileStack?: string;
+}
+
+export type DevFlowGroupRole = "LEAD" | "DELEGATED_LEAD" | "MEMBER" | "VIEWER";
+export type DevFlowGroupStatus = "ACTIVE" | "ARCHIVED";
+export type DevFlowGroupInvitationStatus = "PENDING" | "ACCEPTED" | "DECLINED" | "REVOKED";
+export type DevFlowRepositoryStatus = "PENDING" | "ACTIVE" | "FAILED" | "ARCHIVED";
+export type DevFlowRepositoryAssignmentState = "PENDING" | "ACTIVE" | "REVOKING" | "REVOKED" | "FAILED";
+
+export interface DevFlowGroupPerson {
+  /** DevFlow profile id — null when the person has not signed into DevFlow yet. */
+  id: string | null;
+  email: string | null;
+  fullName: string | null;
+  githubLogin?: string | null;
+  avatarUrl?: string | null;
+  role?: DevFlowUserRole;
+  /** True when they have a DevFlow profile and can be invited directly. */
+  onSystem?: boolean;
+}
+
+export interface DevFlowGroupMember {
+  id: string;
+  groupId: string;
+  userId: string;
+  role: DevFlowGroupRole;
+  status: "ACTIVE" | "REMOVED";
+  createdAt: string;
+  updatedAt: string;
+  user: DevFlowGroupPerson;
+}
+
+export interface DevFlowGroup {
+  id: string;
+  name: string;
+  description: string | null;
+  businessUnit: string | null;
+  status: DevFlowGroupStatus;
+  ownerId: string;
+  githubInstallationId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  owner: DevFlowGroupPerson;
+  members: DevFlowGroupMember[];
+  _count: { projects: number; repositories: number; invitations: number };
+}
+
+export interface DevFlowGroupInvitation {
+  id: string;
+  groupId: string;
+  invitedUserId: string;
+  role: DevFlowGroupRole;
+  status: DevFlowGroupInvitationStatus;
+  createdAt: string;
+  group?: Pick<DevFlowGroup, "id" | "name" | "description" | "businessUnit">;
+  invitedUser?: DevFlowGroupPerson;
+  invitedBy: DevFlowGroupPerson;
+}
+
+export interface DevFlowRepositoryAssignment {
+  id: string;
+  repositoryId: string;
+  userId: string;
+  desiredState: "ASSIGNED" | "UNASSIGNED";
+  effectiveState: DevFlowRepositoryAssignmentState;
+  lastError: string | null;
+  lastSyncedAt: string | null;
+  user: DevFlowGroupPerson;
+  assignedBy: DevFlowGroupPerson;
+}
+
+export interface DevFlowRepository {
+  id: string;
+  groupId: string;
+  projectId: string;
+  name: string;
+  fullName: string | null;
+  htmlUrl: string | null;
+  cloneUrl: string | null;
+  defaultBranch: string;
+  visibility: string;
+  status: DevFlowRepositoryStatus;
+  lastError: string | null;
+  provisionedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  group: Pick<DevFlowGroup, "id" | "name" | "status">;
+  project: Pick<DevFlowProjectDetail, "id" | "companyName" | "stackKey" | "status" | "repoUrl">;
+  assignments: DevFlowRepositoryAssignment[];
 }
 
 export interface CreateDevFlowInquiryInput {
@@ -1166,7 +1275,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   } = await supabase.auth.getSession();
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 15_000);
+  const method = (init?.method ?? "GET").toUpperCase();
+  const provisionsRepository = method === "POST" && (path === "/projects" || path === "/repositories");
+  const timeoutMs = provisionsRepository ? 60_000 : 15_000;
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const idempotencyKey = method === "GET"
+    ? null
+    : globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
   let response: Response;
   try {
@@ -1176,6 +1291,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       headers: {
         "Content-Type": "application/json",
         ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
         ...init?.headers,
       },
     });
@@ -1184,7 +1300,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       throw new DevFlowApiError({
         status: 0,
         kind: "network",
-        message: "The DevFlow API did not respond within 15 seconds. Check that the backend is running and try again.",
+        message: `The DevFlow API did not respond within ${timeoutMs / 1000} seconds. Check that the backend is running and try again.`,
         details: "Request timed out",
       });
     }
@@ -1207,6 +1323,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       message: messageForStatus(response.status, parsed.message),
       details: parsed.message,
       rawBody,
+      code: parsed.code,
     });
   }
 
@@ -1243,6 +1360,7 @@ async function requestFormData<T>(path: string, formData: FormData): Promise<T> 
       message: messageForStatus(response.status, parsed.message),
       details: parsed.message,
       rawBody,
+      code: parsed.code,
     });
   }
 
@@ -1266,19 +1384,19 @@ function messageForStatus(status: number, fallback: string): string {
   return fallback || `DevFlow API request failed with ${status}`;
 }
 
-function parseApiErrorBody(rawBody: string): { message: string } {
-  if (!rawBody) return { message: "" };
+function parseApiErrorBody(rawBody: string): { message: string; code: string | null } {
+  if (!rawBody) return { message: "", code: null };
 
   try {
-    const parsed = JSON.parse(rawBody) as { message?: unknown; error?: unknown };
-    if (Array.isArray(parsed.message)) return { message: parsed.message.join(" ") };
-    if (typeof parsed.message === "string") return { message: parsed.message };
-    if (typeof parsed.error === "string") return { message: parsed.error };
+    const parsed = JSON.parse(rawBody) as { message?: unknown; error?: unknown; code?: unknown };
+    const code = typeof parsed.code === "string" ? parsed.code : null;
+    if (Array.isArray(parsed.message)) return { message: parsed.message.join(" "), code };
+    if (typeof parsed.message === "string") return { message: parsed.message, code };
+    if (typeof parsed.error === "string") return { message: parsed.error, code };
+    return { message: rawBody, code };
   } catch {
-    return { message: rawBody };
+    return { message: rawBody, code: null };
   }
-
-  return { message: rawBody };
 }
 
 function fileNameFromDisposition(disposition: string | null): string | null {
@@ -1287,6 +1405,17 @@ function fileNameFromDisposition(disposition: string | null): string | null {
   if (utf8Match?.[1]) return decodeURIComponent(utf8Match[1]);
   const match = disposition.match(/filename="?([^";]+)"?/i);
   return match?.[1] || null;
+}
+
+/** Developer-initiated orchestration start: the prompt is the build requirement. */
+export function startDevFlowOrchestrationFromPrompt(
+  projectId: string,
+  prompt: string,
+): Promise<{ accepted: boolean; runId: string }> {
+  return request(`/projects/${projectId}/orchestration/start-from-prompt`, {
+    method: "POST",
+    body: JSON.stringify({ prompt }),
+  });
 }
 
 export function listDevFlowProjects(): Promise<DevFlowProjectSummary[]> {
@@ -1807,6 +1936,7 @@ export async function downloadDevFlowProjectArtifact(
       message: messageForStatus(response.status, parsed.message),
       details: parsed.message,
       rawBody,
+      code: parsed.code,
     });
   }
 
@@ -1940,6 +2070,114 @@ export function createDevFlowProject(input: CreateDevFlowProjectInput): Promise<
     method: "POST",
     body: JSON.stringify(input),
   });
+}
+
+export function listDevFlowGroups(): Promise<DevFlowGroup[]> {
+  return request<DevFlowGroup[]>("/groups");
+}
+
+export function createDevFlowGroup(input: {
+  name: string;
+  description?: string;
+  businessUnit?: string;
+}): Promise<DevFlowGroup> {
+  return request<DevFlowGroup>("/groups", { method: "POST", body: JSON.stringify(input) });
+}
+
+export function updateDevFlowGroup(
+  groupId: string,
+  input: { name?: string; description?: string; businessUnit?: string },
+): Promise<DevFlowGroup> {
+  return request<DevFlowGroup>(`/groups/${groupId}`, { method: "PATCH", body: JSON.stringify(input) });
+}
+
+export function archiveDevFlowGroup(groupId: string): Promise<DevFlowGroup> {
+  return request<DevFlowGroup>(`/groups/${groupId}/archive`, { method: "POST" });
+}
+
+export function reopenDevFlowGroup(groupId: string): Promise<DevFlowGroup> {
+  return request<DevFlowGroup>(`/groups/${groupId}/reopen`, { method: "POST" });
+}
+
+export function listDevFlowGroupEligibleUsers(groupId: string): Promise<DevFlowGroupPerson[]> {
+  return request<DevFlowGroupPerson[]>(`/groups/${groupId}/eligible-users`);
+}
+
+export function inviteDevFlowGroupMember(
+  groupId: string,
+  input: { userId: string; role: Exclude<DevFlowGroupRole, "LEAD"> },
+): Promise<DevFlowGroupInvitation> {
+  return request<DevFlowGroupInvitation>(`/groups/${groupId}/invitations`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function listMyDevFlowGroupInvitations(): Promise<DevFlowGroupInvitation[]> {
+  return request<DevFlowGroupInvitation[]>("/groups/invitations/mine");
+}
+
+export function respondToDevFlowGroupInvitation(
+  invitationId: string,
+  response: "accept" | "decline",
+): Promise<{ accepted: boolean; groupId: string }> {
+  return request(`/groups/invitations/${invitationId}/${response}`, { method: "POST" });
+}
+
+export function updateDevFlowGroupMemberRole(
+  groupId: string,
+  userId: string,
+  role: Exclude<DevFlowGroupRole, "LEAD">,
+): Promise<DevFlowGroupMember> {
+  return request<DevFlowGroupMember>(`/groups/${groupId}/members/${userId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ role }),
+  });
+}
+
+export function removeDevFlowGroupMember(groupId: string, userId: string): Promise<{ removed: true }> {
+  return request<{ removed: true }>(`/groups/${groupId}/members/${userId}`, { method: "DELETE" });
+}
+
+export function listDevFlowRepositories(): Promise<DevFlowRepository[]> {
+  return request<DevFlowRepository[]>("/repositories");
+}
+
+export function createDevFlowRepository(input: {
+  groupId: string;
+  projectId: string;
+  name: string;
+  description?: string;
+}): Promise<DevFlowRepository> {
+  return request<DevFlowRepository>("/repositories", { method: "POST", body: JSON.stringify(input) });
+}
+
+export function assignDevFlowRepository(repositoryId: string, userId: string): Promise<DevFlowRepositoryAssignment> {
+  return request<DevFlowRepositoryAssignment>(`/repositories/${repositoryId}/assignments`, {
+    method: "POST",
+    body: JSON.stringify({ userId }),
+  });
+}
+
+export function revokeDevFlowRepositoryAssignment(repositoryId: string, userId: string): Promise<DevFlowRepositoryAssignment> {
+  return request<DevFlowRepositoryAssignment>(`/repositories/${repositoryId}/assignments/${userId}`, { method: "DELETE" });
+}
+
+export function reconcileDevFlowRepositoryAssignment(repositoryId: string, userId: string): Promise<DevFlowRepositoryAssignment> {
+  return request<DevFlowRepositoryAssignment>(`/repositories/${repositoryId}/assignments/${userId}/reconcile`, { method: "POST" });
+}
+
+export function getDevFlowGithubStatus(): Promise<{
+  configured: boolean;
+  available: boolean;
+  owner: string | null;
+  installUrl: string | null;
+  provisioningMode: "plain-repository";
+  ciCdConfigured: false;
+  missingRequirements: string[];
+  reason: string | null;
+}> {
+  return request("/github/status");
 }
 
 export type DevFlowAutoAnalyzeResult = {

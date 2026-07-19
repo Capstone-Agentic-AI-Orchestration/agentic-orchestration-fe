@@ -1,9 +1,12 @@
 // @ts-nocheck
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Badge, Button, Card } from "@/shared/components/ui";
+import { Badge, Button, Card, Textarea, useToast } from "@/shared/components/ui";
+import { startDevFlowOrchestrationFromPrompt } from "@/shared/api/devflow-api";
+import { useSelectedDevFlowProject } from "@/shared/projects/selected-project-context";
+import { DevOrchestratorWorkbench } from "@/features/orchestration";
 import {
   IconActivity,
   IconArrowLeft,
@@ -131,7 +134,7 @@ export function DevProjectDetailView({ projectId }) {
   const { project: backendProject, loading: backendLoading, error: backendError } = useDevFlowProject(projectId);
 
   if (backendProject) {
-    return <BackendDevProjectDetail project={backendProject} onBack={() => router.push("/dev/projects")} onOpenOrchestrator={() => router.push("/dev/orchestrator")} />;
+    return <BackendDevProjectDetail project={backendProject} onBack={() => router.push("/dev/projects")} />;
   }
 
   if (backendLoading) {
@@ -158,18 +161,102 @@ export function DevProjectDetailView({ projectId }) {
   );
 }
 
-function BackendDevProjectDetail({ project, onBack, onOpenOrchestrator }) {
-  const vm = useDevProjectDetailViewModel({ project, onBack, onOpenOrchestrator });
-  const outputs = vm.outputs;
+function DevStartBuildCard({ projectId, runId, onStarted }) {
+  const [prompt, setPrompt] = useState("");
+  const [busy, setBusy] = useState(false);
+  const toast = useToast();
+  const ready = prompt.trim().length >= 10;
+
+  const start = async () => {
+    setBusy(true);
+    try {
+      await startDevFlowOrchestrationFromPrompt(projectId, prompt.trim());
+      toast.success("Orchestration started", "The AI agents are building against this project's repository.");
+      setPrompt("");
+      onStarted?.();
+    } catch (error) {
+      toast.error("Could not start orchestration", error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (runId) {
+    return (
+      <Card style={{ padding: 20, marginBottom: 16, border: "1px solid rgba(52,211,153,.28)" }}>
+        <strong>Orchestration running</strong>
+        <p style={{ color: "var(--text-3)", marginTop: 6 }}>A run is already in progress for this project. Open the orchestrator to follow the agents.</p>
+      </Card>
+    );
+  }
 
   return (
-    <DevProjectDetailContentView
-      vm={vm}
-      workOrders={<DevBackendWorkOrders workOrders={outputs.workOrders} loading={outputs.loading} error={outputs.error} />}
-      tasks={<DevBackendTasks projectId={project.id} tasks={outputs.tasks} loading={outputs.loading} error={outputs.error} onChanged={outputs.refresh} />}
-      timeline={<DevFlowProjectTimeline timeline={outputs.timeline} loading={outputs.loading} error={outputs.error} emptyText="No project timeline events yet." compactError={compactDevFlowError} />}
-      artifacts={<DevBackendArtifacts artifacts={outputs.artifacts} loading={outputs.loading} error={outputs.error} />}
-    />
+    <Card style={{ padding: 20, marginBottom: 16, border: "1px solid rgba(79,139,255,.28)" }}>
+      <strong>Start build</strong>
+      <p style={{ color: "var(--text-3)", margin: "6px 0 12px" }}>
+        Describe what to build. Your prompt starts the orchestration and the AI agents build it directly in this project&apos;s GitHub repository.
+      </p>
+      <Textarea
+        value={prompt}
+        onChange={(event) => setPrompt(event.target.value)}
+        placeholder="e.g. A REST API with GitHub-based auth and a projects CRUD, plus a Next.js dashboard to manage them."
+        rows={4}
+      />
+      <div style={{ marginTop: 12 }}>
+        <Button variant="primary" disabled={busy || !ready} onClick={() => void start()}>
+          {busy ? "Starting…" : "Start build"}
+        </Button>
+      </div>
+    </Card>
+  );
+}
+
+function BackendDevProjectDetail({ project, onBack }) {
+  const [tab, setTab] = useState("workspace"); // "workspace" | "orchestration"
+  const { setSelectedProjectId } = useSelectedDevFlowProject();
+  // Scope the embedded orchestration workbench to this project.
+  useEffect(() => { setSelectedProjectId(project.id); }, [project.id, setSelectedProjectId]);
+
+  // "Open orchestrator" now switches to the in-project Orchestration tab.
+  const vm = useDevProjectDetailViewModel({ project, onBack, onOpenOrchestrator: () => setTab("orchestration") });
+  const outputs = vm.outputs;
+
+  const tabButton = (id, label) => (
+    <button
+      type="button"
+      onClick={() => setTab(id)}
+      style={{
+        background: "none", border: 0, borderBottom: tab === id ? "2px solid #4F8BFF" : "2px solid transparent",
+        color: tab === id ? "white" : "var(--text-2)", padding: "8px 4px", marginRight: 18,
+        fontFamily: "inherit", fontSize: 14, fontWeight: 600, cursor: "pointer",
+      }}
+    >
+      {label}
+    </button>
+  );
+
+  return (
+    <div>
+      <div className="row" style={{ borderBottom: "1px solid var(--border)", marginBottom: 18 }}>
+        {tabButton("workspace", "Workspace")}
+        {tabButton("orchestration", "Orchestration")}
+      </div>
+
+      {tab === "workspace" ? (
+        <DevProjectDetailContentView
+          vm={vm}
+          workOrders={<DevBackendWorkOrders workOrders={outputs.workOrders} loading={outputs.loading} error={outputs.error} />}
+          tasks={<DevBackendTasks projectId={project.id} tasks={outputs.tasks} loading={outputs.loading} error={outputs.error} onChanged={outputs.refresh} />}
+          timeline={<DevFlowProjectTimeline timeline={outputs.timeline} loading={outputs.loading} error={outputs.error} emptyText="No project timeline events yet." compactError={compactDevFlowError} />}
+          artifacts={<DevBackendArtifacts artifacts={outputs.artifacts} loading={outputs.loading} error={outputs.error} />}
+        />
+      ) : (
+        <div style={{ display: "grid", gap: 18 }}>
+          <DevStartBuildCard projectId={project.id} runId={project.runId} onStarted={outputs.refresh} />
+          <DevOrchestratorWorkbench />
+        </div>
+      )}
+    </div>
   );
 }
 

@@ -72,7 +72,8 @@ export function AdminConsoleShell({ children }: { children: ReactNode }) {
   const navigate = async (target: string) => {
     if (target === "__signout") {
       await signOut();
-      router.push("/client/sign-in");
+      // Console sign-out returns to the internal entry point, not the client app.
+      router.push("/sign-in");
     } else router.push(`/admin/${target}`);
   };
 

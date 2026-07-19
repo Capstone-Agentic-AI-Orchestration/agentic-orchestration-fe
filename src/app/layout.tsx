@@ -4,9 +4,9 @@ import { AuthProvider } from "@/shared/auth/auth-provider";
 import { ToastProvider } from "@/shared/components/ui/toast-provider";
 
 export const metadata: Metadata = {
-  title: "Alphaexplora — Enterprise IT Solutions for Philippine MSMEs",
-  description:
-    "Alphaexplora is a Philippine boutique IT consultancy delivering enterprise software for MSMEs and mid-market companies.",
+  title: "DevFlow Console",
+  description: "Internal DevFlow orchestration console. Authorized staff only.",
+  robots: { index: false, follow: false },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

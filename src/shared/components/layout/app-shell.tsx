@@ -113,7 +113,9 @@ export function AppShell({
   const navigate = async (target: string) => {
     if (target === "__signout") {
       await signOut();
-      router.push("/client/sign-in");
+      // Console sign-out returns to the internal entry point. The client
+      // sign-in lives in the separate Alphaexplora client app.
+      router.push("/sign-in");
       return;
     }
     router.push(`${basePath}/${target}`);
