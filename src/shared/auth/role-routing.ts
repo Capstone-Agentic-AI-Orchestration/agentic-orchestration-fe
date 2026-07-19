@@ -2,7 +2,10 @@ import type { DevFlowUserRole } from "@/shared/api/devflow-api";
 
 export function homePathForRole(role: DevFlowUserRole): string {
   const paths: Record<DevFlowUserRole, string> = {
-    CLIENT: "/client/dashboard",
+    // CLIENT has no workspace in this console — the client portal is a separate
+    // app. /no-access is a terminal page on purpose: routing CLIENT to /sign-in
+    // would loop, since sign-in re-routes an authenticated user by role.
+    CLIENT: "/no-access",
     PM: "/pm/projects",
     DEV: "/dev/dashboard",
     ADMIN: "/admin/overview",
@@ -20,7 +23,8 @@ function isNextPathForRole(role: DevFlowUserRole, nextPath: string): boolean {
   if (!nextPath.startsWith("/") || nextPath.startsWith("//")) return false;
 
   const roleRoots: Record<DevFlowUserRole, string> = {
-    CLIENT: "/client",
+    // No /client routes exist here, so a CLIENT never has a valid `next` target.
+    CLIENT: "/no-access",
     PM: "/pm",
     DEV: "/dev",
     ADMIN: "/admin",
