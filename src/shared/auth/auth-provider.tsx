@@ -10,7 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import type { Provider, Session, User } from "@supabase/supabase-js";
-import { acceptDevFlowClientInvites, getCurrentDevFlowUser, type DevFlowAuthUser } from "@/shared/api/devflow-api";
+import { acceptDevFlowClientInvites, getCurrentDevFlowUser, ACCOUNT_PENDING_APPROVAL, DevFlowApiError, type DevFlowAuthUser } from "@/shared/api/devflow-api";
 import { supabase } from "./supabase-client";
 
 type DevFlowOAuthProvider = Extract<Provider, "github" | "google">;
@@ -21,6 +21,8 @@ interface AuthContextValue {
   user: User | null;
   devFlowUser: DevFlowAuthUser | null;
   devFlowUserError: string | null;
+  /** True when the signed-in account exists but is awaiting project manager approval. */
+  pendingApproval: boolean;
   signIn: (email: string, password: string) => Promise<DevFlowAuthUser>;
   signInWithOAuth: (provider: DevFlowOAuthProvider, nextPath?: string | null) => Promise<void>;
   signUp: (email: string, password: string) => Promise<DevFlowAuthUser | null>;
@@ -37,6 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [devFlowUser, setDevFlowUser] = useState<DevFlowAuthUser | null>(null);
   const [devFlowUserError, setDevFlowUserError] = useState<string | null>(null);
+  const [pendingApproval, setPendingApproval] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -62,6 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!session) {
       setDevFlowUser(null);
       setDevFlowUserError(null);
+      setPendingApproval(false);
       return null;
     }
 
@@ -69,10 +73,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const user = await getCurrentDevFlowUser();
       setDevFlowUser(user);
       setDevFlowUserError(null);
+      setPendingApproval(false);
       return user;
     } catch (error) {
       setDevFlowUser(null);
-      setDevFlowUserError(error instanceof Error ? error.message : String(error));
+      // A pending-approval refusal is an expected state for a new client, not a failure to
+      // surface as an error — flag it so the app can route them to the waiting-room screen.
+      const isPending = error instanceof DevFlowApiError && error.code === ACCOUNT_PENDING_APPROVAL;
+      setPendingApproval(isPending);
+      setDevFlowUserError(isPending ? null : error instanceof Error ? error.message : String(error));
       throw error;
     }
   }, [session]);
@@ -105,7 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const redirectPath =
       (typeof window !== "undefined" && window.location.pathname) ||
       process.env.NEXT_PUBLIC_AUTH_REDIRECT_PATH ||
-      "/client/sign-in";
+      "/sign-in";
     const redirectUrl = new URL(redirectPath, window.location.origin);
     if (nextPath) redirectUrl.searchParams.set("next", nextPath);
 
@@ -133,7 +142,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const resetPassword = useCallback(async (email: string) => {
-    const redirectTo = `${window.location.origin}/client/reset`;
+    // Console staff authenticate through GitHub/Google OAuth; password reset is a
+    // client-app flow, so any reset link here returns to the internal sign-in.
+    const redirectTo = `${window.location.origin}/sign-in`;
     const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
     if (error) throw error;
   }, []);
@@ -149,6 +160,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(null);
     setDevFlowUser(null);
     setDevFlowUserError(null);
+    setPendingApproval(false);
   }, []);
 
   const value = useMemo<AuthContextValue>(
@@ -158,6 +170,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user: session?.user ?? null,
       devFlowUser,
       devFlowUserError,
+      pendingApproval,
       signIn,
       signInWithOAuth,
       signUp,
@@ -166,7 +179,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       refreshDevFlowUser,
       signOut,
     }),
-    [devFlowUser, devFlowUserError, initialized, refreshDevFlowUser, resetPassword, session, signIn, signInWithOAuth, signOut, signUp, updatePassword],
+    [devFlowUser, devFlowUserError, pendingApproval, initialized, refreshDevFlowUser, resetPassword, session, signIn, signInWithOAuth, signOut, signUp, updatePassword],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

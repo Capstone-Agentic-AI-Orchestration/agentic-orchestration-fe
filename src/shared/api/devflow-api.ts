@@ -16,6 +16,8 @@ export class DevFlowApiError extends Error {
   kind: DevFlowApiErrorKind;
   details: string | null;
   rawBody: string;
+  /** Machine-readable error code from the API body (e.g. "ACCOUNT_PENDING_APPROVAL"), when present. */
+  code: string | null;
 
   constructor(input: {
     status: number;
@@ -23,6 +25,7 @@ export class DevFlowApiError extends Error {
     message: string;
     details?: string | null;
     rawBody?: string;
+    code?: string | null;
   }) {
     super(input.message);
     this.name = "DevFlowApiError";
@@ -30,8 +33,12 @@ export class DevFlowApiError extends Error {
     this.kind = input.kind;
     this.details = input.details ?? null;
     this.rawBody = input.rawBody ?? "";
+    this.code = input.code ?? null;
   }
 }
+
+/** Distinct code the API returns when a signed-in client is awaiting PM approval. */
+export const ACCOUNT_PENDING_APPROVAL = "ACCOUNT_PENDING_APPROVAL";
 
 export type DevFlowProjectStatus =
   | "PENDING"
@@ -45,7 +52,7 @@ export type DevFlowProjectStatus =
   | "FAILED";
 
 export type DevFlowUserRole = "CLIENT" | "PM" | "DEV" | "ADMIN";
-export type DevFlowProfileStatus = "ACTIVE" | "SUSPENDED";
+export type DevFlowProfileStatus = "PENDING" | "ACTIVE" | "SUSPENDED";
 
 export type DevFlowInquiryStatus = "NEW" | "APPROVED" | "REJECTED";
 
@@ -1316,6 +1323,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       message: messageForStatus(response.status, parsed.message),
       details: parsed.message,
       rawBody,
+      code: parsed.code,
     });
   }
 
@@ -1352,6 +1360,7 @@ async function requestFormData<T>(path: string, formData: FormData): Promise<T> 
       message: messageForStatus(response.status, parsed.message),
       details: parsed.message,
       rawBody,
+      code: parsed.code,
     });
   }
 
@@ -1375,19 +1384,19 @@ function messageForStatus(status: number, fallback: string): string {
   return fallback || `DevFlow API request failed with ${status}`;
 }
 
-function parseApiErrorBody(rawBody: string): { message: string } {
-  if (!rawBody) return { message: "" };
+function parseApiErrorBody(rawBody: string): { message: string; code: string | null } {
+  if (!rawBody) return { message: "", code: null };
 
   try {
-    const parsed = JSON.parse(rawBody) as { message?: unknown; error?: unknown };
-    if (Array.isArray(parsed.message)) return { message: parsed.message.join(" ") };
-    if (typeof parsed.message === "string") return { message: parsed.message };
-    if (typeof parsed.error === "string") return { message: parsed.error };
+    const parsed = JSON.parse(rawBody) as { message?: unknown; error?: unknown; code?: unknown };
+    const code = typeof parsed.code === "string" ? parsed.code : null;
+    if (Array.isArray(parsed.message)) return { message: parsed.message.join(" "), code };
+    if (typeof parsed.message === "string") return { message: parsed.message, code };
+    if (typeof parsed.error === "string") return { message: parsed.error, code };
+    return { message: rawBody, code };
   } catch {
-    return { message: rawBody };
+    return { message: rawBody, code: null };
   }
-
-  return { message: rawBody };
 }
 
 function fileNameFromDisposition(disposition: string | null): string | null {
@@ -1927,6 +1936,7 @@ export async function downloadDevFlowProjectArtifact(
       message: messageForStatus(response.status, parsed.message),
       details: parsed.message,
       rawBody,
+      code: parsed.code,
     });
   }
 

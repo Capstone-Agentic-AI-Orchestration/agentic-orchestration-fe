@@ -12,7 +12,9 @@ import { homePathForRole } from "./role-routing";
 function signInPathForPathname(pathname: string): string {
   if (pathname === "/dev" || pathname.startsWith("/dev/")) return "/dev/sign-in";
   if (pathname === "/pm" || pathname.startsWith("/pm/")) return "/pm/sign-in";
-  return "/client/sign-in";
+  // Everything else in this console (notably /admin) falls back to the shared
+  // internal entry point. The client sign-in lives in the separate client app.
+  return "/sign-in";
 }
 
 export function RequireAuth({
@@ -22,7 +24,7 @@ export function RequireAuth({
   allowedRoles?: DevFlowUserRole[];
   children: ReactNode;
 }) {
-  const { devFlowUser, devFlowUserError, initialized, refreshDevFlowUser, signOut, user } = useAuth();
+  const { devFlowUser, devFlowUserError, pendingApproval, initialized, refreshDevFlowUser, signOut, user } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
   const [roleChecked, setRoleChecked] = useState(false);
@@ -32,6 +34,15 @@ export function RequireAuth({
     if (!initialized || user) return;
     router.replace(`${signInPathForPathname(pathname)}?next=${encodeURIComponent(pathname)}`);
   }, [initialized, pathname, router, user]);
+
+  // A signed-in but unapproved client has no workspace in this console at all —
+  // the waiting room lives in the client app, so send them to the terminal
+  // "wrong workspace" screen instead of a route that no longer exists here.
+  useEffect(() => {
+    if (pendingApproval && pathname !== "/no-access") {
+      router.replace("/no-access");
+    }
+  }, [pendingApproval, pathname, router]);
 
   useEffect(() => {
     if (!initialized || !user) {
@@ -87,6 +98,10 @@ export function RequireAuth({
 
   if (!user) {
     return <AuthRouteState title="Redirecting to sign in" body="A valid session is required for this workspace." />;
+  }
+
+  if (pendingApproval) {
+    return <AuthRouteState title="Awaiting approval" body="Your request is with our team. Taking you to your status page." />;
   }
 
   if (devFlowUserError) {
