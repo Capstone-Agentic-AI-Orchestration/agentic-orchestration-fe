@@ -56,17 +56,17 @@ describe("developer navigation and messages", () => {
     mockSelectedProjectState = selectedProjectState();
   });
 
-  it("uses the seven approved developer navigation items in order", () => {
+  it("uses the five approved developer navigation items in order", () => {
     expect(DEV_NAV.map((item) => ({ id: item.id, label: item.label }))).toEqual([
       { id: "dashboard", label: "Dashboard" },
       { id: "projects", label: "Projects" },
-      { id: "groups", label: "Groups" },
-      { id: "repositories", label: "Repositories" },
       { id: "orchestrator", label: "Orchestrator" },
       { id: "messages", label: "Messages" },
-      { id: "settings", label: "Settings" },
+      { id: "groups", label: "Teams" },
     ]);
     expect(DEV_TITLES.messages).toBe("Messages");
+    expect(DEV_TITLES.groups).toBe("Teams");
+    expect(DEV_TITLES.settings).toBe("Settings");
   });
 
   it("binds team conversations to the selected assigned project", () => {
@@ -74,7 +74,7 @@ describe("developer navigation and messages", () => {
 
     expect(screen.getByText("Messages")).toBeInTheDocument();
     expect(screen.getByText("Acme")).toBeInTheDocument();
-    expect(screen.getByText(/project manager and every developer assigned/i)).toBeInTheDocument();
+    expect(screen.getByText(/communication between developers and the project manager/i)).toBeInTheDocument();
     expect(screen.getByTestId("conversation-panel")).toHaveAttribute("data-project-id", "project-1");
     expect(screen.getByTestId("conversation-panel")).toHaveAttribute("data-visibility", "TEAM");
   });

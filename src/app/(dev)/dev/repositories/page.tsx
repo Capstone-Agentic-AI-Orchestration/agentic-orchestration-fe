@@ -1,5 +1,5 @@
-import { DevRepositoriesView } from "@/features/dev/repositories/views/dev-repositories-view";
+import { redirect } from "next/navigation";
 
 export default function DevRepositoriesPage() {
-  return <DevRepositoriesView />;
+  redirect("/dev/groups?view=repositories");
 }

@@ -131,9 +131,9 @@ export function buildOrchestrationGuidance(input: {
     default:
       return {
         eyebrow: "Not started",
-        title: "The project is waiting for orchestration",
-        description: "The project manager will complete readiness checks and start the AI workflow.",
-        waitingOn: "Waiting on: project manager",
+        title: "Start the first AI build",
+        description: "Describe the expected outcome and acceptance criteria to begin orchestration.",
+        waitingOn: "Next: submit a build prompt",
         tone: "blue",
       };
   }

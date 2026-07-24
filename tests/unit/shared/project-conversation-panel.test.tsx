@@ -63,8 +63,9 @@ describe("ProjectConversationPanel", () => {
     expect(screen.getByText("3")).toBeInTheDocument();
     await waitFor(() => expect(mockUseMessages).toHaveBeenCalledWith("project-1", "conversation-1"));
 
-    await user.type(screen.getByPlaceholderText("Thread title"), "Backend blockers");
-    await user.type(screen.getByPlaceholderText("Optional first message"), "I need PM guidance.");
+    await user.click(screen.getByRole("button", { name: "New thread" }));
+    await user.type(screen.getByPlaceholderText("What do you need to discuss?"), "Backend blockers");
+    await user.type(screen.getByPlaceholderText("Add context for the project manager…"), "I need PM guidance.");
     await user.click(screen.getByRole("button", { name: "Create thread" }));
 
     expect(mockCreateConversation).toHaveBeenCalledWith({
