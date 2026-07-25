@@ -19,6 +19,8 @@ export interface LaunchReviewStepViewModel extends LaunchReviewState {
   projectName: string;
   brief: string;
   stackKey: string;
+  scopeSummary: string;
+  milestoneSummary: string;
   llmResult: ProviderVerificationResult | null;
   githubResult: ProviderVerificationResult | null;
   checking: boolean;
@@ -96,6 +98,12 @@ export function useLaunchReviewStepViewModel(
     projectName: project?.companyName ?? "Untitled project",
     brief: project?.brief ?? "",
     stackKey: project?.stackKey ?? "Not selected",
+    scopeSummary:
+      project?.kickoff?.scopeSummary
+      ?? "The saved project outcome defines the current scope. New requests can be reviewed before they change execution.",
+    milestoneSummary:
+      project?.kickoff?.milestones
+      ?? "Plan review, build review, and final delivery are the required checkpoints.",
     llmResult,
     githubResult,
     checking,

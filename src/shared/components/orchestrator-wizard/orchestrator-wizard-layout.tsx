@@ -36,6 +36,7 @@ export function OrchestratorWizardLayout({
   const vm = useOrchestratorWizardViewModel({ projectId, currentStep });
   const currentMeta = ORCHESTRATOR_STEPS.find((s) => s.id === currentStep);
   const recommendedMeta = ORCHESTRATOR_STEPS.find((s) => s.id === vm.layout.recommendedStep);
+  const isSetup = currentStep === "brief" || currentStep === "review";
 
   return (
     <div className="orchestrator-wizard">
@@ -50,9 +51,12 @@ export function OrchestratorWizardLayout({
             Project
           </Button>
           <div className="orchestrator-wizard-title">
+            <span className="orchestrator-wizard-kicker">
+              {isSetup ? "Execution setup" : "Execution room"}
+            </span>
             <h2>{vm.layout.projectName}</h2>
             <span className="orchestrator-wizard-subtitle">
-              Guided orchestration · {currentMeta?.label ?? "Orchestration"}
+              {currentMeta?.label ?? "Project execution"}
             </span>
           </div>
         </div>
@@ -70,7 +74,7 @@ export function OrchestratorWizardLayout({
           <span className="orch-guidance-icon"><IconCompass size={18} /></span>
           <div className="orch-guidance-copy">
             <span className="orch-guidance-eyebrow">
-              {vm.layout.onTrack ? "Your current task" : "Recommended next action"}
+              {vm.layout.onTrack ? "Current step" : "Go here next"}
             </span>
             <strong>{vm.layout.onTrack ? currentMeta?.label : recommendedMeta?.label}</strong>
             <p>{vm.layout.onTrack ? currentMeta?.description : recommendedMeta?.description}</p>

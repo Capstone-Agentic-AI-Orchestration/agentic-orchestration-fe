@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { formatElapsedDuration } from "@/features/orchestration/model/run-cockpit";
 import { useRunMeterViewModel } from "@/features/orchestration/view-model/use-run-cockpit-view-model";
-import { IconActivity, IconCpu, IconCreditCard, IconClock, IconZap } from "@/shared/components/icons";
+import { IconActivity, IconCreditCard, IconClock, IconZap } from "@/shared/components/icons";
 
 /**
  * Mission-control header for a live orchestration run.
@@ -34,7 +34,7 @@ export function RunMeterBar({ projectName, status: statusProp }: RunMeterBarProp
   const vm = useRunMeterViewModel({ projectName, status: statusProp });
 
   return (
-    <section className="cockpit-meter reveal" aria-label="Run telemetry">
+    <section className="cockpit-meter reveal" aria-label="Execution status">
       <div className="cockpit-meter-inner">
         <div className="cockpit-meter-head">
           <div className="cockpit-meter-headline">
@@ -44,32 +44,29 @@ export function RunMeterBar({ projectName, status: statusProp }: RunMeterBarProp
             />
             <div style={{ minWidth: 0 }}>
               <div className="cockpit-eyebrow">
-                {vm.projectName ? `${vm.projectName} · Orchestration` : "Orchestration"}
+                {vm.projectName ? `${vm.projectName} · Execution room` : "Execution room"}
               </div>
-              <h3 className="cockpit-title">{vm.statusLabel}</h3>
+              <h3 className="cockpit-title">{vm.execution.headline}</h3>
             </div>
           </div>
-          <div className="cockpit-conn" title={`WebSocket ${vm.connectionStatus}`}>
+          <div className="cockpit-conn" title={`Update connection: ${vm.connectionStatus}`}>
             <span style={{ width: 7, height: 7, borderRadius: 999, background: CONN_TONE[vm.connectionStatus] }} />
-            {vm.connectionStatus}
+            {vm.connectionStatus === "connected"
+              ? "Live updates"
+              : vm.connectionStatus === "connecting"
+                ? "Connecting"
+                : "Status polling"}
           </div>
         </div>
 
-        <p className="cockpit-detail">{vm.detail}</p>
+        <p className="cockpit-detail">{vm.execution.description}</p>
 
         <div className="cockpit-stats">
           <MeterStat
-            icon={<IconZap size={13} />}
-            label="Tokens streamed"
-            value={<AnimatedNumber value={vm.totalTokens} />}
-            sub={vm.totalTokens > 0 ? `${vm.inputTokens.toLocaleString()} in · ${vm.outputTokens.toLocaleString()} out` : "in · out"}
-            accent="var(--text-2)"
-          />
-          <MeterStat
-            icon={<IconCreditCard size={13} />}
-            label="Est. spend"
-            value={<AnimatedNumber value={vm.cost} format={(n) => `$${n.toFixed(n < 1 ? 4 : 2)}`} />}
-            sub={vm.activeModel || "live cost"}
+            icon={<IconActivity size={13} />}
+            label="Current phase"
+            value={vm.execution.phaseLabel}
+            sub={vm.statusLabel}
             accent="var(--text-2)"
           />
           <MeterStat
@@ -79,29 +76,27 @@ export function RunMeterBar({ projectName, status: statusProp }: RunMeterBarProp
             sub={vm.isRunning ? "running" : vm.isDelivered ? "complete" : "idle"}
             accent={vm.isRunning ? "var(--text-2)" : vm.isDelivered ? "var(--green)" : "var(--text-3)"}
           />
-          <div className="cockpit-stat cockpit-stat-budget">
-            <span className="cockpit-stat-label">
-              <IconCpu size={13} />
-              Budget burn
-            </span>
-            <span className="cockpit-stat-value mono">{Math.round(vm.budgetPct)}%</span>
-            <span className="cockpit-budget-track" aria-hidden="true">
-              <span
-                className="cockpit-budget-fill"
-                style={{
-                  width: `${vm.budgetPct}%`,
-                  background: vm.budgetPct > 85 ? "var(--amber)" : "var(--text)",
-                }}
-              />
-            </span>
-          </div>
+          <MeterStat
+            icon={<IconZap size={13} />}
+            label="Next checkpoint"
+            value={vm.execution.nextCheckpoint}
+            sub={vm.execution.actionStep ? "Your decision will be required" : "DevFlow continues automatically"}
+            accent={vm.execution.actionStep ? "var(--amber)" : "var(--text-2)"}
+          />
+          <MeterStat
+            icon={<IconCreditCard size={13} />}
+            label="Estimated spend"
+            value={<AnimatedNumber value={vm.cost} format={(n) => `$${n.toFixed(n < 1 ? 4 : 2)}`} />}
+            sub="Current execution"
+            accent="var(--text-2)"
+          />
         </div>
 
         <div className="cockpit-progress" role="progressbar" aria-valuenow={vm.progress} aria-valuemin={0} aria-valuemax={100}>
           <div className="cockpit-progress-head">
             <span className="row gap-2" style={{ alignItems: "center", color: "var(--text-3)", fontSize: 11.5 }}>
               <IconActivity size={12} />
-              Pipeline progress
+              Execution progress
             </span>
             <span className="mono" style={{ color: "white", fontSize: 13, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>
               {vm.progress}%
@@ -121,6 +116,37 @@ export function RunMeterBar({ projectName, status: statusProp }: RunMeterBarProp
             />
           </div>
         </div>
+
+        <details className="cockpit-usage">
+          <summary>Technical usage</summary>
+          <div className="cockpit-usage-grid">
+            <span>
+              <small>Tokens</small>
+              <strong><AnimatedNumber value={vm.totalTokens} /></strong>
+            </span>
+            <span>
+              <small>Input / output</small>
+              <strong>{vm.inputTokens.toLocaleString()} / {vm.outputTokens.toLocaleString()}</strong>
+            </span>
+            <span>
+              <small>Budget used</small>
+              <strong>{Math.round(vm.budgetPct)}%</strong>
+            </span>
+            <span>
+              <small>Active model</small>
+              <strong>{vm.activeModel || "Waiting"}</strong>
+            </span>
+          </div>
+          <span className="cockpit-budget-track" aria-hidden="true">
+            <span
+              className="cockpit-budget-fill"
+              style={{
+                width: `${vm.budgetPct}%`,
+                background: vm.budgetPct > 85 ? "var(--amber)" : "var(--text)",
+              }}
+            />
+          </span>
+        </details>
       </div>
     </section>
   );

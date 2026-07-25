@@ -1,6 +1,11 @@
 "use client";
 
 import { useRef, useState, type CSSProperties } from "react";
+import { useRouter } from "next/navigation";
+import {
+  buildExecutionSummary,
+  type ExecutionPhase,
+} from "@/features/orchestration/model/run-cockpit";
 import {
   controlDevFlowOrchestration,
   type DevFlowOrchestrationControlAction,
@@ -17,6 +22,8 @@ import {
   IconShield,
   IconCode,
   IconGitBranch,
+  IconArrowRight,
+  IconCheck,
 } from "@/shared/components/icons";
 import { ActivityConsole } from "@/shared/components/orchestration/activity-console";
 import { useOrchestrationStore } from "@/shared/store/orchestration-store";
@@ -32,10 +39,10 @@ const RUNNING_STATUSES = new Set([
 ]);
 
 const LAUNCH_STEPS = [
-  { icon: <IconFileText size={15} />, title: "Parse & contract", body: "Agents read the brief and negotiate an architecture contract." },
-  { icon: <IconShield size={15} />, title: "Gate 1 — your call", body: "You approve the contract before any code is written." },
-  { icon: <IconCode size={15} />, title: "Build in parallel", body: "Frontend, backend, database & architecture agents stream code live." },
-  { icon: <IconGitBranch size={15} />, title: "Gate 2 → delivery", body: "Review generated code, then it commits to GitHub." },
+  { icon: <IconFileText size={15} />, title: "Prepare the plan", body: "DevFlow turns the approved outcome into concrete work and deliverables." },
+  { icon: <IconShield size={15} />, title: "Review the plan", body: "You approve the direction before implementation begins." },
+  { icon: <IconCode size={15} />, title: "Build deliverables", body: "Work progresses against the approved plan and pauses for review." },
+  { icon: <IconGitBranch size={15} />, title: "Approve delivery", body: "You review the result before the final handoff." },
 ];
 
 interface OrchestrationRunCockpitProps {
@@ -60,6 +67,7 @@ export function OrchestrationRunCockpit({
   starting,
   error,
 }: OrchestrationRunCockpitProps) {
+  const router = useRouter();
   const connectionStatus = useOrchestrationStore((s) => s.connectionStatus);
   const [selectedAgentNodeId, setSelectedAgentNodeId] = useState<string | null>(null);
   const [resyncing, setResyncing] = useState(false);
@@ -70,6 +78,7 @@ export function OrchestrationRunCockpit({
   const isDelivered = status === "DELIVERED";
   const isLive = isRunning || isAwaitingGate || isFailed || isDelivered;
   const streamOnline = connectionStatus === "connected";
+  const execution = buildExecutionSummary(status);
   const selectAgentNode = (nodeId: string) => {
     setSelectedAgentNodeId(nodeId);
     window.requestAnimationFrame(() => {
@@ -106,22 +115,27 @@ export function OrchestrationRunCockpit({
         </div>
       )}
 
-      {isAwaitingGate && (
-        <div className="cockpit-state-banner is-awaiting reveal">
-          <IconShield size={16} />
-          <span>
-            {status === "AWAITING_GATE_1"
-              ? "Plan review is waiting for approval before code generation starts."
-              : "Build review is waiting for approval before GitHub delivery."}
-          </span>
-        </div>
-      )}
+      <ExecutionPhaseRail phases={execution.phases} />
 
-      {isDelivered && (
-        <div className="cockpit-state-banner is-delivered reveal">
-          <IconGitBranch size={16} />
-          <span>Delivery is complete. Review the final handoff and client-facing artifacts.</span>
-        </div>
+      {execution.actionStep && (
+        <section className="cockpit-decision reveal" aria-labelledby="cockpit-decision-title">
+          <span className="cockpit-decision-icon">
+            {execution.actionStep === "delivery" ? <IconGitBranch size={18} /> : <IconShield size={18} />}
+          </span>
+          <div className="cockpit-decision-copy">
+            <span>PM action required</span>
+            <strong id="cockpit-decision-title">{execution.headline}</strong>
+            <p>{execution.description}</p>
+          </div>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => router.push(`/pm/orchestrate/${projectId}/${execution.actionStep}`)}
+          >
+            {execution.actionLabel}
+            <IconArrowRight size={14} />
+          </button>
+        </section>
       )}
 
       {isFailed && (
@@ -131,11 +145,11 @@ export function OrchestrationRunCockpit({
               <IconAlertTriangle size={16} style={{ color: "#FCA5A5" }} />
               <strong>The run is blocked</strong>
             </div>
-            <p>{error || "Check the latest activity entry to identify which agent or provider stopped the run."}</p>
+            <p>{error || "Check the latest activity entry to identify which step or service stopped execution."}</p>
             <ol>
               <li>Review the latest failed event in the activity log.</li>
-              <li>Fix the provider or project input named in the error.</li>
-              <li>Retry the full run, or rerun only work orders that are ready.</li>
+              <li>Fix the service or project input named in the error.</li>
+              <li>Retry the full execution, or retry only work that is ready.</li>
             </ol>
           </div>
           <div className="cockpit-retry-actions">
@@ -150,84 +164,129 @@ export function OrchestrationRunCockpit({
         </div>
       )}
 
-      <div className="cockpit-toolbar">
-        <div className="cockpit-toolbar-copy">
-          <div className="row gap-2" style={{ alignItems: "center" }}>
-            <IconActivity size={15} style={{ color: "var(--primary-2)" }} />
-            <span className="cockpit-toolbar-title">Live agent output</span>
+      {isRunning && (
+        <div className="cockpit-primary-controls">
+          <span>Need to intervene?</span>
+          <RunControlCluster projectId={projectId} />
+        </div>
+      )}
+
+      <details className="cockpit-technical">
+        <summary>
+          <span className="cockpit-technical-summary">
+            <IconActivity size={15} />
+            <span>
+              <strong>Technical activity</strong>
+              <small>Live workstreams, generated output, and execution events</small>
+            </span>
+          </span>
+          <span className="cockpit-technical-status">
             {isRunning && (
               <span className={streamOnline ? "cockpit-live-pill" : "cockpit-live-pill is-paused"}>
-                {streamOnline ? "Live tokens" : "Tokens paused"}
+                {streamOnline ? "Live" : "Polling"}
               </span>
             )}
-          </div>
-          <p className="cockpit-toolbar-subtitle">
-            {streamOnline
-              ? "Watch each specialist think, stream, validate, and hand off its artifact."
-              : "Status keeps polling while token deltas resume after the socket reconnects."}
-          </p>
-        </div>
-        <div className="cockpit-toolbar-actions">
-          <AgentStreamPulse />
-          <StreamHealthPill status={connectionStatus} />
-          {onResync && (
-            <button
-              type="button"
-              className="stream-resync-btn"
-              onClick={resyncStream}
-              disabled={resyncing}
-              title={streamOnline ? "Request the latest stream state from the socket" : "Refresh run status while the socket reconnects"}
-            >
-              <IconRefresh size={13} className={resyncing ? "spin" : undefined} />
-              {resyncing ? "Syncing" : streamOnline ? "Resync stream" : "Refresh status"}
-            </button>
-          )}
-          {isRunning && <RunControlCluster projectId={projectId} />}
-        </div>
-      </div>
-
-      <AgentLiveHandoff />
-      <AgentRunTranscript
-        selectedNodeId={selectedAgentNodeId}
-        onSelectAgent={selectAgentNode}
-        streamOnline={streamOnline}
-      />
-      <div ref={inspectorRef} className="agent-inspector-anchor">
-        <AgentOutputInspector
-          selectedNodeId={selectedAgentNodeId}
-          onSelectedNodeIdChange={setSelectedAgentNodeId}
-          streamOnline={streamOnline}
-        />
-      </div>
-
-      <div className="cockpit-stage">
-        <AgentStreamGrid
-          selectedNodeId={selectedAgentNodeId}
-          onSelectAgent={selectAgentNode}
-          streamOnline={streamOnline}
-        />
-        <PipelineRail />
-      </div>
-
-      <details className="cockpit-log" open={isRunning}>
-        <summary>
-          <IconActivity size={14} />
-          Activity log
-          <span className="cockpit-log-hint">orchestration events</span>
+            <span aria-hidden="true">+</span>
+          </span>
         </summary>
-        <div className="cockpit-log-body">
-          <ActivityConsole maxHeight={260} />
+        <div className="cockpit-technical-body">
+          <div className="cockpit-toolbar">
+            <div className="cockpit-toolbar-copy">
+              <span className="cockpit-toolbar-title">Live execution detail</span>
+              <p className="cockpit-toolbar-subtitle">
+                {streamOnline
+                  ? "Inspect workstreams, intermediate output, and handoffs."
+                  : "Project status keeps updating while the live stream reconnects."}
+              </p>
+            </div>
+            <div className="cockpit-toolbar-actions">
+              <AgentStreamPulse />
+              <StreamHealthPill status={connectionStatus} />
+              {onResync && (
+                <button
+                  type="button"
+                  className="stream-resync-btn"
+                  onClick={resyncStream}
+                  disabled={resyncing}
+                  title={streamOnline ? "Request the latest execution state" : "Refresh execution status"}
+                >
+                  <IconRefresh size={13} className={resyncing ? "spin" : undefined} />
+                  {resyncing ? "Syncing" : streamOnline ? "Resync" : "Refresh status"}
+                </button>
+              )}
+            </div>
+          </div>
+
+          <AgentLiveHandoff />
+          <AgentRunTranscript
+            selectedNodeId={selectedAgentNodeId}
+            onSelectAgent={selectAgentNode}
+            streamOnline={streamOnline}
+          />
+          <div ref={inspectorRef} className="agent-inspector-anchor">
+            <AgentOutputInspector
+              selectedNodeId={selectedAgentNodeId}
+              onSelectedNodeIdChange={setSelectedAgentNodeId}
+              streamOnline={streamOnline}
+            />
+          </div>
+
+          <div className="cockpit-stage">
+            <AgentStreamGrid
+              selectedNodeId={selectedAgentNodeId}
+              onSelectAgent={selectAgentNode}
+              streamOnline={streamOnline}
+            />
+            <PipelineRail />
+          </div>
+
+          <details className="cockpit-log">
+            <summary>
+              <IconActivity size={14} />
+              Event log
+              <span className="cockpit-log-hint">technical events</span>
+            </summary>
+            <div className="cockpit-log-body">
+              <ActivityConsole maxHeight={260} />
+            </div>
+          </details>
         </div>
       </details>
     </div>
   );
 }
 
+function ExecutionPhaseRail({ phases }: { phases: ExecutionPhase[] }) {
+  return (
+    <section className="execution-phase-rail reveal" aria-label="Execution phases">
+      {phases.map((phase, index) => (
+        <div key={phase.id} className={`execution-phase is-${phase.state}`}>
+          <span className="execution-phase-marker" aria-hidden="true">
+            {phase.state === "done" ? <IconCheck size={13} /> : index + 1}
+          </span>
+          <span>
+            <strong>{phase.label}</strong>
+            <small>
+              {phase.state === "done"
+                ? "Complete"
+                : phase.state === "active"
+                  ? "In progress"
+                  : phase.state === "blocked"
+                    ? "Needs attention"
+                    : "Upcoming"}
+            </small>
+          </span>
+        </div>
+      ))}
+    </section>
+  );
+}
+
 function StreamHealthPill({ status }: { status: "disconnected" | "connecting" | "connected" }) {
   const copy = {
     connected: {
-      label: "Socket live",
-      detail: "Receiving token events",
+      label: "Live updates",
+      detail: "Receiving live updates",
     },
     connecting: {
       label: "Connecting",
@@ -267,13 +326,12 @@ function LaunchPad({
       <div className="cockpit-launch-inner">
         <span className="cockpit-launch-badge">
           <span className="dot" />
-          Orchestration ready
+          Ready to execute
         </span>
-        <h3 className="cockpit-launch-title">Launch the AI build pipeline</h3>
+        <h3 className="cockpit-launch-title">Start project execution</h3>
         <p className="cockpit-launch-lead">
-          Eight specialized agents will take your brief from requirements to a committed GitHub
-          repository — pausing twice for your approval. You&apos;ll watch every token stream in real
-          time.
+          DevFlow will prepare the plan, build the approved deliverables, and pause whenever your
+          decision is required. Technical activity remains available as an optional detailed view.
         </p>
 
         <div className="cockpit-launch-steps">
@@ -305,7 +363,7 @@ function LaunchPad({
             ) : (
               <>
                 <IconPlay size={16} />
-                {isFailed ? "Retry orchestration" : "Start orchestration"}
+                {isFailed ? "Retry execution" : "Start execution"}
                 <span className="btn-island" aria-hidden="true">
                   <IconRocket size={14} />
                 </span>
@@ -315,12 +373,12 @@ function LaunchPad({
           {isFailed && (
             <button className="btn btn-secondary btn-lg" onClick={onRerun} disabled={starting}>
               <IconRefresh size={14} />
-              Rerun ready work orders
+              Retry ready work
             </button>
           )}
         </div>
         {starting && (
-          <div className="cockpit-loading-skeleton" aria-label="Starting orchestration">
+          <div className="cockpit-loading-skeleton" aria-label="Starting project execution">
             <span className="skeleton" />
             <span className="skeleton" />
             <span className="skeleton" />

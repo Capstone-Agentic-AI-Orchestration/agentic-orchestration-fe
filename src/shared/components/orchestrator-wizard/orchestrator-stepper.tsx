@@ -24,44 +24,44 @@ export interface OrchestratorStep {
 export const ORCHESTRATOR_STEPS: OrchestratorStep[] = [
   {
     id: "brief",
-    label: "Describe the project",
-    shortLabel: "Describe",
-    description: "Explain the outcome, choose a stack, and set the design direction",
+    label: "Define the outcome",
+    shortLabel: "Outcome",
+    description: "Describe what should be delivered and how the client will judge success",
     icon: IconClipboard,
   },
   {
     id: "review",
-    label: "Review and launch",
-    shortLabel: "Review",
-    description: "Confirm the direction while DevFlow checks and prepares the run",
+    label: "Check and start",
+    shortLabel: "Check & start",
+    description: "Confirm the direction and let DevFlow verify the requirements for execution",
     icon: IconCheck,
   },
   {
     id: "run",
-    label: "Build",
-    shortLabel: "Build",
-    description: "Watch agents plan and build, then follow the next approval prompt",
+    label: "Execution room",
+    shortLabel: "In progress",
+    description: "Follow progress, resolve blockers, and act when a decision is required",
     icon: IconRocket,
   },
   {
     id: "gate-1",
     label: "Plan review",
-    shortLabel: "Plan",
-    description: "Approve the proposed plan or request changes before code generation",
+    shortLabel: "Plan approval",
+    description: "Approve the proposed plan or request changes before work begins",
     icon: IconClipboard,
   },
   {
     id: "gate-2",
     label: "Build review",
-    shortLabel: "Build",
-    description: "Approve generated deliverables or request changes before GitHub delivery",
+    shortLabel: "Build approval",
+    description: "Approve completed deliverables or request changes before delivery",
     icon: IconCode,
   },
   {
     id: "delivery",
-    label: "Delivery",
-    shortLabel: "Delivery",
-    description: "Client acceptance and project handoff",
+    label: "Review delivery",
+    shortLabel: "Handoff",
+    description: "Review the final handoff and record client acceptance",
     icon: IconGitBranch,
   },
 ];
@@ -75,12 +75,10 @@ interface OrchestratorStepperProps {
 
 const STEP_ORDER = ORCHESTRATOR_STEPS.map((s) => s.id);
 
-/** Five customer-facing phases; the approval phase contains the two intentional gates. */
+/** Three customer-facing phases. Internal review routes remain intact inside execution. */
 const PHASES: Array<{ id: string; label: string; steps: OrchestratorStepId[] }> = [
-  { id: "describe", label: "Describe", steps: ["brief"] },
-  { id: "review", label: "Review", steps: ["review"] },
-  { id: "build", label: "Build", steps: ["run"] },
-  { id: "approve", label: "Approve", steps: ["gate-1", "gate-2"] },
+  { id: "prepare", label: "Prepare", steps: ["brief", "review"] },
+  { id: "execute", label: "Execute", steps: ["run", "gate-1", "gate-2"] },
   { id: "deliver", label: "Deliver", steps: ["delivery"] },
 ];
 
@@ -94,7 +92,7 @@ export function OrchestratorStepper({
   const maxReachedIndex = STEP_ORDER.indexOf(maxReachedStep);
 
   return (
-    <nav className="orch-stepper2" aria-label="Orchestration progress">
+    <nav className="orch-stepper2" aria-label="Project execution progress">
       {PHASES.map((phase, phaseIndex) => {
         const phaseSteps = phase.steps.map((id) => ORCHESTRATOR_STEPS.find((s) => s.id === id)!);
         const phaseStepIdxs = phase.steps.map((id) => STEP_ORDER.indexOf(id));

@@ -24,24 +24,71 @@ export function BriefStep({
   const vm = useBriefStepViewModel(ctx);
 
   return (
-    <div>
-      <div className="wizard-step-section">
+    <div className="execution-setup">
+      <section className="wizard-step-section execution-setup-hero">
+        <span className="execution-setup-eyebrow">Step 1 · Define the outcome</span>
         <h3 className="wizard-step-section-title">
-          <IconSparkles size={16} />
-          AI Auto-Analyze
+          What should this project deliver?
         </h3>
         <p className="wizard-step-section-desc">
-          Not sure how to describe your project? Write a rough idea and let AI turn it into a
-          structured brief with suggested features and tech stack.
+          Give DevFlow enough context to prepare a plan. You can review everything before execution starts.
         </p>
-        <div className="auto-analyze-card">
+      </section>
+
+      <section className="wizard-step-section">
+        <h3 className="wizard-step-section-title">Project outcome</h3>
+        <p className="wizard-step-section-desc">
+          Focus on the result the client expects, the people it serves, and the most important capabilities.
+        </p>
+        {vm.saveError && (
+          <div className="wizard-info-banner warning" role="alert">
+            <IconAlertTriangle size={16} />
+            <span>{vm.saveError}</span>
+          </div>
+        )}
+        {vm.saved && (
+          <div className="wizard-info-banner success" role="status">
+            <IconCheck size={16} />
+            <span>Project outcome saved. Review the execution setup when you are ready.</span>
+          </div>
+        )}
+        <div className="wizard-review-stack">
+          <Field label="Client or company">
+            <Input
+              value={vm.companyName}
+              onChange={vm.actions.onCompanyNameChange}
+              placeholder="e.g. Acme Corp"
+            />
+          </Field>
+          <Field
+            label="Desired outcome"
+            helper="Describe what should be delivered and how the client will know it works. At least 10 characters."
+          >
+            <Textarea
+              value={vm.brief}
+              onChange={vm.actions.onBriefChange}
+              placeholder="e.g. Deliver a task management dashboard where a small team can sign in, manage project boards, and review weekly progress."
+              rows={6}
+            />
+          </Field>
+        </div>
+      </section>
+
+      <section className="wizard-step-section">
+        <h3 className="wizard-step-section-title">
+          <IconSparkles size={16} />
+          Help me shape the outcome
+        </h3>
+        <p className="wizard-step-section-desc">
+          Optional: DevFlow can turn your rough description into a clearer brief and suggest missing capabilities.
+        </p>
+        <div className="auto-analyze-card execution-setup-assist">
           <div className="auto-analyze-header">
             <IconSparkles size={18} />
-            <h3>Enhance your brief with AI</h3>
+            <h3>Review and improve this description</h3>
           </div>
           <p className="auto-analyze-desc">
-            Enter a few words about the project below, then click analyze. The AI will rewrite it
-            as a professional brief and suggest features.
+            Your original text stays unchanged until you choose to apply the suggested version.
           </p>
           {vm.analyzeError && (
             <div className="wizard-info-banner warning">
@@ -63,11 +110,11 @@ export function BriefStep({
           )}
           {vm.analyzeResult && (
             <div className="auto-analyze-result">
-              <h4>Enhanced Brief</h4>
+              <h4>Suggested outcome</h4>
               <p className="auto-analyze-result-copy">
                 {vm.analyzeResult.enhancedBrief}
               </p>
-              <h4>Suggested Features</h4>
+              <h4>Suggested capabilities</h4>
               <div className="auto-analyze-features">
                 {vm.analyzeResult.suggestedFeatures.map((feature, i) => (
                   <span key={i} className="auto-analyze-feature-chip">
@@ -75,7 +122,7 @@ export function BriefStep({
                   </span>
                 ))}
               </div>
-              <h4 className="auto-analyze-subhead">Tech Stack</h4>
+              <h4 className="auto-analyze-subhead">Suggested build foundation</h4>
               <div className="auto-analyze-techstack">
                 <div className="auto-analyze-tech-item">
                   <span className="auto-analyze-tech-label">Frontend</span>
@@ -101,7 +148,7 @@ export function BriefStep({
               <div className="auto-analyze-actions">
                 <Button variant="primary" size="sm" onClick={vm.actions.applyEnhanced}>
                   <IconCheck size={14} />
-                  Apply enhanced brief
+                  Use this version
                 </Button>
                 <Button variant="ghost" size="sm" onClick={vm.actions.discardAnalysis}>
                   Discard
@@ -124,47 +171,25 @@ export function BriefStep({
             ) : (
               <>
                 <IconSparkles size={14} />
-                Auto-analyze brief
+                Improve description
               </>
             )}
           </Button>
         </div>
-      </div>
+      </section>
 
-      <div className="wizard-step-section">
-        <h3 className="wizard-step-section-title">Project Details</h3>
-        <p className="wizard-step-section-desc">
-          Define the company name, project brief, and target tech stack.
-        </p>
-        {vm.saveError && (
-          <div className="wizard-info-banner warning">
-            <IconAlertTriangle size={16} />
-            <span>{vm.saveError}</span>
-          </div>
-        )}
-        {vm.saved && (
-          <div className="wizard-info-banner success">
-            <IconCheck size={16} />
-            <span>Project brief saved. Continue to the next step.</span>
-          </div>
-        )}
-        <div className="wizard-review-stack">
-          <Field label="Company name">
-            <Input
-              value={vm.companyName}
-              onChange={vm.actions.onCompanyNameChange}
-              placeholder="e.g. Acme Corp"
-            />
-          </Field>
-          <Field label="Project brief" helper="Describe what the client wants to build. Min 10 characters.">
-            <Textarea
-              value={vm.brief}
-              onChange={vm.actions.onBriefChange}
-              placeholder="e.g. A task management dashboard for a small team with user auth, project boards, and reporting"
-              rows={5}
-            />
-          </Field>
-          <Field label="Tech stack">
+      <details className="wizard-disclosure">
+        <summary>
+          <span>
+            <strong>Optional build and design preferences</strong>
+            <small>Use the recommended defaults or give the delivery team more direction.</small>
+          </span>
+        </summary>
+        <div className="wizard-disclosure-body">
+          <Field
+            label="Build foundation"
+            helper="Choose a preferred foundation only when the project has a technical constraint."
+          >
             <Select
               value={vm.stackKey}
               onChange={vm.actions.onStackKeyChange}
@@ -176,18 +201,20 @@ export function BriefStep({
               ))}
             </Select>
           </Field>
+          <div>
+            <h3 className="wizard-step-section-title">Design direction</h3>
+            <p className="wizard-step-section-desc">
+              Optional preferences for how the final experience should look and feel.
+            </p>
+            <DesignGuidancePanel value={vm.designGuidance} onChange={vm.actions.setDesignGuidance} />
+          </div>
         </div>
-      </div>
-
-      <div className="wizard-step-section">
-        <h3 className="wizard-step-section-title">Design Direction</h3>
-        <DesignGuidancePanel value={vm.designGuidance} onChange={vm.actions.setDesignGuidance} />
-      </div>
+      </details>
 
       <OrchestratorStepNav
         projectId={vm.projectId}
         currentStep="brief"
-        nextLabel="Save & Continue"
+        nextLabel={vm.saving ? "Saving…" : "Save outcome and review"}
         nextDisabled={!vm.canSave || vm.saving}
         onComplete={vm.actions.save}
       />

@@ -14,11 +14,11 @@ export function RunStep({ ctx }: { ctx: OrchestratorWizardContextValue }) {
       <div className="wizard-step-section">
         <h3 className="wizard-step-section-title">
           <IconRocket size={16} />
-          AI Run
+          Execution room
         </h3>
         <p className="wizard-step-section-desc">
-          Launch the agent pipeline and watch every agent stream its work — tokens, decisions, cost,
-          and deliverables in real time. The run pauses at plan review and build review for your approval.
+          Follow the current phase, handle decisions, and review what comes next. Technical activity
+          remains available when you need a deeper view.
         </p>
       </div>
 

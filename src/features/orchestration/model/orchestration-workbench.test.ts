@@ -23,6 +23,7 @@ import {
   normalizeKickoffAnalyzeError,
 } from "./kickoff-step";
 import {
+  buildExecutionSummary,
   buildRunMeterViewModel,
   formatElapsedDuration,
   humanizeRunStatus,
@@ -147,7 +148,7 @@ describe("run cockpit model", () => {
   it("normalizes run status, node names, and elapsed display", () => {
     expect(normalizeRunNode("work_order_frontend_agent")).toBe("frontend_agent");
     expect(normalizeRunNode("none")).toBe("");
-    expect(humanizeRunStatus("AWAITING_GATE_1")).toBe("Awaiting Gate 1 review");
+    expect(humanizeRunStatus("AWAITING_GATE_1")).toBe("Plan ready for review");
     expect(humanizeRunStatus("CUSTOM_STATUS")).toBe("CUSTOM STATUS");
     expect(formatElapsedDuration(0)).toBe("0:00");
     expect(formatElapsedDuration(65_000)).toBe("1:05");
@@ -195,7 +196,7 @@ describe("run cockpit model", () => {
     expect(vm).toMatchObject({
       projectName: "Atlas",
       status: "GENERATING_CODE",
-      statusLabel: "Generating code",
+      statusLabel: "Building deliverables",
       currentNode: "frontend_agent",
       runId: "run-1",
       isRunning: true,
@@ -205,6 +206,10 @@ describe("run cockpit model", () => {
       cost: 0.4,
       activeModel: "gpt-test",
       detail: "Rendering MVVM views",
+      execution: {
+        phaseLabel: "Building",
+        nextCheckpoint: "Build review",
+      },
     });
     expect(vm.budgetPct).toBe(1);
     expect(vm.progress).toBe(33);
@@ -391,6 +396,43 @@ describe("launch review model", () => {
       canStart: false,
       llmLabel: "Needs attention",
     });
+  });
+});
+
+describe("PM execution summary", () => {
+  it("turns orchestration states into PM phases and decision prompts", () => {
+    expect(buildExecutionSummary("AWAITING_GATE_1")).toMatchObject({
+      headline: "The plan needs your decision",
+      phaseLabel: "Plan review",
+      actionStep: "gate-1",
+      actionLabel: "Review plan",
+      phases: [
+        { id: "prepare", state: "done" },
+        { id: "plan", state: "active" },
+        { id: "build", state: "upcoming" },
+        { id: "deliver", state: "upcoming" },
+      ],
+    });
+
+    expect(buildExecutionSummary("DELIVERED")).toMatchObject({
+      phaseLabel: "Complete",
+      actionStep: "delivery",
+      phases: [
+        { id: "prepare", state: "done" },
+        { id: "plan", state: "done" },
+        { id: "build", state: "done" },
+        { id: "deliver", state: "done" },
+      ],
+    });
+
+    const blocked = buildExecutionSummary("FAILED", "backend_agent");
+    expect(blocked).toMatchObject({
+      phaseLabel: "Blocked",
+      nextCheckpoint: "Resolve blocker",
+    });
+    expect(blocked.phases).toContainEqual(
+      expect.objectContaining({ id: "build", state: "blocked" }),
+    );
   });
 });
 

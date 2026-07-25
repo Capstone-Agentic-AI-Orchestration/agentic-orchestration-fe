@@ -21,16 +21,35 @@ export const PIPELINE_ORDER = [
 ] as const;
 
 export const RUN_STATUS_LABEL: Record<string, string> = {
-  PENDING: "Ready to launch",
-  PARSING_REQUIREMENTS: "Parsing requirements",
-  NEGOTIATING_CONTRACT: "Negotiating contract",
-  AWAITING_GATE_1: "Awaiting Gate 1 review",
-  GENERATING_CODE: "Generating code",
-  AWAITING_GATE_2: "Awaiting Gate 2 review",
-  COMMITTING: "Committing to GitHub",
-  DELIVERED: "Delivered",
-  FAILED: "Run blocked",
+  PENDING: "Ready to start",
+  PARSING_REQUIREMENTS: "Preparing the plan",
+  NEGOTIATING_CONTRACT: "Finalizing the plan",
+  AWAITING_GATE_1: "Plan ready for review",
+  GENERATING_CODE: "Building deliverables",
+  AWAITING_GATE_2: "Build ready for review",
+  COMMITTING: "Preparing delivery",
+  DELIVERED: "Delivery ready",
+  FAILED: "Execution blocked",
 };
+
+export type ExecutionPhaseId = "prepare" | "plan" | "build" | "deliver";
+export type ExecutionPhaseState = "done" | "active" | "upcoming" | "blocked";
+
+export interface ExecutionPhase {
+  id: ExecutionPhaseId;
+  label: string;
+  state: ExecutionPhaseState;
+}
+
+export interface ExecutionSummary {
+  headline: string;
+  description: string;
+  phaseLabel: string;
+  nextCheckpoint: string;
+  actionStep?: "gate-1" | "gate-2" | "delivery";
+  actionLabel?: string;
+  phases: ExecutionPhase[];
+}
 
 export interface RunMeterViewModel {
   projectName?: string;
@@ -51,6 +70,7 @@ export interface RunMeterViewModel {
   progress: number;
   accent: string;
   detail: string;
+  execution: ExecutionSummary;
 }
 
 export function normalizeRunNode(node: string | undefined | null): string {
@@ -69,6 +89,127 @@ export function formatElapsedDuration(ms: number): string {
   const minutes = Math.floor(total / 60);
   const seconds = total % 60;
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+}
+
+const EXECUTION_PHASES: Array<{ id: ExecutionPhaseId; label: string }> = [
+  { id: "prepare", label: "Prepare" },
+  { id: "plan", label: "Plan" },
+  { id: "build", label: "Build" },
+  { id: "deliver", label: "Deliver" },
+];
+
+function phasesFor(
+  activePhase: ExecutionPhaseId,
+  options: { complete?: boolean; blocked?: boolean } = {},
+): ExecutionPhase[] {
+  const activeIndex = EXECUTION_PHASES.findIndex((phase) => phase.id === activePhase);
+  return EXECUTION_PHASES.map((phase, index) => ({
+    ...phase,
+    state: options.complete
+      ? "done"
+      : index < activeIndex
+        ? "done"
+        : index === activeIndex
+          ? options.blocked
+            ? "blocked"
+            : "active"
+          : "upcoming",
+  }));
+}
+
+export function buildExecutionSummary(
+  status: string | undefined | null,
+  currentNode?: string,
+): ExecutionSummary {
+  const normalizedStatus = status ?? "PENDING";
+
+  switch (normalizedStatus) {
+    case "PARSING_REQUIREMENTS":
+      return {
+        headline: "DevFlow is preparing the implementation plan",
+        description: "The approved brief is being translated into concrete work and deliverables.",
+        phaseLabel: "Planning",
+        nextCheckpoint: "Plan review",
+        phases: phasesFor("plan"),
+      };
+    case "NEGOTIATING_CONTRACT":
+      return {
+        headline: "The implementation plan is being finalized",
+        description: "Dependencies and responsibilities are being aligned before your review.",
+        phaseLabel: "Planning",
+        nextCheckpoint: "Plan review",
+        phases: phasesFor("plan"),
+      };
+    case "AWAITING_GATE_1":
+      return {
+        headline: "The plan needs your decision",
+        description: "Execution is paused. Review the proposed plan before any deliverables are built.",
+        phaseLabel: "Plan review",
+        nextCheckpoint: "Approve or request changes",
+        actionStep: "gate-1",
+        actionLabel: "Review plan",
+        phases: phasesFor("plan"),
+      };
+    case "GENERATING_CODE":
+      return {
+        headline: "DevFlow is building the approved deliverables",
+        description: "Work is progressing against the plan. You will be asked to review the result next.",
+        phaseLabel: "Building",
+        nextCheckpoint: "Build review",
+        phases: phasesFor("build"),
+      };
+    case "AWAITING_GATE_2":
+      return {
+        headline: "The build needs your decision",
+        description: "Execution is paused. Review the completed work before it moves to delivery.",
+        phaseLabel: "Build review",
+        nextCheckpoint: "Approve or request changes",
+        actionStep: "gate-2",
+        actionLabel: "Review build",
+        phases: phasesFor("build"),
+      };
+    case "COMMITTING":
+      return {
+        headline: "DevFlow is preparing the final delivery",
+        description: "Approved work is being packaged and connected to the project repository.",
+        phaseLabel: "Delivery",
+        nextCheckpoint: "Final handoff",
+        phases: phasesFor("deliver"),
+      };
+    case "DELIVERED":
+    case "SUCCEEDED":
+      return {
+        headline: "The delivery is ready",
+        description: "Review the final handoff, delivery links, and client-facing outputs.",
+        phaseLabel: "Complete",
+        nextCheckpoint: "Client acceptance",
+        actionStep: "delivery",
+        actionLabel: "Review delivery",
+        phases: phasesFor("deliver", { complete: true }),
+      };
+    case "FAILED": {
+      const failedPhase: ExecutionPhaseId = currentNode?.includes("commit")
+        ? "deliver"
+        : currentNode?.includes("agent") || currentNode?.includes("validate")
+          ? "build"
+          : "plan";
+      return {
+        headline: "Execution needs attention",
+        description: "DevFlow stopped safely. Review the blocker, correct it, and retry when ready.",
+        phaseLabel: "Blocked",
+        nextCheckpoint: "Resolve blocker",
+        phases: phasesFor(failedPhase, { blocked: true }),
+      };
+    }
+    default:
+      return {
+        headline: "The project is ready to start",
+        description: "Confirm the outcome and launch checks before DevFlow begins planning.",
+        phaseLabel: "Preparation",
+        nextCheckpoint: "Start planning",
+        phases: phasesFor("prepare"),
+      };
+  }
 }
 
 export function buildRunMeterViewModel(input: {
@@ -126,10 +267,11 @@ export function buildRunMeterViewModel(input: {
       : isRunning
         ? "#FAFAFA"
         : "#A1A1A1";
+  const execution = buildExecutionSummary(isFailed ? "FAILED" : status, currentNode);
   const detail =
     input.orchestrationState?.error ||
     input.nodeStates[currentNode]?.progressLabel ||
-    (isRunning ? "Agents are working - watch the live output below." : "Launch the pipeline to begin.");
+    execution.description;
 
   return {
     projectName: input.projectName,
@@ -150,5 +292,6 @@ export function buildRunMeterViewModel(input: {
     progress,
     accent,
     detail,
+    execution,
   };
 }
