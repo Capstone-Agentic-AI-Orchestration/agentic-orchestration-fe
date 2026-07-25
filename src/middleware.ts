@@ -11,7 +11,10 @@ import { NextResponse, type NextRequest } from "next/server";
  * also marked noindex so it can never surface in search engines.
  */
 
-// Reachable without a session (the login surfaces themselves).
+// Reachable without a session. /sign-in is the only real login page; the two
+// per-persona paths are legacy redirect stubs that must stay public, or an
+// unauthenticated visitor following an old bookmark would be bounced by this
+// gate before the stub could forward them to /sign-in.
 const PUBLIC_PATHS = ["/sign-in", "/dev/sign-in", "/pm/sign-in"];
 
 function isPublicPath(pathname: string): boolean {

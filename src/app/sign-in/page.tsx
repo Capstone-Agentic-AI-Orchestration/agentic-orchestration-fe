@@ -1,7 +1,15 @@
-import { redirect } from "next/navigation";
+import { Suspense } from "react";
+import { SignInView } from "@/features/auth/sign-in-view";
 
-export default function SignInRedirectPage() {
-  // Internal console entry. DevFlow staff sign in here; role-routing forwards
-  // each user (DEV / PM / ADMIN) to their correct home after authentication.
-  redirect("/dev/sign-in");
+/**
+ * The one and only sign-in page for the internal console. Role routing after
+ * authentication forwards each user (DEV / PM / ADMIN) to their own workspace,
+ * so there is no reason for per-persona login URLs.
+ */
+export default function SignInPage() {
+  return (
+    <Suspense fallback={<div className="auth-route-state">Loading...</div>}>
+      <SignInView />
+    </Suspense>
+  );
 }

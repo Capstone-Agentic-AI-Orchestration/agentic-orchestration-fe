@@ -5,24 +5,24 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { IconGitHub } from "@/shared/components/icons";
 import { useAuth } from "@/shared/auth/auth-provider";
 import { loginPathForRole } from "@/shared/auth/role-routing";
-import type { DevFlowUserRole } from "@/shared/api/devflow-api";
 
-export interface PersonaSignInProps {
-  /** The persona this entry point is branded for. Cosmetic only — the actual
-   *  workspace a user reaches is decided by their backend role, not this page. */
-  persona: Extract<DevFlowUserRole, "DEV" | "PM">;
-  title: string;
-  subtitle: string;
-  /** Default post-login destination when no ?next= is present. */
-  homePath: string;
-  accent: string;
-}
-
-export function PersonaSignInView({ persona, title, subtitle, homePath, accent }: PersonaSignInProps) {
+/**
+ * The single sign-in surface for the internal DevFlow console.
+ *
+ * There is deliberately ONE entry point for every staff role. The workspace a
+ * person lands in (DEV / PM / ADMIN) is decided by the role on their backend
+ * profile — resolved from GitHub org team membership — never by which URL they
+ * opened. Separate /dev and /pm login pages used to exist and were pure
+ * duplication: they rendered this same form and only differed in wording, which
+ * implied the choice mattered and misled anyone who picked the "wrong" one.
+ */
+export function SignInView() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { signIn, signInWithOAuth, devFlowUser, user, initialized, refreshDevFlowUser } = useAuth();
-  const nextPath = searchParams.get("next") ?? homePath;
+  // No persona default: loginPathForRole falls back to the role's own home when
+  // `next` is absent or points outside the role's workspace.
+  const nextPath = searchParams.get("next");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -30,8 +30,8 @@ export function PersonaSignInView({ persona, title, subtitle, homePath, accent }
   const [submitting, setSubmitting] = useState(false);
   const [oauthSubmitting, setOauthSubmitting] = useState(false);
 
-  // A visitor who already has a session is sent to their real workspace by role
-  // (loginPathForRole), so the URL of this page never grants access on its own.
+  // A visitor who already has a session is sent to their real workspace by role,
+  // so the URL of this page never grants access on its own.
   useEffect(() => {
     if (!initialized || !user || devFlowUser) return;
     refreshDevFlowUser().catch(() => null);
@@ -68,7 +68,6 @@ export function PersonaSignInView({ persona, title, subtitle, homePath, accent }
   };
 
   const busy = submitting || oauthSubmitting;
-  const personaLabel = persona === "PM" ? "Project Manager" : "Developer";
 
   return (
     <div className="auth-route-state">
@@ -80,17 +79,25 @@ export function PersonaSignInView({ persona, title, subtitle, homePath, accent }
             fontWeight: 600,
             letterSpacing: "0.04em",
             textTransform: "uppercase",
-            color: accent,
-            border: `1px solid ${accent}55`,
+            color: ACCENT,
+            border: `1px solid ${ACCENT}55`,
             borderRadius: 999,
             padding: "4px 12px",
           }}
         >
-          {personaLabel} workspace
+          Internal console
         </span>
 
-        <h1 style={{ fontSize: 24, fontWeight: 700, letterSpacing: "-0.02em", margin: "18px 0 0" }}>{title}</h1>
-        <p style={{ fontSize: 14, color: "var(--text-2)", marginTop: 8, lineHeight: 1.55 }}>{subtitle}</p>
+        <h1 style={{ fontSize: 24, fontWeight: 700, letterSpacing: "-0.02em", margin: "18px 0 0" }}>
+          Sign in to DevFlow
+        </h1>
+        <p style={{ fontSize: 14, color: "var(--text-2)", marginTop: 8, lineHeight: 1.55 }}>
+          Continue with GitHub — your workspace is set by your team in the{" "}
+          <strong style={{ color: "var(--text-1, white)", fontWeight: 600 }}>
+            {GITHUB_ORG_LABEL}
+          </strong>{" "}
+          organisation. Project managers and developers both sign in here.
+        </p>
 
         <div className="auth-form-fields" style={{ marginTop: 24 }}>
           <button
@@ -109,6 +116,11 @@ export function PersonaSignInView({ persona, title, subtitle, homePath, accent }
             <IconGitHub size={18} />
             {oauthSubmitting ? "Opening GitHub..." : "Continue with GitHub"}
           </button>
+
+          <p style={{ fontSize: 12.5, color: "var(--text-3, var(--text-2))", marginTop: 10, lineHeight: 1.5 }}>
+            GitHub is the recommended route for staff: it is the only method that can read your
+            team membership and grant your DEV or PM workspace automatically.
+          </p>
 
           <div className="auth-premium-divider">
             <span>or sign in with email</span>
@@ -148,7 +160,7 @@ export function PersonaSignInView({ persona, title, subtitle, homePath, accent }
               className="btn btn-primary"
               style={{ width: "100%", height: 46, marginTop: 18, borderRadius: 999, opacity: busy ? 0.6 : 1 }}
             >
-              {submitting ? "Signing in..." : `Sign in to ${personaLabel} workspace`}
+              {submitting ? "Signing in..." : "Sign in"}
             </button>
           </form>
         </div>
@@ -159,6 +171,9 @@ export function PersonaSignInView({ persona, title, subtitle, homePath, accent }
     </div>
   );
 }
+
+const ACCENT = "#818CF8";
+const GITHUB_ORG_LABEL = "Capstone-Agentic-AI-Orchestration";
 
 const inputStyle: React.CSSProperties = {
   width: "100%",

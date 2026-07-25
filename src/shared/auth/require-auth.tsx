@@ -7,15 +7,10 @@ import { compactDevFlowError } from "@/shared/utils/devflow-projects";
 import { useAuth } from "./auth-provider";
 import { homePathForRole } from "./role-routing";
 
-/** Route an unauthenticated visitor to the sign-in page for the workspace they
- *  were trying to reach, so the dedicated /dev and /pm entry points get used. */
-function signInPathForPathname(pathname: string): string {
-  if (pathname === "/dev" || pathname.startsWith("/dev/")) return "/dev/sign-in";
-  if (pathname === "/pm" || pathname.startsWith("/pm/")) return "/pm/sign-in";
-  // Everything else in this console (notably /admin) falls back to the shared
-  // internal entry point. The client sign-in lives in the separate client app.
-  return "/sign-in";
-}
+/** The console has a single sign-in page: role routing after authentication
+ *  decides the workspace, so the entry URL carries no role meaning. `next`
+ *  preserves the route the visitor was trying to reach. */
+const SIGN_IN_PATH = "/sign-in";
 
 export function RequireAuth({
   allowedRoles,
@@ -32,7 +27,7 @@ export function RequireAuth({
 
   useEffect(() => {
     if (!initialized || user) return;
-    router.replace(`${signInPathForPathname(pathname)}?next=${encodeURIComponent(pathname)}`);
+    router.replace(`${SIGN_IN_PATH}?next=${encodeURIComponent(pathname)}`);
   }, [initialized, pathname, router, user]);
 
   // A signed-in but unapproved client has no workspace in this console at all —
@@ -89,7 +84,7 @@ export function RequireAuth({
 
   const returnToSignIn = async () => {
     await signOut().catch(() => null);
-    router.replace(`${signInPathForPathname(pathname)}?next=${encodeURIComponent(pathname)}`);
+    router.replace(`${SIGN_IN_PATH}?next=${encodeURIComponent(pathname)}`);
   };
 
   if (!initialized) {
