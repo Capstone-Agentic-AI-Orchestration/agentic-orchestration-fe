@@ -9,25 +9,34 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { Provider, Session, User } from "@supabase/supabase-js";
-import { acceptDevFlowClientInvites, getCurrentDevFlowUser, ACCOUNT_PENDING_APPROVAL, DevFlowApiError, type DevFlowAuthUser } from "@/shared/api/devflow-api";
+import type { Session, User } from "@supabase/supabase-js";
+import {
+  getCurrentDevFlowUser,
+  NOT_A_TEAM_MEMBER,
+  DevFlowApiError,
+  type DevFlowAuthUser,
+} from "@/shared/api/devflow-api";
 import { supabase } from "./supabase-client";
 
-type DevFlowOAuthProvider = Extract<Provider, "github" | "google">;
-
+/**
+ * Auth for the internal console: GitHub only.
+ *
+ * Access is decided entirely by membership of a team in the GitHub organisation, so there is
+ * no email/password or sign-up path here — a password account could never be resolved to a
+ * DEV or PM role. Client accounts belong to the separate Alphaexplora client app, which
+ * shares this Supabase project but owns its own sign-up and invite handling.
+ */
 interface AuthContextValue {
   initialized: boolean;
   session: Session | null;
   user: User | null;
   devFlowUser: DevFlowAuthUser | null;
   devFlowUserError: string | null;
-  /** True when the signed-in account exists but is awaiting project manager approval. */
-  pendingApproval: boolean;
-  signIn: (email: string, password: string) => Promise<DevFlowAuthUser>;
-  signInWithOAuth: (provider: DevFlowOAuthProvider, nextPath?: string | null) => Promise<void>;
-  signUp: (email: string, password: string) => Promise<DevFlowAuthUser | null>;
-  resetPassword: (email: string) => Promise<void>;
-  updatePassword: (password: string) => Promise<void>;
+  /** True when the GitHub account signed in fine but is in none of the mapped org teams. */
+  notATeamMember: boolean;
+  /** The API's explanation for that refusal, shown on the no-access screen. */
+  notATeamMemberMessage: string | null;
+  signInWithGithub: (nextPath?: string | null) => Promise<void>;
   refreshDevFlowUser: () => Promise<DevFlowAuthUser | null>;
   signOut: () => Promise<void>;
 }
@@ -39,7 +48,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [devFlowUser, setDevFlowUser] = useState<DevFlowAuthUser | null>(null);
   const [devFlowUserError, setDevFlowUserError] = useState<string | null>(null);
-  const [pendingApproval, setPendingApproval] = useState(false);
+  const [notATeamMember, setNotATeamMember] = useState(false);
+  const [notATeamMemberMessage, setNotATeamMemberMessage] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -65,7 +75,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!session) {
       setDevFlowUser(null);
       setDevFlowUserError(null);
-      setPendingApproval(false);
+      setNotATeamMember(false);
+      setNotATeamMemberMessage(null);
       return null;
     }
 
@@ -73,84 +84,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const user = await getCurrentDevFlowUser();
       setDevFlowUser(user);
       setDevFlowUserError(null);
-      setPendingApproval(false);
+      setNotATeamMember(false);
+      setNotATeamMemberMessage(null);
       return user;
     } catch (error) {
       setDevFlowUser(null);
-      // A pending-approval refusal is an expected state for a new client, not a failure to
-      // surface as an error — flag it so the app can route them to the waiting-room screen.
-      const isPending = error instanceof DevFlowApiError && error.code === ACCOUNT_PENDING_APPROVAL;
-      setPendingApproval(isPending);
-      setDevFlowUserError(isPending ? null : error instanceof Error ? error.message : String(error));
+      // "Not on a team" is an expected outcome for a valid GitHub login, not a fault to
+      // report as a broken session — flag it so the app can show the staff-only screen.
+      const refused = error instanceof DevFlowApiError && error.code === NOT_A_TEAM_MEMBER;
+      const detail = error instanceof Error ? error.message : String(error);
+      setNotATeamMember(refused);
+      setNotATeamMemberMessage(refused ? detail : null);
+      setDevFlowUserError(refused ? null : detail);
       throw error;
     }
   }, [session]);
 
   useEffect(() => {
     if (!session) return;
-    let mounted = true;
-
     refreshDevFlowUser().catch(() => null);
-
-    return () => {
-      mounted = false;
-    };
   }, [session]);
 
-  const signIn = useCallback(async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
-
-    const user = await getCurrentDevFlowUser();
-    await acceptDevFlowClientInvites().catch(() => null);
-    setDevFlowUser(user);
-    setDevFlowUserError(null);
-    return user;
-  }, []);
-
-  const signInWithOAuth = useCallback(async (provider: DevFlowOAuthProvider, nextPath?: string | null) => {
-    // Return the user to the SAME sign-in page they started on (dev/pm/client),
-    // each of which routes onward by role. Falls back to the configured path.
-    const redirectPath =
-      (typeof window !== "undefined" && window.location.pathname) ||
-      process.env.NEXT_PUBLIC_AUTH_REDIRECT_PATH ||
-      "/sign-in";
-    const redirectUrl = new URL(redirectPath, window.location.origin);
+  const signInWithGithub = useCallback(async (nextPath?: string | null) => {
+    // Return to the sign-in page, which routes onward by the role the backend resolves.
+    const redirectUrl = new URL("/sign-in", window.location.origin);
     if (nextPath) redirectUrl.searchParams.set("next", nextPath);
 
     const { error } = await supabase.auth.signInWithOAuth({
-      provider,
+      provider: "github",
       options: {
         redirectTo: redirectUrl.toString(),
-        scopes: provider === "github" ? "read:user user:email" : undefined,
+        // read:user + user:email are what the backend needs to read the login and email;
+        // team membership itself is read server-side with the GitHub App installation.
+        scopes: "read:user user:email",
       },
     });
-    if (error) throw error;
-  }, []);
-
-  const signUp = useCallback(async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signUp({ email, password });
-    if (error) throw error;
-    if (!data.session) return null;
-
-    setSession(data.session);
-    const user = await getCurrentDevFlowUser();
-    await acceptDevFlowClientInvites().catch(() => null);
-    setDevFlowUser(user);
-    setDevFlowUserError(null);
-    return user;
-  }, []);
-
-  const resetPassword = useCallback(async (email: string) => {
-    // Console staff authenticate through GitHub/Google OAuth; password reset is a
-    // client-app flow, so any reset link here returns to the internal sign-in.
-    const redirectTo = `${window.location.origin}/sign-in`;
-    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
-    if (error) throw error;
-  }, []);
-
-  const updatePassword = useCallback(async (password: string) => {
-    const { error } = await supabase.auth.updateUser({ password });
     if (error) throw error;
   }, []);
 
@@ -160,7 +128,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(null);
     setDevFlowUser(null);
     setDevFlowUserError(null);
-    setPendingApproval(false);
+    setNotATeamMember(false);
+    setNotATeamMemberMessage(null);
   }, []);
 
   const value = useMemo<AuthContextValue>(
@@ -170,16 +139,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user: session?.user ?? null,
       devFlowUser,
       devFlowUserError,
-      pendingApproval,
-      signIn,
-      signInWithOAuth,
-      signUp,
-      resetPassword,
-      updatePassword,
+      notATeamMember,
+      notATeamMemberMessage,
+      signInWithGithub,
       refreshDevFlowUser,
       signOut,
     }),
-    [devFlowUser, devFlowUserError, pendingApproval, initialized, refreshDevFlowUser, resetPassword, session, signIn, signInWithOAuth, signOut, signUp, updatePassword],
+    [
+      devFlowUser,
+      devFlowUserError,
+      notATeamMember,
+      notATeamMemberMessage,
+      initialized,
+      refreshDevFlowUser,
+      session,
+      signInWithGithub,
+      signOut,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

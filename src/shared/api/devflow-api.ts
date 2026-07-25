@@ -16,7 +16,7 @@ export class DevFlowApiError extends Error {
   kind: DevFlowApiErrorKind;
   details: string | null;
   rawBody: string;
-  /** Machine-readable error code from the API body (e.g. "ACCOUNT_PENDING_APPROVAL"), when present. */
+  /** Machine-readable error code from the API body (e.g. "NOT_A_TEAM_MEMBER"), when present. */
   code: string | null;
 
   constructor(input: {
@@ -37,8 +37,13 @@ export class DevFlowApiError extends Error {
   }
 }
 
-/** Distinct code the API returns when a signed-in client is awaiting PM approval. */
-export const ACCOUNT_PENDING_APPROVAL = "ACCOUNT_PENDING_APPROVAL";
+/**
+ * Code the API returns when a GitHub account authenticated fine but is in none of the
+ * mapped org teams. This console is staff-only, so it is the single refusal reason —
+ * it replaced ACCOUNT_PENDING_APPROVAL, which implied a client-approval flow that does
+ * not exist here (clients belong to the separate Alphaexplora client app).
+ */
+export const NOT_A_TEAM_MEMBER = "NOT_A_TEAM_MEMBER";
 
 export type DevFlowProjectStatus =
   | "PENDING"
@@ -1438,19 +1443,10 @@ export function getDevFlowInquiry(id: string): Promise<DevFlowInquiry> {
   return request<DevFlowInquiry>(`/inquiries/${id}`);
 }
 
-export function getDevFlowClientInviteStatus(email: string): Promise<DevFlowClientInviteStatusSummary> {
-  return request<DevFlowClientInviteStatusSummary>(`/client-invites/status?email=${encodeURIComponent(email)}`);
-}
-
-export function getMyDevFlowClientInvites(): Promise<DevFlowClientInvite[]> {
-  return request<DevFlowClientInvite[]>("/client-invites/me");
-}
-
-export function acceptDevFlowClientInvites(): Promise<{ accepted: DevFlowClientInvite[] }> {
-  return request<{ accepted: DevFlowClientInvite[] }>("/client-invites/accept", {
-    method: "POST",
-  });
-}
+// The client's own invite calls (/client-invites/status, /me, /accept) used to live here.
+// They are gone: this console admits GitHub team members only, so no client can authenticate
+// to call them. A client's invites are handled by the Alphaexplora client app. The
+// PM-facing invite endpoints below (create, list per project, revoke) remain.
 
 export function approveDevFlowInquiry(
   id: string,

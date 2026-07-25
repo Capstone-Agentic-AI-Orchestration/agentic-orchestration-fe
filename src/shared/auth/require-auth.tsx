@@ -19,7 +19,7 @@ export function RequireAuth({
   allowedRoles?: DevFlowUserRole[];
   children: ReactNode;
 }) {
-  const { devFlowUser, devFlowUserError, pendingApproval, initialized, refreshDevFlowUser, signOut, user } = useAuth();
+  const { devFlowUser, devFlowUserError, notATeamMember, initialized, refreshDevFlowUser, signOut, user } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
   const [roleChecked, setRoleChecked] = useState(false);
@@ -30,14 +30,14 @@ export function RequireAuth({
     router.replace(`${SIGN_IN_PATH}?next=${encodeURIComponent(pathname)}`);
   }, [initialized, pathname, router, user]);
 
-  // A signed-in but unapproved client has no workspace in this console at all —
-  // the waiting room lives in the client app, so send them to the terminal
-  // "wrong workspace" screen instead of a route that no longer exists here.
+  // A valid GitHub login that is in no mapped org team has no workspace in this console at
+  // all, and no approval flow will ever grant one, so send them to the terminal staff-only
+  // screen rather than leaving them on a guarded route.
   useEffect(() => {
-    if (pendingApproval && pathname !== "/no-access") {
+    if (notATeamMember && pathname !== "/no-access") {
       router.replace("/no-access");
     }
-  }, [pendingApproval, pathname, router]);
+  }, [notATeamMember, pathname, router]);
 
   useEffect(() => {
     if (!initialized || !user) {
@@ -95,8 +95,8 @@ export function RequireAuth({
     return <AuthRouteState title="Redirecting to sign in" body="A valid session is required for this workspace." />;
   }
 
-  if (pendingApproval) {
-    return <AuthRouteState title="Awaiting approval" body="Your request is with our team. Taking you to your status page." />;
+  if (notATeamMember) {
+    return <AuthRouteState title="No workspace for this account" body="Your GitHub account is not in a DevFlow team. Taking you to the details." />;
   }
 
   if (devFlowUserError) {

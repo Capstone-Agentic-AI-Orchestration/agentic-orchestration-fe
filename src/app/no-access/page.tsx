@@ -3,18 +3,17 @@
 import { useAuth } from "@/shared/auth/auth-provider";
 
 /**
- * Terminal "wrong workspace" screen for the internal console.
+ * Terminal staff-only screen for the internal console.
  *
- * A CLIENT account has no workspace here — the client experience lives in the
- * separate Alphaexplora client app. This page exists so role routing has a real
- * destination for CLIENT: sending them to /sign-in instead would loop, because
- * the sign-in page routes an authenticated user back by role.
+ * Reached when a GitHub account authenticates but is in none of the mapped org teams, which
+ * is the only reason access is refused here. There is no approval flow to wait for: a role
+ * comes from GitHub team membership, so the fix is to be added to a team. Client accounts
+ * belong to the separate Alphaexplora client app.
  *
- * Deliberately has no <RequireAuth>: it must render for exactly the users the
- * role guards reject.
+ * Deliberately has no <RequireAuth>: it must render for exactly the users the guards reject.
  */
 export default function NoAccessPage() {
-  const { devFlowUser, signOut } = useAuth();
+  const { devFlowUser, notATeamMemberMessage, signOut } = useAuth();
   const clientAppUrl = process.env.NEXT_PUBLIC_CLIENT_APP_URL || "https://alphaexplora.com";
 
   return (
@@ -47,9 +46,17 @@ export default function NoAccessPage() {
         </h1>
 
         <p style={{ fontSize: 14.5, lineHeight: 1.55, color: "var(--text-2, #b9bcbc)", marginTop: 12 }}>
-          {devFlowUser?.email ? <>You are signed in as {devFlowUser.email}. </> : null}
-          Client projects are managed in the Alphaexplora client portal, not here.
+          {/* The API message names the GitHub login and the teams to ask for. It is the only
+              detail available here: a refused sign-in has no DevFlow profile to read. */}
+          {notATeamMemberMessage ??
+            "Your GitHub account is not a member of a DevFlow team, so there is no workspace for it in this console."}
         </p>
+
+        {devFlowUser?.email && (
+          <p style={{ fontSize: 13, lineHeight: 1.55, color: "var(--text-3, #8b8f8f)", marginTop: 8 }}>
+            Signed in as {devFlowUser.email}.
+          </p>
+        )}
 
         <div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 28, flexWrap: "wrap" }}>
           <a

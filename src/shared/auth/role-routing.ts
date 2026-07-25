@@ -2,9 +2,10 @@ import type { DevFlowUserRole } from "@/shared/api/devflow-api";
 
 export function homePathForRole(role: DevFlowUserRole): string {
   const paths: Record<DevFlowUserRole, string> = {
-    // CLIENT has no workspace in this console — the client portal is a separate
-    // app. /no-access is a terminal page on purpose: routing CLIENT to /sign-in
-    // would loop, since sign-in re-routes an authenticated user by role.
+    // Defensive only: the backend now refuses CLIENT sign-ins outright (403
+    // NOT_A_TEAM_MEMBER), so no CLIENT role should ever reach the frontend. Kept mapped to
+    // the terminal /no-access page because routing a CLIENT to /sign-in would loop —
+    // sign-in re-routes an authenticated user by role.
     CLIENT: "/no-access",
     PM: "/pm/projects",
     DEV: "/dev/dashboard",
