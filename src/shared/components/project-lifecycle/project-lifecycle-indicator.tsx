@@ -27,19 +27,19 @@ export type LifecycleStageId = "draft" | "kickoff" | "build" | "review" | "deliv
 export const LIFECYCLE_STAGES: LifecycleStage[] = [
   {
     id: "draft",
-    label: "Draft",
-    shortLabel: "Draft",
-    description: "Set up project brief and team",
+    label: "Describe",
+    shortLabel: "Describe",
+    description: "Define the outcome, stack, and design direction",
     icon: IconClipboard,
-    nextAction: "Complete project setup",
+    nextAction: "Describe the project",
   },
   {
     id: "kickoff",
-    label: "Kickoff",
-    shortLabel: "Kickoff",
-    description: "Define scope, milestones, and readiness",
+    label: "Review",
+    shortLabel: "Review",
+    description: "Confirm the direction and launch the run",
     icon: IconUsers,
-    nextAction: "Complete kickoff checklist",
+    nextAction: "Review and launch",
   },
   {
     id: "build",
@@ -51,9 +51,9 @@ export const LIFECYCLE_STAGES: LifecycleStage[] = [
   },
   {
     id: "review",
-    label: "Review",
-    shortLabel: "Review",
-    description: "Approve gates and review artifacts",
+    label: "Approve",
+    shortLabel: "Approve",
+    description: "Review the plan and generated deliverables",
     icon: IconCode,
     nextAction: "Review and approve",
   },
@@ -77,26 +77,24 @@ export function getStageById(id: string): LifecycleStage | undefined {
   return LIFECYCLE_STAGES.find((s) => s.id === id);
 }
 
-export function mapProjectStatusToLifecycleStage(status: string, kickoffStatus?: string): LifecycleStageId {
+export function mapProjectStatusToLifecycleStage(status: string, _kickoffStatus?: string): LifecycleStageId {
   if (!status) return "draft";
 
   switch (status) {
     case "DELIVERED":
       return "delivered";
     case "COMMITTING":
-      return "review";
     case "AWAITING_GATE_1":
     case "AWAITING_GATE_2":
+      return "review";
     case "GENERATING_CODE":
     case "PARSING_REQUIREMENTS":
     case "NEGOTIATING_CONTRACT":
       return "build";
     case "PENDING":
+      return "kickoff";
     case "FAILED":
-      if (kickoffStatus === "READY" || kickoffStatus === "LOCKED") {
-        return "kickoff";
-      }
-      return "draft";
+      return "build";
     default:
       return "draft";
   }
@@ -110,7 +108,7 @@ export function getStageProgress(stageId: LifecycleStageId): number {
 export function getOrchestratorRouteForStage(stageId: LifecycleStageId): string {
   const map: Record<LifecycleStageId, string> = {
     draft: "brief",
-    kickoff: "kickoff",
+    kickoff: "review",
     build: "run",
     review: "gate-2",
     delivered: "delivery",
@@ -251,16 +249,16 @@ export function LifecycleOverviewBanner({
   const orchestratorRoute = getOrchestratorRouteForStage(currentStage);
 
   const tips: Record<LifecycleStageId, string> = {
-    draft: "Set up your project brief, choose a tech stack, and invite team members to get started.",
-    kickoff: "Complete the kickoff checklist — define scope, milestones, required documents, and confirm readiness.",
-    build: "Launch the orchestration pipeline. The AI agents will parse requirements, negotiate a contract, and generate code in parallel.",
-    review: "Review generated code artifacts and approve or reject at each gate. Approve Gate 2 to commit to GitHub.",
+    draft: "Describe the outcome, choose a tech stack, and set the design direction.",
+    kickoff: "Review the project direction once. DevFlow will prepare the agent tasks automatically when you launch.",
+    build: "Follow the live agent run as it plans and builds the project.",
+    review: "Review the plan and generated deliverables at the two approval points.",
     delivered: "The project has been delivered. Review the repository and delivery notes.",
   };
 
   const actions: Record<LifecycleStageId, { label: string; route: string }> = {
     draft: { label: "Open wizard", route: `/pm/orchestrate/${projectId}/brief` },
-    kickoff: { label: "Open kickoff", route: `/pm/orchestrate/${projectId}/kickoff` },
+    kickoff: { label: "Review and launch", route: `/pm/orchestrate/${projectId}/review` },
     build: { label: "Open orchestration", route: `/pm/orchestrate/${projectId}/run` },
     review: { label: "Open review", route: `/pm/orchestrate/${projectId}/gate-2` },
     delivered: { label: "View delivery", route: `/pm/orchestrate/${projectId}/delivery` },

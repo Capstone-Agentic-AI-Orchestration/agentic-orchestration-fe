@@ -58,6 +58,7 @@ import {
   determineWizardStepFromStatus,
   getWizardStepIndex,
 } from "./orchestrator-wizard";
+import { buildLaunchReviewState } from "./launch-review";
 import {
   buildAgentSnapshots,
   buildTranscriptEntries,
@@ -314,8 +315,8 @@ describe("agent stream model", () => {
 describe("orchestrator wizard model", () => {
   it("maps project and run status to the recommended wizard step", () => {
     expect(determineWizardStepFromStatus(null, null)).toBe("brief");
-    expect(determineWizardStepFromStatus({ status: "PENDING", kickoff: { status: "DRAFT" } }, null)).toBe("kickoff");
-    expect(determineWizardStepFromStatus({ status: "PENDING", kickoff: { status: "READY" } }, null)).toBe("team");
+    expect(determineWizardStepFromStatus({ status: "PENDING", brief: "Short" }, null)).toBe("brief");
+    expect(determineWizardStepFromStatus({ status: "PENDING", brief: "A detailed project brief" }, null)).toBe("review");
     expect(determineWizardStepFromStatus({ status: "AWAITING_GATE_1" }, null)).toBe("gate-1");
     expect(determineWizardStepFromStatus({ status: "AWAITING_GATE_2" }, null)).toBe("gate-2");
     expect(determineWizardStepFromStatus({ status: "DELIVERED" }, null)).toBe("delivery");
@@ -327,17 +328,13 @@ describe("orchestrator wizard model", () => {
       {
         status: "AWAITING_GATE_2",
         brief: "A detailed enough brief",
-        kickoff: { status: "LOCKED" },
-        members: [{ id: "member-1" }],
       },
       { runId: "run-1" },
     );
 
     expect(Array.from(completed)).toEqual([
       "brief",
-      "kickoff",
-      "team",
-      "readiness",
+      "review",
       "run",
       "gate-1",
     ]);
@@ -350,8 +347,6 @@ describe("orchestrator wizard model", () => {
         companyName: "Atlas",
         status: "AWAITING_GATE_1",
         brief: "A detailed enough brief",
-        kickoff: { status: "READY" },
-        members: [{ id: "member-1" }],
       },
       status: { runId: "run-1" },
     });
@@ -362,6 +357,39 @@ describe("orchestrator wizard model", () => {
       currentStepNumber: getWizardStepIndex("run") + 1,
       onTrack: false,
       projectName: "Atlas",
+    });
+  });
+});
+
+describe("launch review model", () => {
+  it("requires AI readiness but treats GitHub as optional at launch", () => {
+    expect(buildLaunchReviewState({
+      providerStatus: {
+        available: true,
+        activeMode: "llm",
+        githubDelivery: { available: false },
+      },
+      llmResult: null,
+      githubResult: null,
+    })).toMatchObject({
+      llmOk: true,
+      githubOk: false,
+      canStart: true,
+      agentMode: "llm",
+      githubLabel: "Connect later",
+    });
+  });
+
+  it("blocks launch when AI generation is unavailable", () => {
+    expect(buildLaunchReviewState({
+      providerStatus: null,
+      llmResult: { ok: false, reason: "Provider unavailable" },
+      githubResult: { ok: true },
+    })).toMatchObject({
+      llmOk: false,
+      githubOk: true,
+      canStart: false,
+      llmLabel: "Needs attention",
     });
   });
 });

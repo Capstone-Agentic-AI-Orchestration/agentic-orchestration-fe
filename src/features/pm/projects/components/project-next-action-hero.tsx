@@ -35,9 +35,6 @@ interface NextActionHeroProps {
   status: ProjectNextActionStatus;
   runId?: string | null;
   repoUrl?: string | null;
-  kickoffReady: boolean;
-  readyWorkOrderCount: number;
-  totalWorkOrderCount: number;
   artifactCount: number;
   hasRunBudget?: boolean;
   tokensConsumed?: number;
@@ -82,9 +79,7 @@ const ACTION_ICONS: Record<ProjectNextActionHeroActionId, React.ReactNode> = {
   reviewArtifacts: <IconCheck size={14} />,
   requestChanges: <IconAlertTriangle size={14} />,
   retry: <IconRocket size={14} />,
-  goToKickoff: <IconShield size={14} />,
   start: <IconPlay size={14} />,
-  goToWorkOrders: <IconPlay size={14} />,
 };
 
 export function ProjectNextActionHero(props: NextActionHeroProps) {
@@ -92,9 +87,6 @@ export function ProjectNextActionHero(props: NextActionHeroProps) {
     status: props.status,
     runId: props.runId,
     repoUrl: props.repoUrl,
-    kickoffReady: props.kickoffReady,
-    readyWorkOrderCount: props.readyWorkOrderCount,
-    totalWorkOrderCount: props.totalWorkOrderCount,
     artifactCount: props.artifactCount,
     orchestrationBlockers: props.orchestrationBlockers,
     providerAvailable: props.providerAvailable,
@@ -113,8 +105,6 @@ export function ProjectNextActionHero(props: NextActionHeroProps) {
     if (actionId === "reviewArtifacts") props.onApproveGate2();
     if (actionId === "requestChanges") props.onRejectGate2?.();
     if (actionId === "retry" || actionId === "start") props.onStart();
-    if (actionId === "goToKickoff") window.location.hash = "#kickoff";
-    if (actionId === "goToWorkOrders") window.location.hash = "#work-orders";
   };
   const renderAction = (action: ProjectNextActionHeroActionModel) => (
     <Button

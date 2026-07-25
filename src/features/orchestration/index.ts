@@ -7,6 +7,7 @@ export { useDeliveryStepViewModel } from "./view-model/use-delivery-step-view-mo
 export { useGate1StepViewModel } from "./view-model/use-gate1-step-view-model";
 export { useGate2StepViewModel } from "./view-model/use-gate2-step-view-model";
 export { useKickoffStepViewModel } from "./view-model/use-kickoff-step-view-model";
+export { useLaunchReviewStepViewModel } from "./view-model/use-launch-review-step-view-model";
 export { useOrchestratorWizardViewModel } from "./view-model/use-orchestrator-wizard-view-model";
 export { useReadinessStepViewModel } from "./view-model/use-readiness-step-view-model";
 export { useRunStepViewModel } from "./view-model/use-run-step-view-model";
@@ -21,6 +22,7 @@ export * from "./model/brief-step";
 export * from "./model/delivery-step";
 export * from "./model/gate-review";
 export * from "./model/kickoff-step";
+export * from "./model/launch-review";
 export * from "./model/orchestrator-wizard";
 export * from "./model/readiness-step";
 export * from "./model/run-step";

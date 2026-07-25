@@ -182,7 +182,7 @@ export function TeamStep({ ctx }: { ctx: OrchestratorWizardContextValue }) {
 
       <OrchestratorStepNav
         projectId={vm.projectId}
-        currentStep="team"
+        currentStep="review"
         nextDisabled={false}
       />
     </div>

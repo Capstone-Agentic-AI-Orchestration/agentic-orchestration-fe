@@ -151,7 +151,7 @@ export function KickoffStep({ ctx }: { ctx: OrchestratorWizardContextValue }) {
 
       <OrchestratorStepNav
         projectId={vm.projectId}
-        currentStep="kickoff"
+        currentStep="review"
         nextLabel={vm.ready ? "Save & Continue" : "Save & Continue"}
         nextDisabled={vm.nextDisabled}
         onComplete={vm.actions.save}

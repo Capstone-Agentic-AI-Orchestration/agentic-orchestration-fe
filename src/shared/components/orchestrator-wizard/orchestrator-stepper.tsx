@@ -4,24 +4,14 @@ import { useRouter } from "next/navigation";
 import {
   IconCheck,
   IconClipboard,
-  IconUsers,
-  IconShield,
   IconRocket,
-  IconLock,
   IconCode,
   IconGitBranch,
   IconArrowRight,
 } from "@/shared/components/icons";
 
-export type OrchestratorStepId =
-  | "brief"
-  | "kickoff"
-  | "team"
-  | "readiness"
-  | "run"
-  | "gate-1"
-  | "gate-2"
-  | "delivery";
+export type { OrchestratorStepId } from "@/features/orchestration/model/orchestrator-wizard";
+import type { OrchestratorStepId } from "@/features/orchestration/model/orchestrator-wizard";
 
 export interface OrchestratorStep {
   id: OrchestratorStepId;
@@ -34,50 +24,36 @@ export interface OrchestratorStep {
 export const ORCHESTRATOR_STEPS: OrchestratorStep[] = [
   {
     id: "brief",
-    label: "Project Brief",
-    shortLabel: "Brief",
-    description: "Define the project idea and let AI enhance it",
+    label: "Describe the project",
+    shortLabel: "Describe",
+    description: "Explain the outcome, choose a stack, and set the design direction",
     icon: IconClipboard,
   },
   {
-    id: "kickoff",
-    label: "Kickoff Setup",
-    shortLabel: "Kickoff",
-    description: "Scope, milestones, and readiness checklist",
-    icon: IconLock,
-  },
-  {
-    id: "team",
-    label: "Team & Roles",
-    shortLabel: "Team",
-    description: "Assign developers and client members",
-    icon: IconUsers,
-  },
-  {
-    id: "readiness",
-    label: "Provider Readiness",
-    shortLabel: "Readiness",
-    description: "Verify LLM and GitHub delivery are configured",
-    icon: IconShield,
+    id: "review",
+    label: "Review and launch",
+    shortLabel: "Review",
+    description: "Confirm the direction while DevFlow checks and prepares the run",
+    icon: IconCheck,
   },
   {
     id: "run",
-    label: "AI Run",
-    shortLabel: "AI Run",
-    description: "Start the AI workflow, monitor progress, and follow the next approval prompt",
+    label: "Build",
+    shortLabel: "Build",
+    description: "Watch agents plan and build, then follow the next approval prompt",
     icon: IconRocket,
   },
   {
     id: "gate-1",
-    label: "Plan Approval",
-    shortLabel: "Plan Approval",
+    label: "Plan review",
+    shortLabel: "Plan",
     description: "Approve the proposed plan or request changes before code generation",
     icon: IconClipboard,
   },
   {
     id: "gate-2",
-    label: "Build Approval",
-    shortLabel: "Build Approval",
+    label: "Build review",
+    shortLabel: "Build",
     description: "Approve generated deliverables or request changes before GitHub delivery",
     icon: IconCode,
   },
@@ -99,11 +75,12 @@ interface OrchestratorStepperProps {
 
 const STEP_ORDER = ORCHESTRATOR_STEPS.map((s) => s.id);
 
-/** Four readable phases so the eight steps don't read as one long list. */
+/** Five customer-facing phases; the approval phase contains the two intentional gates. */
 const PHASES: Array<{ id: string; label: string; steps: OrchestratorStepId[] }> = [
-  { id: "setup", label: "Setup", steps: ["brief", "kickoff", "team", "readiness"] },
-  { id: "build", label: "AI Run", steps: ["run"] },
-  { id: "review", label: "Approvals", steps: ["gate-1", "gate-2"] },
+  { id: "describe", label: "Describe", steps: ["brief"] },
+  { id: "review", label: "Review", steps: ["review"] },
+  { id: "build", label: "Build", steps: ["run"] },
+  { id: "approve", label: "Approve", steps: ["gate-1", "gate-2"] },
   { id: "deliver", label: "Deliver", steps: ["delivery"] },
 ];
 
@@ -176,7 +153,7 @@ export function OrchestratorStepNav({
 }: {
   projectId: string;
   currentStep: OrchestratorStepId;
-  onComplete?: () => void;
+  onComplete?: () => void | boolean | Promise<void | boolean>;
   nextLabel?: string;
   backLabel?: string;
   nextDisabled?: boolean;
@@ -206,11 +183,12 @@ export function OrchestratorStepNav({
         type="button"
         className="btn btn-primary"
         disabled={nextDisabled}
-        onClick={() => {
+        onClick={async () => {
+          let shouldContinue: void | boolean = true;
           if (onComplete) {
-            onComplete();
+            shouldContinue = await onComplete();
           }
-          if (!isLastStep && nextStep) {
+          if (shouldContinue !== false && !isLastStep && nextStep) {
             router.push(`/pm/orchestrate/${projectId}/${nextStep}`);
           }
         }}

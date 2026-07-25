@@ -52,7 +52,7 @@ export function OrchestratorWizardLayout({
           <div className="orchestrator-wizard-title">
             <h2>{vm.layout.projectName}</h2>
             <span className="orchestrator-wizard-subtitle">
-              Step {vm.layout.currentStepNumber} of {ORCHESTRATOR_STEPS.length} · {currentMeta?.label ?? "Orchestration"}
+              Guided orchestration · {currentMeta?.label ?? "Orchestration"}
             </span>
           </div>
         </div>

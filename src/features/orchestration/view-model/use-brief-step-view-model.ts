@@ -40,7 +40,7 @@ export interface BriefStepViewModel extends BriefStepState {
     analyze: () => Promise<void>;
     applyEnhanced: () => void;
     discardAnalysis: () => void;
-    save: () => Promise<void>;
+    save: () => Promise<boolean>;
   };
 }
 
@@ -98,8 +98,10 @@ export function useBriefStepViewModel(ctx: OrchestratorWizardContextValue): Brie
       await updateDevFlowProject(projectId, { companyName, brief, stackKey });
       setSaved(true);
       await refresh();
+      return true;
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : String(err));
+      return false;
     } finally {
       setSaving(false);
     }

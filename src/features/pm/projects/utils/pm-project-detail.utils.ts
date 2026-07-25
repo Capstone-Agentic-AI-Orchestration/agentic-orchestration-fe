@@ -42,18 +42,21 @@ export function projectManagerIds(detail: { createdById?: string; members: Array
 }
 
 export function orchestrationReadinessBlockers(
-  detail: { runId?: string; kickoff?: { status?: string } },
+  detail: { runId?: string },
   workOrders: Array<{ status: string; instructions?: string }> = [],
   outputsLoading = false,
+  requireReadyWorkOrders = false,
 ): string[] {
   const blockers: string[] = [];
-  const kickoffReady = detail.kickoff?.status === "READY" || detail.kickoff?.status === "LOCKED";
   const readyExecutableWorkOrders = workOrders.filter((wo) => wo.status === "READY" && wo.instructions?.trim());
 
   if (detail.runId) return blockers;
-  if (!kickoffReady) blockers.push("Complete and save the kickoff checklist before starting orchestration.");
-  if (outputsLoading) blockers.push("Wait for work orders to finish loading before starting orchestration.");
-  if (!outputsLoading && readyExecutableWorkOrders.length === 0) blockers.push("Create or mark at least one work order as READY with instructions before starting orchestration.");
+  if (requireReadyWorkOrders && outputsLoading) {
+    blockers.push("Wait for work orders to finish loading before rerunning them.");
+  }
+  if (requireReadyWorkOrders && !outputsLoading && readyExecutableWorkOrders.length === 0) {
+    blockers.push("No READY work orders are available to rerun.");
+  }
 
   return blockers;
 }

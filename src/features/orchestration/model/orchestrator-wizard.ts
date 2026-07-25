@@ -1,8 +1,6 @@
 export type OrchestratorStepId =
   | "brief"
-  | "kickoff"
-  | "team"
-  | "readiness"
+  | "review"
   | "run"
   | "gate-1"
   | "gate-2"
@@ -10,9 +8,7 @@ export type OrchestratorStepId =
 
 export const ORCHESTRATOR_STEP_ORDER: OrchestratorStepId[] = [
   "brief",
-  "kickoff",
-  "team",
-  "readiness",
+  "review",
   "run",
   "gate-1",
   "gate-2",
@@ -21,8 +17,6 @@ export const ORCHESTRATOR_STEP_ORDER: OrchestratorStepId[] = [
 
 interface WizardProjectLike {
   status?: string | null;
-  kickoff?: { status?: string | null } | null;
-  members?: unknown[] | null;
   brief?: string | null;
   companyName?: string | null;
 }
@@ -51,10 +45,6 @@ export function getWizardStepByIndex(index: number): OrchestratorStepId {
   return ORCHESTRATOR_STEP_ORDER[Math.min(Math.max(index, 0), ORCHESTRATOR_STEP_ORDER.length - 1)];
 }
 
-export function isKickoffReady(project: WizardProjectLike | null): boolean {
-  return project?.kickoff?.status === "READY" || project?.kickoff?.status === "LOCKED";
-}
-
 export function determineWizardStepFromStatus(
   project: WizardProjectLike | null,
   status: WizardStatusLike | null,
@@ -62,11 +52,9 @@ export function determineWizardStepFromStatus(
   if (!project) return "brief";
 
   const projectStatus = project.status ?? status?.status;
-  const kickoffReady = isKickoffReady(project);
-
   switch (projectStatus) {
     case "PENDING":
-      return kickoffReady ? "team" : "kickoff";
+      return project.brief?.trim() && project.brief.trim().length > 10 ? "review" : "brief";
     case "PARSING_REQUIREMENTS":
     case "NEGOTIATING_CONTRACT":
       return "run";
@@ -83,7 +71,7 @@ export function determineWizardStepFromStatus(
     case "FAILED":
       return "run";
     default:
-      return kickoffReady ? "team" : "brief";
+      return project.brief?.trim() && project.brief.trim().length > 10 ? "review" : "brief";
   }
 }
 
@@ -94,13 +82,9 @@ export function computeWizardCompletedSteps(
   const completed = new Set<OrchestratorStepId>();
   if (!project) return completed;
 
-  const kickoffReady = isKickoffReady(project);
-  const hasMembers = (project.members?.length ?? 0) > 0;
   const projectStatus = project.status ?? status?.status;
 
   if (project.brief && project.brief.length > 10) completed.add("brief");
-  if (kickoffReady) completed.add("kickoff");
-  if (hasMembers) completed.add("team");
 
   const hasRun =
     status?.runId ||
@@ -110,7 +94,7 @@ export function computeWizardCompletedSteps(
     projectStatus === "COMMITTING" ||
     projectStatus === "DELIVERED";
   if (hasRun) {
-    completed.add("readiness");
+    completed.add("review");
     completed.add("run");
   }
 

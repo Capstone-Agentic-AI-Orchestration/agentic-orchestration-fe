@@ -49,17 +49,11 @@ export function useRunStepViewModel(ctx: OrchestratorWizardContextValue): RunSte
     setStarting(true);
     setError("");
     try {
-      const [llm, github] = await Promise.all([
-        verifyDevFlowLlmProvider(projectId),
-        verifyDevFlowGithubDelivery(projectId),
-      ]);
-      if (!llm.ok || !github.ok) {
-        const blockers = [
-          !llm.ok ? `LLM: ${llm.reason || "connection unavailable"}` : "",
-          !github.ok ? `GitHub: ${github.reason || "delivery unavailable"}` : "",
-        ].filter(Boolean);
-        throw new Error(`Preflight failed. ${blockers.join(" ")}`);
+      const llm = await verifyDevFlowLlmProvider(projectId);
+      if (!llm.ok) {
+        throw new Error(`AI provider check failed. ${llm.reason || "Connection unavailable."}`);
       }
+      await verifyDevFlowGithubDelivery(projectId).catch(() => null);
       await startDevFlowOrchestration(projectId, {
         designGuidance: loadDesignGuidance(projectId),
       });

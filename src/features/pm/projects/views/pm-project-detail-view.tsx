@@ -233,7 +233,6 @@ function BackendProjectDetail({ project, onBack }) {
   const [memberForm, setMemberForm] = useState({ email: "", role: "DEV" });
 
   const status = backendStatusBits(detail.status);
-  const kickoffReady = detail.kickoff?.status === "READY" || detail.kickoff?.status === "LOCKED";
   const lifecycle = detail.lifecycle || {
     label: status.label,
     tone: status.tone,
@@ -250,7 +249,6 @@ function BackendProjectDetail({ project, onBack }) {
     ? Math.min(100, Math.round((detail.runBudget.tokensConsumed / detail.runBudget.tokenBudget) * 100))
     : 0;
   const managerIds = projectManagerIds(detail);
-  const readyExecutableWorkOrders = outputs.workOrders.filter((workOrder) => workOrder.status === "READY" && workOrder.instructions?.trim());
   const orchestrationBlockers = orchestrationReadinessBlockers(detail, outputs.workOrders, outputs.loading);
   const providerActionBlocked = provider.loading || provider.error || (provider.status && !provider.status.available);
   const canStartOrchestration = orchestrationBlockers.length === 0 && !detail.runId && !starting && !providerActionBlocked;
@@ -508,7 +506,7 @@ function BackendProjectDetail({ project, onBack }) {
   };
 
   const rerunReadyWorkOrders = async () => {
-    const blockers = orchestrationReadinessBlockers(detail, outputs.workOrders, outputs.loading);
+    const blockers = orchestrationReadinessBlockers(detail, outputs.workOrders, outputs.loading, true);
     if (blockers.length) {
       setError(blockers[0]);
       return;
@@ -580,7 +578,7 @@ function BackendProjectDetail({ project, onBack }) {
           currentStage={lifecycleStageId}
           maxReachedStage={lifecycleStageId}
           completedStages={completedStagesFromProject}
-          onClickStage={(stage) => router.push(`/pm/orchestrate/${detail.id}/${stage === "draft" ? "brief" : stage === "kickoff" ? "kickoff" : stage === "build" ? "run" : stage === "review" ? "gate-2" : "delivery"}`)}
+          onClickStage={(stage) => router.push(`/pm/orchestrate/${detail.id}/${stage === "draft" ? "brief" : stage === "kickoff" ? "review" : stage === "build" ? "run" : stage === "review" ? "gate-2" : "delivery"}`)}
         />
       </div>
 
@@ -590,9 +588,6 @@ function BackendProjectDetail({ project, onBack }) {
         status={detail.status}
         runId={detail.runId}
         repoUrl={detail.repoUrl}
-        kickoffReady={kickoffReady}
-        readyWorkOrderCount={readyExecutableWorkOrders.length}
-        totalWorkOrderCount={outputs.workOrders.length}
         artifactCount={outputs.artifacts.length}
         hasRunBudget={Boolean(detail.runBudget)}
         tokensConsumed={detail.runBudget?.tokensConsumed}

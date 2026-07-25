@@ -21,9 +21,7 @@ export type ProjectNextActionHeroActionId =
   | "reviewArtifacts"
   | "requestChanges"
   | "retry"
-  | "goToKickoff"
-  | "start"
-  | "goToWorkOrders";
+  | "start";
 
 export interface ProjectNextActionHeroActionModel {
   id: ProjectNextActionHeroActionId;
@@ -47,9 +45,6 @@ export interface ProjectNextActionHeroInput {
   status: ProjectNextActionStatus;
   runId?: string | null;
   repoUrl?: string | null;
-  kickoffReady: boolean;
-  readyWorkOrderCount: number;
-  totalWorkOrderCount: number;
   artifactCount: number;
   orchestrationBlockers: string[];
   providerAvailable?: boolean;
@@ -74,9 +69,6 @@ export function buildProjectNextActionHeroModel(
     status,
     runId,
     repoUrl,
-    kickoffReady,
-    readyWorkOrderCount,
-    totalWorkOrderCount,
     artifactCount,
     orchestrationBlockers,
     providerAvailable,
@@ -144,17 +136,6 @@ export function buildProjectNextActionHeroModel(
     };
   }
 
-  if (!kickoffReady) {
-    return {
-      kind: "blocked",
-      badge: { tone: "yellow", label: "Kickoff needed" },
-      headline: "Complete the kickoff checklist to unlock orchestration.",
-      detail: "The kickoff tab has 8 checks: scope, milestones, documents, stack, roles, client access, tasks, and work orders.",
-      cta: { id: "goToKickoff", label: "Go to kickoff", variant: "primary" },
-      secondary: null,
-    };
-  }
-
   if (providerAvailable === false) {
     return {
       kind: "blocked",
@@ -174,20 +155,7 @@ export function buildProjectNextActionHeroModel(
       detail: orchestrationBlockers.length > 1
         ? `+ ${orchestrationBlockers.length - 1} more issue${orchestrationBlockers.length > 2 ? "s" : ""} to resolve`
         : null,
-      cta: readyWorkOrderCount > 0
-        ? { id: "start", label: "Start anyway", variant: "secondary" }
-        : null,
-      secondary: null,
-    };
-  }
-
-  if (readyWorkOrderCount === 0) {
-    return {
-      kind: "blocked",
-      badge: { tone: "yellow", label: "No work to do" },
-      headline: "Create at least one work order to start the run.",
-      detail: `${totalWorkOrderCount} work order${totalWorkOrderCount === 1 ? "" : "s"} exist, but none are marked READY with instructions.`,
-      cta: { id: "goToWorkOrders", label: "Go to work orders", variant: "primary" },
+      cta: null,
       secondary: null,
     };
   }
@@ -195,11 +163,11 @@ export function buildProjectNextActionHeroModel(
   return {
     kind: "idle",
     badge: { tone: "green", label: "Ready" },
-    headline: `Ready to start - ${readyWorkOrderCount} work order${readyWorkOrderCount === 1 ? "" : "s"} queued.`,
-    detail: "Starting the run will dispatch all READY work orders to the AI agents in parallel.",
+    headline: "Ready to review and start.",
+    detail: "DevFlow prepares the agent tasks automatically, then pauses for your approval before code generation.",
     cta: {
       id: "start",
-      label: input.isStarting ? "Starting..." : "Start orchestration",
+      label: input.isStarting ? "Starting..." : "Start planning",
       variant: "primary",
     },
     secondary: null,

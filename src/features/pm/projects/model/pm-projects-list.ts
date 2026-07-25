@@ -31,32 +31,31 @@ const ACTIVE_BUILD_STATUSES = new Set([
 ]);
 
 const STAGE_NEXT_ACTION: Record<PMProjectLifecycleStageId, string> = {
-  draft: "Complete project setup",
-  kickoff: "Complete kickoff checklist",
-  build: "Start orchestration",
+  draft: "Describe the project",
+  kickoff: "Review and launch",
+  build: "Monitor build",
   review: "Review and approve",
   delivered: "Project complete",
 };
 
 export function pmProjectLifecycleStage(
   status?: string | null,
-  kickoffStatus?: string | null,
+  _kickoffStatus?: string | null,
 ): PMProjectLifecycleStageId {
   if (!status) return "draft";
   if (status === "DELIVERED") return "delivered";
-  if (status === "COMMITTING") return "review";
+  if (status === "COMMITTING" || status === "AWAITING_GATE_1" || status === "AWAITING_GATE_2") {
+    return "review";
+  }
   if (
-    status === "AWAITING_GATE_1" ||
-    status === "AWAITING_GATE_2" ||
     status === "GENERATING_CODE" ||
     status === "PARSING_REQUIREMENTS" ||
     status === "NEGOTIATING_CONTRACT"
   ) {
     return "build";
   }
-  if (status === "PENDING" || status === "FAILED") {
-    return kickoffStatus === "READY" || kickoffStatus === "LOCKED" ? "kickoff" : "draft";
-  }
+  if (status === "PENDING") return "kickoff";
+  if (status === "FAILED") return "build";
   return "draft";
 }
 
@@ -80,7 +79,7 @@ export function pmProjectOrchestrateRoute(project: Pick<DevFlowProjectSummary, "
     case "DELIVERED":
       return `/pm/orchestrate/${id}/delivery`;
     default:
-      return `/pm/orchestrate/${id}`;
+      return `/pm/orchestrate/${id}/review`;
   }
 }
 

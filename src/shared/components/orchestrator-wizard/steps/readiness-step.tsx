@@ -169,7 +169,7 @@ export function ReadinessStep({ ctx }: { ctx: OrchestratorWizardContextValue }) 
 
       <OrchestratorStepNav
         projectId={vm.projectId}
-        currentStep="readiness"
+        currentStep="review"
         nextLabel="Continue to Run"
         nextDisabled={!vm.allReady || vm.verifyingLlm || vm.verifyingGithub}
       />
