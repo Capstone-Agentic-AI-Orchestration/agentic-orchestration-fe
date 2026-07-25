@@ -24,10 +24,10 @@ export function DevMessagesView() {
   const error = projectsError || selectedProjectError;
 
   return (
-    <div data-screen-label="Dev - Messages" style={{ display: "grid", gap: 20 }}>
+    <div className="dev-workspace-page dev-messages-page" data-screen-label="Dev - Messages">
       <DevPageHeader
         title="Messages"
-        subtitle="Shared project conversations with your project manager and assigned developers."
+        subtitle="Coordinate decisions, blockers, and delivery details directly with your project manager."
         actions={(
           <Button variant="secondary" size="sm" icon={<IconRefresh size={13} />} onClick={refreshProjects}>
             Refresh projects
@@ -60,16 +60,16 @@ export function DevMessagesView() {
             <div style={{ color: "var(--text-3)", fontSize: 11.5, textTransform: "uppercase", letterSpacing: ".08em" }}>Selected project</div>
             <div style={{ fontWeight: 700, fontSize: 15, marginTop: 4 }}>{selectedProject.companyName}</div>
             <div style={{ color: "var(--text-2)", fontSize: 12.5, marginTop: 4 }}>
-              Team threads are visible to the project manager and every developer assigned to this project. Clients cannot access them.
+              This TEAM workspace is for communication between developers and the project manager. Clients cannot access it.
             </div>
           </Card>
           <ProjectConversationPanel
             projectId={selectedProjectId}
-            title="Team conversations"
-            subtitle="Project manager and assigned developers"
+            title="Project manager inbox"
+            subtitle="Project-scoped TEAM threads"
             defaultVisibility="TEAM"
             defaultCategory="GENERAL"
-            emptyText="No team conversations yet. Create the first thread for this project."
+            emptyText="No project-manager conversations yet. Start the first thread for this project."
           />
         </>
       )}

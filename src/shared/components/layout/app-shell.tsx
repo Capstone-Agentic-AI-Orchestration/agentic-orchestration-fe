@@ -25,8 +25,11 @@ export interface AppShellProps {
   titles: Record<string, string>;
   defaultRoute: string;
   searchPlaceholder: string;
+  showSearch?: boolean;
   showSearchHint?: boolean;
   showOnlineDot?: boolean;
+  showSupport?: boolean;
+  showSecurity?: boolean;
   /** Persona block content (default). Ignored when `sidebarHeader` is provided. */
   personaName?: string;
   personaMeta?: string;
@@ -92,8 +95,11 @@ export function AppShell({
   titles,
   defaultRoute,
   searchPlaceholder,
+  showSearch = true,
   showSearchHint,
   showOnlineDot,
+  showSupport = true,
+  showSecurity = true,
   personaName,
   personaMeta,
   sidebarHeader,
@@ -167,9 +173,11 @@ export function AppShell({
           </div>
 
           <div className="cs-spacer" />
-          <a className="cs-support">
-            <IconLifeBuoy size={15} /> Help &amp; Support
-          </a>
+          {showSupport && (
+            <a className="cs-support">
+              <IconLifeBuoy size={15} /> Help &amp; Support
+            </a>
+          )}
 
           <div className="cs-user">
             <Avatar initials={profile.initials} online={showOnlineDot} />
@@ -187,7 +195,9 @@ export function AppShell({
           rootLabel={rootLabel}
           title={titles[base] || titles[defaultRoute] || rootLabel}
           searchPlaceholder={searchPlaceholder}
+          showSearch={showSearch}
           showSearchHint={showSearchHint}
+          showSecurity={showSecurity}
           rightSlot={rightSlot}
           profile={profile}
           onMenu={() => setMobileOpen((open) => !open)}
@@ -203,7 +213,9 @@ function AppTopBar({
   rootLabel,
   title,
   searchPlaceholder,
+  showSearch,
   showSearchHint,
+  showSecurity,
   rightSlot,
   profile,
   onMenu,
@@ -212,7 +224,9 @@ function AppTopBar({
   rootLabel: string;
   title: string;
   searchPlaceholder: string;
+  showSearch: boolean;
   showSearchHint?: boolean;
+  showSecurity: boolean;
   rightSlot?: ReactNode;
   profile: ShellProfile;
   onMenu: () => void;
@@ -244,20 +258,22 @@ function AppTopBar({
           <span className="cs-crumb-current">{title}</span>
         </div>
 
-        <div className="cs-topbar-search">
-          <div style={{ position: "relative" }}>
-            <IconSearch size={15} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--text-3)" }} />
-            <input className="input" placeholder={searchPlaceholder} style={{ paddingLeft: 36, height: 36, fontSize: 13.5 }} />
-            {showSearchHint && (
-              <span
-                className="mono"
-                style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", fontSize: 10, color: "var(--text-3)", padding: "2px 6px", borderRadius: 4, background: "var(--bg-sunken)", border: "1px solid var(--border)" }}
-              >
-                Ctrl K
-              </span>
-            )}
+        {showSearch && (
+          <div className="cs-topbar-search">
+            <div style={{ position: "relative" }}>
+              <IconSearch size={15} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--text-3)" }} />
+              <input className="input" placeholder={searchPlaceholder} style={{ paddingLeft: 36, height: 36, fontSize: 13.5 }} />
+              {showSearchHint && (
+                <span
+                  className="mono"
+                  style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", fontSize: 10, color: "var(--text-3)", padding: "2px 6px", borderRadius: 4, background: "var(--bg-sunken)", border: "1px solid var(--border)" }}
+                >
+                  Ctrl K
+                </span>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="cs-topbar-actions">
           {rightSlot}
@@ -282,9 +298,11 @@ function AppTopBar({
                 >
                   <IconUser size={15} /> Profile &amp; preferences
                 </button>
-                <button className="cs-menu-item">
-                  <IconShield size={15} /> Security
-                </button>
+                {showSecurity && (
+                  <button className="cs-menu-item">
+                    <IconShield size={15} /> Security
+                  </button>
+                )}
                 <div className="cs-menu-sep" />
                 <button className="cs-menu-item cs-menu-item--danger" onClick={() => onNavigate("__signout")}>
                   <IconLogout size={15} /> Sign out

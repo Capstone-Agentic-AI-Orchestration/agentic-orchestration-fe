@@ -110,7 +110,10 @@ export function useDevOrchestratorViewModel(): OrchestrationWorkbenchViewModel {
     selectedProjectId,
   ]);
 
-  const errorMessage = compactDevFlowError(selectedProjectError || outputs.error || orchestration.error);
+  const hasRun = Boolean(selectedProject?.runId);
+  const errorMessage = compactDevFlowError(
+    selectedProjectError || (hasRun ? outputs.error || orchestration.error : ""),
+  );
   const providerErrorMessage = provider.error ? compactDevFlowError(provider.error) : "";
 
   return {

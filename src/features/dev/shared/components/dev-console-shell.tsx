@@ -5,25 +5,25 @@ import { AppShell, type ShellNavItem } from "@/shared/components/layout/app-shel
 import { SelectedProjectProvider } from "@/shared/projects/selected-project-context";
 import { ProjectSwitcher } from "@/shared/projects/project-switcher";
 import { DevFlowNotificationBell } from "@/shared/components/notifications/devflow-notification-bell";
-import { ProjectContextStrip } from "@/shared/components/journey";
-import { IconFolder, IconGitHub, IconHome, IconMessageCircle, IconSettings, IconUsers } from "@/shared/components/icons";
+import { IconCpu, IconFolder, IconHome, IconMessageCircle, IconUsers } from "@/shared/components/icons";
 
 export const DEV_NAV: ShellNavItem[] = [
   { id: "dashboard", label: "Dashboard", icon: <IconHome size={17} /> },
   { id: "projects", label: "Projects", icon: <IconFolder size={17} />, aliases: ["project"] },
-  { id: "groups", label: "Groups", icon: <IconUsers size={17} /> },
-  { id: "repositories", label: "Repositories", icon: <IconGitHub size={17} /> },
+  { id: "orchestrator", label: "Orchestrator", icon: <IconCpu size={17} /> },
   { id: "messages", label: "Messages", icon: <IconMessageCircle size={17} /> },
-  { id: "settings", label: "Settings", icon: <IconSettings size={17} /> },
+  { id: "groups", label: "Teams", icon: <IconUsers size={17} />, aliases: ["team", "repositories"] },
 ];
 
 export const DEV_TITLES: Record<string, string> = {
   dashboard: "Dashboard",
   projects: "Projects",
   project: "Projects",
-  groups: "Groups",
-  repositories: "Repositories",
+  orchestrator: "Orchestrator",
   messages: "Messages",
+  groups: "Teams",
+  team: "Teams",
+  repositories: "Teams",
   settings: "Settings",
 };
 
@@ -38,8 +38,10 @@ export function DevConsoleShell({ children }: { children: ReactNode }) {
         titles={DEV_TITLES}
         defaultRoute="dashboard"
         searchPlaceholder="Search tasks, repos, files, agents…"
-        showSearchHint
+        showSearch={false}
         showOnlineDot
+        showSupport={false}
+        showSecurity={false}
         personaName="Developer"
         personaMeta="Alphaexplora · Internal"
         rightSlot={
@@ -49,7 +51,6 @@ export function DevConsoleShell({ children }: { children: ReactNode }) {
           </>
         }
       >
-        <ProjectContextStrip role="dev" />
         {children}
       </AppShell>
     </SelectedProjectProvider>
