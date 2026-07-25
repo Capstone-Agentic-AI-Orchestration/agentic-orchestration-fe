@@ -23,7 +23,9 @@ import { OrchestrationCanvas } from "@/shared/components/orchestration/canvas/or
 import { OrchestrationLiveVisualizer } from "@/shared/components/orchestration/orchestration-live-visualizer";
 import { OrchestrationProviderStatusPanel } from "@/shared/components/orchestration/orchestration-provider-status-panel";
 import { RunStatusBanner } from "@/shared/components/orchestration/run-status-banner";
+import { ModelSelectionPanel } from "@/shared/components/orchestration/model-selection-panel";
 import { startDevFlowOrchestrationFromPrompt } from "@/shared/api/devflow-api";
+import { useOrchestrationModelSelection } from "@/shared/hooks/use-orchestration-model-selection";
 import {
   compactDevFlowError,
   formatDevFlowDate,
@@ -136,6 +138,7 @@ function StartBuildPanel({
   const [prompt, setPrompt] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const modelSelection = useOrchestrationModelSelection(projectId);
 
   const startBuild = async () => {
     const buildPrompt = prompt.trim();
@@ -143,10 +146,22 @@ function StartBuildPanel({
       setError("Describe the result you want the agents to build.");
       return;
     }
+    if (modelSelection.loading) {
+      setError("Wait for the Vercel model list to finish loading before starting the build.");
+      return;
+    }
+    if (!modelSelection.selection) {
+      setError(modelSelection.error || "Choose an AI Gateway model before starting the build.");
+      return;
+    }
     setSubmitting(true);
     setError("");
     try {
-      await startDevFlowOrchestrationFromPrompt(projectId, buildPrompt);
+      await startDevFlowOrchestrationFromPrompt(
+        projectId,
+        buildPrompt,
+        modelSelection.selection,
+      );
       toast.success("Build started", "The orchestration run is now being prepared.");
       onStarted();
     } catch (cause) {
@@ -192,6 +207,7 @@ function StartBuildPanel({
           disabled={submitting}
         />
       </Field>
+      <ModelSelectionPanel controller={modelSelection} disabled={submitting} />
       <div className="dev-start-build-actions">
         <span>{prompt.trim().length} characters</span>
         <Button variant="primary" onClick={startBuild} disabled={submitting}>

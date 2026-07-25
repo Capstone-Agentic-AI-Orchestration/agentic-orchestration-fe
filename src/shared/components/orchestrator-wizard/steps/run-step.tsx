@@ -3,6 +3,7 @@
 import { useRunStepViewModel } from "@/features/orchestration";
 import { IconRocket } from "@/shared/components/icons";
 import { OrchestrationRunCockpit } from "@/shared/components/orchestration/run-cockpit/orchestration-run-cockpit";
+import { ModelSelectionPanel } from "@/shared/components/orchestration/model-selection-panel";
 import { OrchestratorStepNav } from "@/shared/components/orchestrator-wizard/orchestrator-stepper";
 import type { OrchestratorWizardContextValue } from "@/shared/components/orchestrator-wizard/orchestrator-wizard-layout";
 
@@ -21,6 +22,11 @@ export function RunStep({ ctx }: { ctx: OrchestratorWizardContextValue }) {
           remains available when you need a deeper view.
         </p>
       </div>
+
+      <ModelSelectionPanel
+        controller={vm.modelSelection}
+        disabled={vm.starting || vm.modelSelectionLocked}
+      />
 
       <OrchestrationRunCockpit
         projectId={vm.projectId}

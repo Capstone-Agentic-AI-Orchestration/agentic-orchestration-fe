@@ -1193,6 +1193,44 @@ export interface StartDevFlowOrchestrationResult {
 
 export interface StartDevFlowOrchestrationInput {
   designGuidance?: DevFlowDesignGuidance;
+  modelSelection?: DevFlowOrchestrationModelSelection;
+}
+
+export type DevFlowOrchestrationModelTarget =
+  | "requirements"
+  | "contract"
+  | "frontend"
+  | "backend"
+  | "database"
+  | "architecture"
+  | "mobile"
+  | "critique";
+
+export interface DevFlowOrchestrationModelSelection {
+  defaultModel: string;
+  overrides?: Partial<Record<DevFlowOrchestrationModelTarget, string>>;
+}
+
+export interface DevFlowGatewayModel {
+  id: string;
+  name: string;
+  provider: string;
+  description: string;
+  contextWindow: number | null;
+  maxTokens: number | null;
+  pricing: {
+    input: string | null;
+    output: string | null;
+  };
+  free: boolean;
+}
+
+export interface DevFlowGatewayModelCatalog {
+  models: DevFlowGatewayModel[];
+  defaultModel: string;
+  source: "live" | "cache" | "fallback";
+  fetchedAt: string;
+  warning: string | null;
 }
 
 export interface DevFlowOrchestrationStatus {
@@ -1416,11 +1454,16 @@ function fileNameFromDisposition(disposition: string | null): string | null {
 export function startDevFlowOrchestrationFromPrompt(
   projectId: string,
   prompt: string,
+  modelSelection?: DevFlowOrchestrationModelSelection,
 ): Promise<{ accepted: boolean; runId: string }> {
   return request(`/projects/${projectId}/orchestration/start-from-prompt`, {
     method: "POST",
-    body: JSON.stringify({ prompt }),
+    body: JSON.stringify({ prompt, modelSelection }),
   });
+}
+
+export function getDevFlowOrchestrationModels(): Promise<DevFlowGatewayModelCatalog> {
+  return request<DevFlowGatewayModelCatalog>("/projects/orchestration/models");
 }
 
 export function listDevFlowProjects(): Promise<DevFlowProjectSummary[]> {

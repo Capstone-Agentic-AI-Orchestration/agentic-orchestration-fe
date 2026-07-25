@@ -16,11 +16,17 @@ import {
 } from "@/shared/api/devflow-api";
 import { loadDesignGuidance } from "@/shared/design-guidance";
 import { useSocketSubscription } from "@/shared/hooks/use-socket-subscription";
+import {
+  useOrchestrationModelSelection,
+  type OrchestrationModelSelectionController,
+} from "@/shared/hooks/use-orchestration-model-selection";
 
 export interface RunStepViewModel extends RunStepState {
   projectId: string;
   starting: boolean;
   error: string;
+  modelSelection: OrchestrationModelSelectionController;
+  modelSelectionLocked: boolean;
   actions: {
     start: () => Promise<void>;
     rerun: () => Promise<void>;
@@ -34,6 +40,8 @@ export function useRunStepViewModel(ctx: OrchestratorWizardContextValue): RunSte
   const router = useRouter();
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState("");
+  const modelSelection = useOrchestrationModelSelection(projectId);
+  const modelSelectionLocked = Boolean(project?.runId);
   const state = buildRunStepState({ project, status });
   const destinationPath = runStepDestinationPath(projectId, state.destination);
 
@@ -46,6 +54,14 @@ export function useRunStepViewModel(ctx: OrchestratorWizardContextValue): RunSte
   });
 
   const start = async () => {
+    if (modelSelection.loading) {
+      setError("Wait for the Vercel model list to finish loading before starting the run.");
+      return;
+    }
+    if (!modelSelection.selection) {
+      setError(modelSelection.error || "Choose an AI Gateway model before starting the run.");
+      return;
+    }
     setStarting(true);
     setError("");
     try {
@@ -56,6 +72,7 @@ export function useRunStepViewModel(ctx: OrchestratorWizardContextValue): RunSte
       await verifyDevFlowGithubDelivery(projectId).catch(() => null);
       await startDevFlowOrchestration(projectId, {
         designGuidance: loadDesignGuidance(projectId),
+        modelSelection: modelSelection.selection,
       });
       await refresh();
     } catch (err) {
@@ -98,6 +115,8 @@ export function useRunStepViewModel(ctx: OrchestratorWizardContextValue): RunSte
     projectId,
     starting,
     error,
+    modelSelection,
+    modelSelectionLocked,
     actions: {
       start,
       rerun,

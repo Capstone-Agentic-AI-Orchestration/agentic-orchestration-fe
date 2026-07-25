@@ -12,6 +12,7 @@ import { Badge, Button, Card, Field, Input, Modal, Select, Tabs, Textarea } from
 import { DevFlowProjectTimeline } from "@/shared/components/project-timeline/devflow-project-timeline";
 import { OrchestrationProviderStatusPanel } from "@/shared/components/orchestration/orchestration-provider-status-panel";
 import { OrchestrationLiveVisualizer } from "@/shared/components/orchestration/orchestration-live-visualizer";
+import { ModelSelectionPanel } from "@/shared/components/orchestration/model-selection-panel";
 import { BlockingIssuePanel, GuidedActionPanel } from "@/shared/components/journey";
 import { makeProjectJourneyContext } from "@/shared/journey";
 import {
@@ -88,6 +89,7 @@ import {
 } from "@/shared/api/devflow-api";
 import { loadDesignGuidance } from "@/shared/design-guidance";
 import { useDevFlowOrchestrationProviderStatus, useDevFlowOrchestrationStatus, useDevFlowProjectOutputs } from "@/shared/hooks/use-devflow-projects";
+import { useOrchestrationModelSelection } from "@/shared/hooks/use-orchestration-model-selection";
 import {
   ProjectLifecycleIndicator,
   mapProjectStatusToLifecycleStage,
@@ -202,6 +204,7 @@ function BackendProjectDetail({ project, onBack }) {
   const outputs = useDevFlowProjectOutputs(detail.id, { includeEvents: true, includeTasks: true, includeTimeline: true, includeWorkOrders: true });
   const orchestration = useDevFlowOrchestrationStatus(detail.id);
   const provider = useDevFlowOrchestrationProviderStatus(detail.id);
+  const modelSelection = useOrchestrationModelSelection(detail.id);
   const [orchestrationRuns, setOrchestrationRuns] = useState([]);
   const [orchestrationRunsLoading, setOrchestrationRunsLoading] = useState(false);
   const [orchestrationRunsError, setOrchestrationRunsError] = useState("");
@@ -466,6 +469,14 @@ function BackendProjectDetail({ project, onBack }) {
       setError(providerBlocker);
       return;
     }
+    if (modelSelection.loading) {
+      setError("Wait for the Vercel model list to finish loading before starting the run.");
+      return;
+    }
+    if (!modelSelection.selection) {
+      setError(modelSelection.error || "Choose an AI Gateway model before starting the run.");
+      return;
+    }
     if (blockers.length && !detail.runId) {
       setError(blockers[0]);
       setTab(blockers[0].includes("work order") ? "build" : "build");
@@ -477,6 +488,7 @@ function BackendProjectDetail({ project, onBack }) {
     try {
       await startDevFlowOrchestration(detail.id, {
         designGuidance: loadDesignGuidance(detail.id),
+        modelSelection: modelSelection.selection,
       });
       await new Promise((resolve) => window.setTimeout(resolve, 1200));
       setDetail(await getDevFlowProject(detail.id));
@@ -661,6 +673,10 @@ function BackendProjectDetail({ project, onBack }) {
               onChanged={async () => {
                 await Promise.all([outputs.refresh?.(), refreshDeliveryReadiness()]);
               }}
+            />
+            <ModelSelectionPanel
+              controller={modelSelection}
+              disabled={starting || Boolean(detail.runId)}
             />
             <BackendOrchestrationPanel
               detail={detail}
