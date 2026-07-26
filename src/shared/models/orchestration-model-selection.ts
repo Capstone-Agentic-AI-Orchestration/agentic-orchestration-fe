@@ -42,6 +42,45 @@ export function reconcileModelSelection(
     : { defaultModel };
 }
 
+export function resolveInitialModelSelection(
+  stored: DevFlowOrchestrationModelSelection | null | undefined,
+  defaults: DevFlowOrchestrationModelSelection | null | undefined,
+  catalog: DevFlowGatewayModelCatalog,
+): DevFlowOrchestrationModelSelection {
+  return reconcileModelSelection(stored ?? defaults, catalog);
+}
+
+export function changeDefaultModel(
+  selection: DevFlowOrchestrationModelSelection | null,
+  model: string,
+  catalog: DevFlowGatewayModelCatalog | null,
+): DevFlowOrchestrationModelSelection {
+  return reconcileModelSelection(
+    selection ? { ...selection, defaultModel: model } : { defaultModel: model },
+    catalog ?? {
+      models: [],
+      defaultModel: model,
+      source: "fallback",
+      fetchedAt: "",
+      warning: null,
+    },
+  );
+}
+
+export function changeModelOverride(
+  selection: DevFlowOrchestrationModelSelection | null,
+  target: DevFlowOrchestrationModelTarget,
+  model: string,
+): DevFlowOrchestrationModelSelection | null {
+  if (!selection) return selection;
+  const overrides = { ...(selection.overrides ?? {}) };
+  if (!model || model === selection.defaultModel) delete overrides[target];
+  else overrides[target] = model;
+  return Object.keys(overrides).length > 0
+    ? { ...selection, overrides }
+    : { defaultModel: selection.defaultModel };
+}
+
 export function parseStoredModelSelection(
   raw: string | null,
 ): DevFlowOrchestrationModelSelection | null {

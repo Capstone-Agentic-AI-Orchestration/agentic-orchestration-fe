@@ -1233,6 +1233,13 @@ export interface DevFlowGatewayModelCatalog {
   warning: string | null;
 }
 
+export interface DevFlowOrchestrationModelDefaults {
+  selection: DevFlowOrchestrationModelSelection;
+  source: "saved" | "catalog";
+  warning: string | null;
+  updatedAt: string | null;
+}
+
 export interface DevFlowOrchestrationStatus {
   status: string;
   currentNode: string;
@@ -1464,6 +1471,19 @@ export function startDevFlowOrchestrationFromPrompt(
 
 export function getDevFlowOrchestrationModels(): Promise<DevFlowGatewayModelCatalog> {
   return request<DevFlowGatewayModelCatalog>("/projects/orchestration/models");
+}
+
+export function getDevFlowOrchestrationModelDefaults(): Promise<DevFlowOrchestrationModelDefaults> {
+  return request<DevFlowOrchestrationModelDefaults>("/projects/orchestration/model-defaults");
+}
+
+export function updateDevFlowOrchestrationModelDefaults(
+  selection: DevFlowOrchestrationModelSelection,
+): Promise<DevFlowOrchestrationModelDefaults> {
+  return request<DevFlowOrchestrationModelDefaults>("/projects/orchestration/model-defaults", {
+    method: "PATCH",
+    body: JSON.stringify(selection),
+  });
 }
 
 export function listDevFlowProjects(): Promise<DevFlowProjectSummary[]> {

@@ -7328,6 +7328,76 @@ details.pricing-faq[open] summary .pricing-faq-toggle {
   border-top: 1px solid rgba(255, 255, 255, 0.07);
 }
 
+.orchestration-model-defaults {
+  display: grid;
+  gap: 12px;
+}
+
+.orchestration-model-defaults__notice,
+.orchestration-model-defaults__error,
+.orchestration-model-defaults__saved {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 9px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.orchestration-model-defaults__notice {
+  border: 1px solid rgba(245, 158, 11, 0.24);
+  color: #fde68a;
+  background: rgba(245, 158, 11, 0.07);
+}
+
+.orchestration-model-defaults__error {
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.07);
+}
+
+.orchestration-model-defaults__saved {
+  border: 1px solid rgba(163, 230, 53, 0.22);
+  color: #d9f99d;
+  background: rgba(163, 230, 53, 0.055);
+}
+
+.orchestration-model-defaults__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.orchestration-model-defaults__actions strong,
+.orchestration-model-defaults__actions span {
+  display: block;
+}
+
+.orchestration-model-defaults__actions strong {
+  color: var(--text-1);
+  font-size: 12px;
+}
+
+.orchestration-model-defaults__actions span {
+  margin-top: 3px;
+  color: var(--text-3);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.orchestration-model-defaults__buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 @media (max-width: 720px) {
   .orchestration-model-picker {
     padding: 16px;
@@ -7346,5 +7416,18 @@ details.pricing-faq[open] summary .pricing-faq-toggle {
 
   .orchestration-model-picker__check {
     white-space: normal;
+  }
+
+  .orchestration-model-defaults__actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .orchestration-model-defaults__buttons {
+    justify-content: stretch;
+  }
+
+  .orchestration-model-defaults__buttons > * {
+    flex: 1 1 auto;
   }
 }

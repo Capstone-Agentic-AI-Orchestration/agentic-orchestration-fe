@@ -14,9 +14,11 @@ import {
 export function ModelSelectionPanel({
   controller,
   disabled = false,
+  scope = "run",
 }: {
   controller: OrchestrationModelSelectionController;
   disabled?: boolean;
+  scope?: "run" | "defaults";
 }) {
   const [query, setQuery] = useState("");
   const [freeOnly, setFreeOnly] = useState(false);
@@ -40,10 +42,13 @@ export function ModelSelectionPanel({
       <div className="orchestration-model-picker__header">
         <div>
           <span className="orchestration-model-picker__kicker"><IconCpu size={13} /> AI Gateway</span>
-          <h3 id="orchestration-model-picker-title">Choose how the agents think</h3>
+          <h3 id="orchestration-model-picker-title">
+            {scope === "defaults" ? "Set the default models for your agents" : "Choose how the agents think"}
+          </h3>
           <p>
-            Pick one model for the whole run, or give individual specialists their own model.
-            Your choice is locked when the run starts.
+            {scope === "defaults"
+              ? "New orchestration runs will start with these choices. You can still override them before an individual run begins."
+              : "Pick one model for the whole run, or give individual specialists their own model. Your choice is locked when the run starts."}
           </p>
         </div>
         <Button
@@ -64,7 +69,7 @@ export function ModelSelectionPanel({
       ) : null}
       {controller.error ? (
         <div className="orchestration-model-picker__error" role="alert">
-          Could not load the Vercel model list. {controller.error}
+          Could not load the agent model configuration. {controller.error}
         </div>
       ) : null}
 
@@ -91,7 +96,11 @@ export function ModelSelectionPanel({
       <Field
         label="Model for all agents"
         helper={selectedModel ? modelSummary(selectedModel) : "Loading the current Gateway catalog…"}
-        error={!controller.loading && !controller.selection ? "Choose a model before starting the run." : undefined}
+        error={!controller.loading && !controller.selection
+          ? scope === "defaults"
+            ? "Choose a default model before saving."
+            : "Choose a model before starting the run."
+          : undefined}
       >
         <Select
           value={controller.selection?.defaultModel ?? ""}
@@ -146,8 +155,9 @@ export function ModelSelectionPanel({
       ) : null}
 
       <div className="orchestration-model-picker__footnote">
-        Prices come from Vercel AI Gateway and can change. Provider credentials stay on the server;
-        the browser stores only your model IDs for this project.
+        {scope === "defaults"
+          ? "Prices come from Vercel AI Gateway and can change. Only model IDs are saved to your DevFlow profile; provider credentials remain on the server."
+          : "Prices come from Vercel AI Gateway and can change. Provider credentials stay on the server; the browser stores only your model IDs for this project."}
       </div>
     </section>
   );

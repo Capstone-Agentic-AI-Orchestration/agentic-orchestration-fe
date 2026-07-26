@@ -3,10 +3,13 @@ import type {
   DevFlowGatewayModelCatalog,
 } from "@/shared/api/devflow-api";
 import {
+  changeDefaultModel,
+  changeModelOverride,
   filterGatewayModels,
   modelPriceLabel,
   parseStoredModelSelection,
   reconcileModelSelection,
+  resolveInitialModelSelection,
 } from "./orchestration-model-selection";
 
 const models: DevFlowGatewayModel[] = [
@@ -59,6 +62,30 @@ describe("orchestration model selection", () => {
     expect(reconcileModelSelection({
       defaultModel: "removed/model",
     }, catalog)).toEqual({ defaultModel: "free/fast" });
+  });
+
+  it("prefers a project choice over personal defaults and otherwise inherits the defaults", () => {
+    const defaults = {
+      defaultModel: "free/fast",
+      overrides: { backend: "paid/strong" as const },
+    };
+
+    expect(resolveInitialModelSelection(
+      { defaultModel: "paid/strong" },
+      defaults,
+      catalog,
+    )).toEqual({ defaultModel: "paid/strong" });
+    expect(resolveInitialModelSelection(null, defaults, catalog)).toEqual(defaults);
+  });
+
+  it("updates the default and specialist overrides without keeping redundant choices", () => {
+    const changed = changeDefaultModel({ defaultModel: "free/fast" }, "paid/strong", catalog);
+    expect(changed).toEqual({ defaultModel: "paid/strong" });
+    expect(changeModelOverride(changed, "backend", "free/fast")).toEqual({
+      defaultModel: "paid/strong",
+      overrides: { backend: "free/fast" },
+    });
+    expect(changeModelOverride(changed, "backend", "paid/strong")).toEqual(changed);
   });
 
   it("filters by provider and free status", () => {
