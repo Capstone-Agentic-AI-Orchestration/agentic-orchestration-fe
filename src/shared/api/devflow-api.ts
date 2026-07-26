@@ -1194,6 +1194,12 @@ export interface StartDevFlowOrchestrationResult {
 export interface StartDevFlowOrchestrationInput {
   designGuidance?: DevFlowDesignGuidance;
   modelSelection?: DevFlowOrchestrationModelSelection;
+  runControls?: DevFlowOrchestrationRunControls;
+}
+
+export interface DevFlowOrchestrationRunControls {
+  tokenBudget?: number;
+  maxRetries?: number;
 }
 
 export type DevFlowOrchestrationModelTarget =
@@ -1462,10 +1468,11 @@ export function startDevFlowOrchestrationFromPrompt(
   projectId: string,
   prompt: string,
   modelSelection?: DevFlowOrchestrationModelSelection,
+  runControls?: DevFlowOrchestrationRunControls,
 ): Promise<{ accepted: boolean; runId: string }> {
   return request(`/projects/${projectId}/orchestration/start-from-prompt`, {
     method: "POST",
-    body: JSON.stringify({ prompt, modelSelection }),
+    body: JSON.stringify({ prompt, modelSelection, runControls }),
   });
 }
 

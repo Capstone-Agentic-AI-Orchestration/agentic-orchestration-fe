@@ -12,7 +12,7 @@ import { Badge, Button, Card, Field, Input, Modal, Select, Tabs, Textarea } from
 import { DevFlowProjectTimeline } from "@/shared/components/project-timeline/devflow-project-timeline";
 import { OrchestrationProviderStatusPanel } from "@/shared/components/orchestration/orchestration-provider-status-panel";
 import { OrchestrationLiveVisualizer } from "@/shared/components/orchestration/orchestration-live-visualizer";
-import { ModelSelectionPanel } from "@/shared/components/orchestration/model-selection-panel";
+import { OrchestrationPreflight } from "@/shared/components/orchestration/orchestration-preflight";
 import { BlockingIssuePanel, GuidedActionPanel } from "@/shared/components/journey";
 import { makeProjectJourneyContext } from "@/shared/journey";
 import {
@@ -219,6 +219,7 @@ function BackendProjectDetail({ project, onBack }) {
   const [llmVerificationError, setLlmVerificationError] = useState("");
   const [saving, setSaving] = useState(false);
   const [starting, setStarting] = useState(false);
+  const [preflightOpen, setPreflightOpen] = useState(false);
   const [orchestrationAction, setOrchestrationAction] = useState("");
   const [creatingRepo, setCreatingRepo] = useState(false);
   const [error, setError] = useState("");
@@ -458,7 +459,7 @@ function BackendProjectDetail({ project, onBack }) {
     }
   };
 
-  const startRun = async () => {
+  const startRun = async (runControls) => {
     const blockers = orchestrationReadinessBlockers(detail, outputs.workOrders, outputs.loading);
     const providerBlocker = provider.error || (provider.status && !provider.status.available ? provider.status.reason : "");
     if (provider.loading) {
@@ -489,10 +490,12 @@ function BackendProjectDetail({ project, onBack }) {
       await startDevFlowOrchestration(detail.id, {
         designGuidance: loadDesignGuidance(detail.id),
         modelSelection: modelSelection.selection,
+        runControls,
       });
       await new Promise((resolve) => window.setTimeout(resolve, 1200));
       setDetail(await getDevFlowProject(detail.id));
       await Promise.all([outputs.refresh?.(), orchestration.refresh?.(), provider.refresh?.(), refreshOrchestrationRuns(), refreshDeliveryReadiness()]);
+      setPreflightOpen(false);
       setTab("build");
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : String(nextError));
@@ -560,7 +563,7 @@ function BackendProjectDetail({ project, onBack }) {
     blockers: orchestrationBlockers,
     primaryAction: {
       label: canStartOrchestration ? "Start build run" : detail.runId ? "Open build run" : "Resolve blockers",
-      onClick: canStartOrchestration ? startRun : () => setTab("build"),
+      onClick: canStartOrchestration ? () => setPreflightOpen(true) : () => setTab("build"),
       disabled: starting,
     },
     secondaryAction: { label: "Guided wizard", href: `/pm/orchestrate/${detail.id}/brief`, variant: "secondary", icon: <IconWorkflow size={13} /> },
@@ -610,7 +613,7 @@ function BackendProjectDetail({ project, onBack }) {
         providerAvailable={provider.status?.available}
         providerReason={provider.status?.reason || provider.error}
         isStarting={starting}
-        onStart={startRun}
+        onStart={() => setPreflightOpen(true)}
         onApproveGate1={() => approveGate("architecture", true)}
         onRejectGate1={() => approveGate("architecture", false)}
         onApproveGate2={() => approveGate("code", true)}
@@ -674,9 +677,23 @@ function BackendProjectDetail({ project, onBack }) {
                 await Promise.all([outputs.refresh?.(), refreshDeliveryReadiness()]);
               }}
             />
-            <ModelSelectionPanel
+            <OrchestrationPreflight
+              open={preflightOpen}
+              projectName={detail.companyName}
               controller={modelSelection}
-              disabled={starting || Boolean(detail.runId)}
+              blockers={orchestrationBlockers}
+              activeRunId={detail.runId}
+              providerReason={
+                provider.loading
+                  ? "Wait for the agent provider check to finish."
+                  : provider.error || (provider.status && !provider.status.available ? provider.status.reason : "")
+              }
+              starting={starting}
+              initialTokenBudget={detail.runBudget?.tokenBudget}
+              initialMaxRetries={detail.runBudget?.maxRetries}
+              onOpen={() => setPreflightOpen(true)}
+              onClose={() => setPreflightOpen(false)}
+              onLaunch={startRun}
             />
             <BackendOrchestrationPanel
               detail={detail}
@@ -703,7 +720,7 @@ function BackendProjectDetail({ project, onBack }) {
               actionId={orchestrationAction}
               creatingRepo={creatingRepo}
               onCreateRepo={handleCreateRepo}
-              onStart={startRun}
+              onStart={() => setPreflightOpen(true)}
               onRerunReady={rerunReadyWorkOrders}
               onRetryFailedWorkOrder={retryFailedWorkOrder}
               onVerifyGithubDelivery={verifyGithubDelivery}
