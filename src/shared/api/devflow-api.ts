@@ -1210,7 +1210,36 @@ export type DevFlowOrchestrationModelTarget =
   | "database"
   | "architecture"
   | "mobile"
+  | "qa"
+  | "security"
   | "critique";
+
+export type DevFlowPlannedAgent =
+  | "frontend"
+  | "backend"
+  | "database"
+  | "mobile"
+  | "architecture"
+  | "qa"
+  | "integration"
+  | "security";
+
+export interface DevFlowAgentPlanEntry {
+  agent: DevFlowPlannedAgent;
+  role: "implementer" | "reviewer" | "documentation";
+  reason: string;
+  ownedPaths: string[];
+  dependsOn: DevFlowPlannedAgent[];
+}
+
+export interface DevFlowAgentPlan {
+  version: "agent-plan-v1";
+  createdBy: "planner-orchestrator";
+  activeAgents: DevFlowPlannedAgent[];
+  skippedAgents: Array<{ agent: DevFlowPlannedAgent; reason: string }>;
+  entries: DevFlowAgentPlanEntry[];
+  securityReview: boolean;
+}
 
 export interface DevFlowOrchestrationModelSelection {
   defaultModel: string;
@@ -1251,6 +1280,14 @@ export interface DevFlowOrchestrationStatus {
   currentNode: string;
   retryCount: number;
   error: string | null;
+  contract?: {
+    projectName?: string;
+    description?: string;
+    requirements?: unknown;
+    fileManifest?: string[];
+    acceptanceCriteria?: string[];
+    agentPlan?: DevFlowAgentPlan;
+  } | null;
   companyName: string;
   brief: string;
   stackKey: string;

@@ -11,13 +11,15 @@ export const ORCHESTRATION_MODEL_TARGETS: ReadonlyArray<{
   description: string;
 }> = [
   { id: "requirements", label: "Requirements", description: "Turns the brief into a build plan." },
-  { id: "contract", label: "Contract", description: "Aligns frontend, backend, and data boundaries." },
+  { id: "contract", label: "Planner / Orchestrator", description: "Locks the contract and selects the bounded agent team." },
   { id: "frontend", label: "Frontend", description: "Builds the interface and interactions." },
   { id: "backend", label: "Backend", description: "Builds APIs and server behavior." },
   { id: "database", label: "Database", description: "Designs schema and data access." },
   { id: "architecture", label: "Architecture", description: "Reviews system structure and tradeoffs." },
   { id: "mobile", label: "Mobile", description: "Joins only when the project has a mobile repository." },
-  { id: "critique", label: "Review", description: "Checks the combined result before delivery." },
+  { id: "qa", label: "Test / QA", description: "Checks acceptance coverage, edge cases, and build risk." },
+  { id: "security", label: "Security", description: "Joins sensitive scopes for a focused security review." },
+  { id: "critique", label: "Integration Review", description: "Checks cross-agent contracts before delivery." },
 ];
 
 export function reconcileModelSelection(

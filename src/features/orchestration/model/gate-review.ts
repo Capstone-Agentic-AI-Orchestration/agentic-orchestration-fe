@@ -46,6 +46,15 @@ export interface Gate1ReviewState {
   features: string[];
   fileManifest: string[];
   acceptanceCriteria: string[];
+  agentPlan: {
+    activeAgents: string[];
+    entries: Array<{
+      agent: string;
+      role: string;
+      reason: string;
+      ownedPaths?: string[];
+    }>;
+  } | null;
   nextDisabled: boolean;
 }
 
@@ -90,6 +99,10 @@ export function buildGate1ReviewState(input: {
     features: Array.isArray(requirements?.features) ? requirements.features : [],
     fileManifest: Array.isArray(contract?.fileManifest) ? contract.fileManifest : [],
     acceptanceCriteria: Array.isArray(contract?.acceptanceCriteria) ? contract.acceptanceCriteria : [],
+    agentPlan:
+      contract?.agentPlan && Array.isArray(contract.agentPlan.activeAgents)
+        ? contract.agentPlan
+        : null,
     nextDisabled: !isAwaiting || Boolean(input.acting),
   };
 }

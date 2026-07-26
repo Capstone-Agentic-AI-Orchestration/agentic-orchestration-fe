@@ -16,11 +16,14 @@ import { useOrchestrationStore } from "@/shared/store/orchestration-store";
 // (see backend topology.ts NODE + the canvas PIPELINE_NODES). Keep in sync.
 export const STEPS: Array<{ nodeId: string; label: string }> = [
   { nodeId: "parse_requirements", label: "Requirements" },
-  { nodeId: "negotiate_contract", label: "Contract" },
+  { nodeId: "negotiate_contract", label: "Planner / Orchestrator" },
   { nodeId: "frontend_agent", label: "Frontend" },
   { nodeId: "backend_agent", label: "Backend" },
   { nodeId: "database_agent", label: "Database" },
   { nodeId: "architecture_agent", label: "Architecture" },
+  { nodeId: "qa_review", label: "Test / QA review" },
+  { nodeId: "self_critique", label: "Integration review" },
+  { nodeId: "security_review", label: "Security review" },
   { nodeId: "validate_outputs", label: "Validation" },
   { nodeId: "commit_to_github", label: "GitHub delivery" },
 ];

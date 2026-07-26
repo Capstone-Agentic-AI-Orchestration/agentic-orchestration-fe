@@ -50,6 +50,7 @@ export function Gate1Step({ ctx }: { ctx: OrchestratorWizardContextValue }) {
         <div className="wizard-metadata-grid">
           <div><span>Features</span><strong>{vm.features.length}</strong></div>
           <div><span>Planned files</span><strong>{vm.fileManifest.length}</strong></div>
+          <div><span>Agent team</span><strong>{vm.agentPlan?.activeAgents.length ?? 0}</strong></div>
           <div><span>Acceptance checks</span><strong>{vm.acceptanceCriteria.length}</strong></div>
           <div><span>Decision</span><strong>{vm.isAwaiting ? "Required now" : "Not pending"}</strong></div>
         </div>
@@ -103,6 +104,28 @@ export function Gate1Step({ ctx }: { ctx: OrchestratorWizardContextValue }) {
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+
+            {vm.agentPlan && (
+              <div className="wizard-review-panel">
+                <div className="wizard-review-kicker">
+                  Locked Agent Team ({vm.agentPlan.activeAgents.length})
+                </div>
+                <div className="wizard-check-row-list">
+                  {vm.agentPlan.entries.map((entry) => (
+                    <div key={entry.agent} className="wizard-check-row">
+                      <IconCheck size={14} />
+                      <span>
+                        <strong>{entry.agent.replace(/-/g, " ")}</strong>
+                        {" · "}
+                        {entry.role}
+                        {" — "}
+                        {entry.reason}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 

@@ -34,9 +34,9 @@ interface StageDef {
 
 const STAGES: StageDef[] = [
   { id: "requirements", label: "Requirements", hint: "Brief → structured spec", nodes: ["parse_requirements"], statuses: ["PARSING_REQUIREMENTS"], kind: "stage", icon: <IconFileText size={14} /> },
-  { id: "contract", label: "Contract", hint: "File manifest + criteria", nodes: ["negotiate_contract"], statuses: ["NEGOTIATING_CONTRACT"], kind: "stage", icon: <IconShield size={14} /> },
-  { id: "gate1", label: "Gate 1 · Architecture", hint: "Your approval", nodes: ["gate_1_check"], statuses: ["AWAITING_GATE_1"], kind: "gate", icon: <IconLock size={14} /> },
-  { id: "build", label: "Build", hint: "4 agents in parallel", nodes: ["frontend_agent", "backend_agent", "database_agent", "architecture_agent"], statuses: ["GENERATING_CODE"], kind: "agents", icon: <IconCode size={14} /> },
+  { id: "contract", label: "Planner / Orchestrator", hint: "Contract + locked agent plan", nodes: ["negotiate_contract"], statuses: ["NEGOTIATING_CONTRACT"], kind: "stage", icon: <IconShield size={14} /> },
+  { id: "gate1", label: "Gate 1 · Plan", hint: "Your approval", nodes: ["gate_1_check"], statuses: ["AWAITING_GATE_1"], kind: "gate", icon: <IconLock size={14} /> },
+  { id: "build", label: "Agent team", hint: "Planner-selected specialists + reviews", nodes: ["frontend_agent", "mobile_agent", "backend_agent", "database_agent", "architecture_agent", "qa_review", "self_critique", "security_review"], statuses: ["GENERATING_CODE"], kind: "agents", icon: <IconCode size={14} /> },
   { id: "validation", label: "Validation", hint: "Artifact checks", nodes: ["validate_outputs"], statuses: [], kind: "stage", icon: <IconCheckCircle size={14} /> },
   { id: "gate2", label: "Gate 2 · Code review", hint: "Your approval", nodes: ["gate_2_check"], statuses: ["AWAITING_GATE_2"], kind: "gate", icon: <IconLock size={14} /> },
   { id: "github", label: "GitHub delivery", hint: "Commit to repo", nodes: ["commit_to_github"], statuses: ["COMMITTING"], kind: "stage", icon: <IconGitBranch size={14} /> },
@@ -94,7 +94,7 @@ export function PipelineRail() {
                 <span className="pipeline-node-label">
                   {stage.label}
                   {stage.kind === "agents" && state !== "waiting" && (
-                    <span className="pipeline-node-count">{buildDone}/4</span>
+                    <span className="pipeline-node-count">{buildDone} complete</span>
                   )}
                 </span>
                 <span className="pipeline-node-hint">

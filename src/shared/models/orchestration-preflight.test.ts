@@ -52,8 +52,8 @@ describe("orchestration preflight model", () => {
     };
     const estimate = estimateOrchestrationCost(selection, catalog, 200_000);
 
-    expect(estimate.pricedModels).toBe(8);
-    expect(estimate.totalModels).toBe(8);
+    expect(estimate.pricedModels).toBe(10);
+    expect(estimate.totalModels).toBe(10);
     expect(estimate.amount).toBeCloseTo(0.32, 6);
     expect(formatCostEstimate(estimate.amount)).toBe("$0.32");
   });
