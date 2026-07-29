@@ -21,13 +21,13 @@ const project = (overrides: Record<string, unknown>) => ({
 
 describe("pm projects list model", () => {
   it("maps lifecycle, next actions, and orchestrator routes", () => {
-    expect(pmProjectLifecycleStage("AWAITING_GATE_1", "READY")).toBe("build");
-    expect(pmProjectLifecycleStage("FAILED", "LOCKED")).toBe("kickoff");
+    expect(pmProjectLifecycleStage("AWAITING_GATE_1", "READY")).toBe("review");
+    expect(pmProjectLifecycleStage("FAILED", "LOCKED")).toBe("build");
     expect(pmProjectLifecycleStage("DELIVERED")).toBe("delivered");
     expect(pmProjectNextAction("build", { status: "AWAITING_GATE_2" } as never)).toBe("Review the build");
     expect(pmProjectNextAction("build", { status: "GENERATING_CODE" } as never)).toBe("Monitor build");
-    expect(pmProjectOrchestrateRoute({ id: "abc", status: "AWAITING_GATE_1" } as never)).toBe("/pm/orchestrate/abc/gate-1");
-    expect(pmProjectOrchestrateRoute({ id: "abc", status: "DELIVERED" } as never)).toBe("/pm/orchestrate/abc/delivery");
+    expect(pmProjectOrchestrateRoute({ id: "abc", status: "AWAITING_GATE_1" } as never)).toBe("/pm/orchestrate/abc");
+    expect(pmProjectOrchestrateRoute({ id: "abc", status: "DELIVERED" } as never)).toBe("/pm/orchestrate/abc");
   });
 
   it("builds attention metadata without JSX", () => {

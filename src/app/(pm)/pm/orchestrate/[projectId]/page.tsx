@@ -1,45 +1,43 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { getDevFlowProject, getDevFlowOrchestrationStatus } from "@/shared/api/devflow-api";
-import { determineStepFromStatus } from "@/shared/components/orchestrator-wizard/orchestrator-wizard-layout";
+import { useParams } from "next/navigation";
+import { OrchestratorWizardLayout } from "@/shared/components/orchestrator-wizard/orchestrator-wizard-layout";
+import type { OrchestratorStepId } from "@/features/orchestration";
+import { BriefStep } from "@/shared/components/orchestrator-wizard/steps/brief-step";
+import { DeliveryStep } from "@/shared/components/orchestrator-wizard/steps/delivery-step";
+import { Gate1Step } from "@/shared/components/orchestrator-wizard/steps/gate-1-step";
+import { Gate2Step } from "@/shared/components/orchestrator-wizard/steps/gate-2-step";
+import { LaunchReviewStep } from "@/shared/components/orchestrator-wizard/steps/launch-review-step";
+import { RunStep } from "@/shared/components/orchestrator-wizard/steps/run-step";
+import type { OrchestratorWizardContextValue } from "@/shared/components/orchestrator-wizard/orchestrator-wizard-layout";
 
-export default function OrchestratorRedirectPage() {
+function renderActiveStep(
+  step: OrchestratorStepId,
+  ctx: OrchestratorWizardContextValue,
+) {
+  switch (step) {
+    case "brief":
+      return <BriefStep ctx={ctx} stepId={step} />;
+    case "review":
+      return <LaunchReviewStep ctx={ctx} />;
+    case "run":
+      return <RunStep ctx={ctx} />;
+    case "gate-1":
+      return <Gate1Step ctx={ctx} />;
+    case "gate-2":
+      return <Gate2Step ctx={ctx} />;
+    case "delivery":
+      return <DeliveryStep ctx={ctx} />;
+  }
+}
+
+export default function AdaptiveOrchestratorPage() {
   const params = useParams();
-  const router = useRouter();
   const projectId = params.projectId as string;
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        const [project, status] = await Promise.all([
-          getDevFlowProject(projectId),
-          getDevFlowOrchestrationStatus(projectId).catch(() => null),
-        ]);
-        if (!active) return;
-        const recommendedStep = determineStepFromStatus(project, status);
-        router.replace(`/pm/orchestrate/${projectId}/${recommendedStep}`);
-      } catch {
-        if (!active) return;
-        router.replace(`/pm/orchestrate/${projectId}/brief`);
-      } finally {
-        if (active) setLoading(false);
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, [projectId, router]);
 
   return (
-    <div style={{ padding: 60, textAlign: "center" }}>
-      <div className="skeleton" style={{ height: 120, borderRadius: 12, maxWidth: 600, margin: "0 auto" }} />
-      <p style={{ marginTop: 16, color: "var(--text-3)", fontSize: "0.875rem" }}>
-        {loading ? "Loading orchestration wizard…" : "Redirecting…"}
-      </p>
-    </div>
+    <OrchestratorWizardLayout projectId={projectId}>
+      {(ctx, activeStep) => renderActiveStep(activeStep, ctx)}
+    </OrchestratorWizardLayout>
   );
 }

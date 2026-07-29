@@ -16,7 +16,7 @@ export function Gate2Step({ ctx }: { ctx: OrchestratorWizardContextValue }) {
   const vm = useGate2StepViewModel(ctx);
 
   return (
-    <div>
+    <div className="orchestrator-decision-surface">
       <div className="wizard-step-section">
         <h3 className="wizard-step-section-title">
           <IconCode size={16} />
@@ -54,6 +54,11 @@ export function Gate2Step({ ctx }: { ctx: OrchestratorWizardContextValue }) {
         </div>
       </div>
 
+      <details className="orchestrator-technical-details orchestrator-decision-evidence">
+        <summary>Review build evidence</summary>
+        <p className="orchestrator-technical-intro">
+          Design direction and generated files grouped by responsible agent.
+        </p>
       <div className="wizard-step-section">
         <h4 className="wizard-section-label">
           Frontend Design Contract
@@ -119,22 +124,26 @@ export function Gate2Step({ ctx }: { ctx: OrchestratorWizardContextValue }) {
           </div>
         )}
       </div>
+      </details>
 
       {vm.isAwaiting && (
-        <div className="wizard-step-section">
+        <div className="wizard-step-section orchestrator-decision-card">
           <h4 className="wizard-section-label">
-            Review Notes (optional)
+            Your decision
           </h4>
+          <p className="wizard-step-section-desc">
+            Approve the completed build for delivery, or request revisions before handoff.
+          </p>
           <Textarea
             rows={3}
             value={vm.notes}
             onChange={vm.actions.onNotesChange}
-            placeholder="Add any feedback or conditions for this code review…"
+            placeholder="Optional feedback or approval conditions"
           />
           <div className="wizard-action-row">
             <Button variant="primary" onClick={() => vm.actions.approve(true)} disabled={vm.acting}>
               <IconCheck size={14} />
-              {vm.acting ? "Approving…" : "Approve build and commit to GitHub"}
+              {vm.acting ? "Approving…" : "Approve build for delivery"}
             </Button>
             <Button variant="danger" onClick={() => vm.actions.approve(false)} disabled={vm.acting}>
               <IconClose size={14} />

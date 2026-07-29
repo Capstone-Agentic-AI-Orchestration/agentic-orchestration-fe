@@ -15,6 +15,48 @@ export const ORCHESTRATOR_STEP_ORDER: OrchestratorStepId[] = [
   "delivery",
 ];
 
+export type OrchestratorPhaseId = "setup" | "build" | "deliver";
+
+export interface OrchestratorPhase {
+  id: OrchestratorPhaseId;
+  label: string;
+  description: string;
+  steps: OrchestratorStepId[];
+}
+
+export const ORCHESTRATOR_PHASES: OrchestratorPhase[] = [
+  {
+    id: "setup",
+    label: "Set up",
+    description: "Describe the outcome and confirm the direction",
+    steps: ["brief", "review"],
+  },
+  {
+    id: "build",
+    label: "Build",
+    description: "Follow progress and make decisions when asked",
+    steps: ["run", "gate-1", "gate-2"],
+  },
+  {
+    id: "deliver",
+    label: "Deliver",
+    description: "Review and accept the final handoff",
+    steps: ["delivery"],
+  },
+];
+
+export function orchestratorPhaseForStep(step: OrchestratorStepId): OrchestratorPhaseId {
+  return ORCHESTRATOR_PHASES.find((phase) => phase.steps.includes(step))?.id ?? "setup";
+}
+
+export function orchestratorPhaseTargetStep(
+  phaseId: OrchestratorPhaseId,
+  recommendedStep: OrchestratorStepId,
+): OrchestratorStepId {
+  const phase = ORCHESTRATOR_PHASES.find((item) => item.id === phaseId) ?? ORCHESTRATOR_PHASES[0];
+  return phase.steps.includes(recommendedStep) ? recommendedStep : phase.steps[0];
+}
+
 interface WizardProjectLike {
   status?: string | null;
   brief?: string | null;

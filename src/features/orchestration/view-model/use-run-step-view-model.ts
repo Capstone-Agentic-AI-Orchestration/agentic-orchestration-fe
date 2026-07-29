@@ -1,10 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import {
   buildRunStepState,
-  runStepDestinationPath,
   type RunStepState,
 } from "@/features/orchestration/model/run-step";
 import type { OrchestratorWizardContextValue } from "@/features/orchestration/view-model/use-orchestrator-wizard-view-model";
@@ -31,19 +29,16 @@ export interface RunStepViewModel extends RunStepState {
     start: () => Promise<void>;
     rerun: () => Promise<void>;
     resync: () => Promise<void>;
-    complete: () => void;
   };
 }
 
 export function useRunStepViewModel(ctx: OrchestratorWizardContextValue): RunStepViewModel {
   const { project, projectId, status, refresh } = ctx;
-  const router = useRouter();
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState("");
   const modelSelection = useOrchestrationModelSelection(projectId);
   const modelSelectionLocked = Boolean(project?.runId);
   const state = buildRunStepState({ project, status });
-  const destinationPath = runStepDestinationPath(projectId, state.destination);
 
   const { resync } = useSocketSubscription({
     projectId,
@@ -100,16 +95,6 @@ export function useRunStepViewModel(ctx: OrchestratorWizardContextValue): RunSte
     await refresh();
   };
 
-  const complete = () => {
-    if (destinationPath) router.push(destinationPath);
-  };
-
-  useEffect(() => {
-    if (!destinationPath) return;
-    const timer = window.setTimeout(() => router.push(destinationPath), 1800);
-    return () => window.clearTimeout(timer);
-  }, [destinationPath, router]);
-
   return {
     ...state,
     projectId,
@@ -121,7 +106,6 @@ export function useRunStepViewModel(ctx: OrchestratorWizardContextValue): RunSte
       start,
       rerun,
       resync: resyncRun,
-      complete,
     },
   };
 }

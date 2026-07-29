@@ -566,7 +566,7 @@ function BackendProjectDetail({ project, onBack }) {
       onClick: canStartOrchestration ? () => setPreflightOpen(true) : () => setTab("build"),
       disabled: starting,
     },
-    secondaryAction: { label: "Guided wizard", href: `/pm/orchestrate/${detail.id}/brief`, variant: "secondary", icon: <IconWorkflow size={13} /> },
+    secondaryAction: { label: "Open project build", href: `/pm/orchestrate/${detail.id}`, variant: "secondary", icon: <IconWorkflow size={13} /> },
   });
 
   return (
@@ -577,8 +577,8 @@ function BackendProjectDetail({ project, onBack }) {
         actions={
           <div className="row gap-2">
             <Button variant="secondary" size="sm" icon={<IconArrowLeft size={14} />} onClick={onBack}>All projects</Button>
-            <Button variant="secondary" size="sm" icon={<IconWorkflow size={13} />} onClick={() => router.push(`/pm/orchestrate/${detail.id}/brief`)}>
-              Guided wizard
+            <Button variant="secondary" size="sm" icon={<IconWorkflow size={13} />} onClick={() => router.push(`/pm/orchestrate/${detail.id}`)}>
+              Open project build
             </Button>
             <Button variant="secondary" size="sm" icon={<IconClipboard size={13} />} onClick={() => router.push(`/pm/project/${detail.id}/intake`)}>
               Review intake
@@ -593,7 +593,7 @@ function BackendProjectDetail({ project, onBack }) {
           currentStage={lifecycleStageId}
           maxReachedStage={lifecycleStageId}
           completedStages={completedStagesFromProject}
-          onClickStage={(stage) => router.push(`/pm/orchestrate/${detail.id}/${stage === "draft" ? "brief" : stage === "kickoff" ? "review" : stage === "build" ? "run" : stage === "review" ? "gate-2" : "delivery"}`)}
+          onClickStage={() => router.push(`/pm/orchestrate/${detail.id}`)}
         />
       </div>
 

@@ -20,6 +20,61 @@ export interface RunStepState {
   destination: RunStepDestination | null;
 }
 
+export interface RunFocusCopy {
+  eyebrow: string;
+  title: string;
+  description: string;
+  tone: "blue" | "amber" | "red" | "green";
+}
+
+export function runFocusCopy(status: string | null | undefined): RunFocusCopy {
+  switch (status) {
+    case "PARSING_REQUIREMENTS":
+    case "NEGOTIATING_CONTRACT":
+      return {
+        eyebrow: "Preparing the plan",
+        title: "DevFlow is turning the outcome into a build plan",
+        description: "No action is needed yet. You will be asked to approve the plan before implementation begins.",
+        tone: "blue",
+      };
+    case "GENERATING_CODE":
+      return {
+        eyebrow: "Build in progress",
+        title: "The approved plan is being built",
+        description: "DevFlow is coordinating the selected team and will pause when the completed build is ready for review.",
+        tone: "blue",
+      };
+    case "COMMITTING":
+      return {
+        eyebrow: "Preparing delivery",
+        title: "The approved build is being prepared for handoff",
+        description: "No action is needed. DevFlow is finalizing the repository and delivery record.",
+        tone: "amber",
+      };
+    case "FAILED":
+      return {
+        eyebrow: "Action needed",
+        title: "The build stopped before completion",
+        description: "Retry the recoverable work below. Open technical details only if you need the failure evidence.",
+        tone: "red",
+      };
+    case "DELIVERED":
+      return {
+        eyebrow: "Build complete",
+        title: "The project is ready for final delivery review",
+        description: "Continue to delivery to review the handoff and record acceptance.",
+        tone: "green",
+      };
+    default:
+      return {
+        eyebrow: "Build status",
+        title: "DevFlow is ready",
+        description: "The current project state is synchronized. DevFlow will show the next required decision here.",
+        tone: "blue",
+      };
+  }
+}
+
 export function buildRunStepState(input: {
   project: RunStepProjectLike | null;
   status: RunStepStatusLike | null;
@@ -59,5 +114,5 @@ export function runStepDestinationPath(
   destination: RunStepDestination | null,
 ): string | null {
   if (!destination) return null;
-  return `/pm/orchestrate/${projectId}/${destination}`;
+  return `/pm/orchestrate/${projectId}`;
 }

@@ -43,6 +43,7 @@ import {
 } from "./gate-review";
 import {
   buildRunStepState,
+  runFocusCopy,
   runStepDestinationPath,
 } from "./run-step";
 import {
@@ -58,6 +59,8 @@ import {
   computeWizardCompletedSteps,
   determineWizardStepFromStatus,
   getWizardStepIndex,
+  orchestratorPhaseForStep,
+  orchestratorPhaseTargetStep,
 } from "./orchestrator-wizard";
 import { buildLaunchReviewState } from "./launch-review";
 import {
@@ -397,6 +400,38 @@ describe("launch review model", () => {
       llmLabel: "Needs attention",
     });
   });
+
+  it("maps internal orchestration steps into three customer-facing phases", () => {
+    expect(orchestratorPhaseForStep("brief")).toBe("setup");
+    expect(orchestratorPhaseForStep("gate-1")).toBe("build");
+    expect(orchestratorPhaseForStep("gate-2")).toBe("build");
+    expect(orchestratorPhaseForStep("delivery")).toBe("deliver");
+
+    expect(orchestratorPhaseTargetStep("setup", "gate-1")).toBe("brief");
+    expect(orchestratorPhaseTargetStep("build", "gate-1")).toBe("gate-1");
+    expect(orchestratorPhaseTargetStep("deliver", "run")).toBe("delivery");
+  });
+});
+
+describe("simple run focus", () => {
+  it("translates runtime statuses into a plain-language PM update", () => {
+    expect(runFocusCopy("PARSING_REQUIREMENTS")).toMatchObject({
+      eyebrow: "Preparing the plan",
+      tone: "blue",
+    });
+    expect(runFocusCopy("GENERATING_CODE")).toMatchObject({
+      eyebrow: "Build in progress",
+      tone: "blue",
+    });
+    expect(runFocusCopy("FAILED")).toMatchObject({
+      eyebrow: "Action needed",
+      tone: "red",
+    });
+    expect(runFocusCopy("DELIVERED")).toMatchObject({
+      eyebrow: "Build complete",
+      tone: "green",
+    });
+  });
 });
 
 describe("PM execution summary", () => {
@@ -602,9 +637,9 @@ describe("run step model", () => {
 
   it("builds run-step destination paths", () => {
     expect(runStepDestinationPath("project-1", null)).toBeNull();
-    expect(runStepDestinationPath("project-1", "gate-1")).toBe("/pm/orchestrate/project-1/gate-1");
-    expect(runStepDestinationPath("project-1", "gate-2")).toBe("/pm/orchestrate/project-1/gate-2");
-    expect(runStepDestinationPath("project-1", "delivery")).toBe("/pm/orchestrate/project-1/delivery");
+    expect(runStepDestinationPath("project-1", "gate-1")).toBe("/pm/orchestrate/project-1");
+    expect(runStepDestinationPath("project-1", "gate-2")).toBe("/pm/orchestrate/project-1");
+    expect(runStepDestinationPath("project-1", "delivery")).toBe("/pm/orchestrate/project-1");
   });
 });
 

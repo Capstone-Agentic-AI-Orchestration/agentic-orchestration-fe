@@ -1,7 +1,7 @@
 "use client";
 
 import { useGate1StepViewModel } from "@/features/orchestration";
-import { Button, Badge, Textarea } from "@/shared/components/ui";
+import { Button, Textarea } from "@/shared/components/ui";
 import {
   IconClipboard,
   IconCheck,
@@ -16,7 +16,7 @@ export function Gate1Step({ ctx }: { ctx: OrchestratorWizardContextValue }) {
   const vm = useGate1StepViewModel(ctx);
 
   return (
-    <div>
+    <div className="orchestrator-decision-surface">
       <div className="wizard-step-section">
         <h3 className="wizard-step-section-title">
           <IconShield size={16} />
@@ -56,6 +56,11 @@ export function Gate1Step({ ctx }: { ctx: OrchestratorWizardContextValue }) {
         </div>
       </div>
 
+      <details className="orchestrator-technical-details orchestrator-decision-evidence">
+        <summary>Review plan evidence</summary>
+        <p className="orchestrator-technical-intro">
+          Requirements, design direction, selected agents, owned files, and acceptance checks.
+        </p>
       <div className="wizard-step-section">
         <h4 className="wizard-section-label">
           Frontend Design Contract
@@ -165,17 +170,21 @@ export function Gate1Step({ ctx }: { ctx: OrchestratorWizardContextValue }) {
           </div>
         )}
       </div>
+      </details>
 
       {vm.isAwaiting && (
-        <div className="wizard-step-section">
+        <div className="wizard-step-section orchestrator-decision-card">
           <h4 className="wizard-section-label">
-            Review Notes (optional)
+            Your decision
           </h4>
+          <p className="wizard-step-section-desc">
+            Approve this plan to begin implementation, or request changes before any code is generated.
+          </p>
           <Textarea
             rows={3}
             value={vm.notes}
             onChange={vm.actions.onNotesChange}
-            placeholder="Add any feedback or conditions for this plan approval…"
+            placeholder="Optional feedback or approval conditions"
           />
           <div className="wizard-action-row">
             <Button variant="primary" onClick={() => vm.actions.approve(true)} disabled={vm.acting}>

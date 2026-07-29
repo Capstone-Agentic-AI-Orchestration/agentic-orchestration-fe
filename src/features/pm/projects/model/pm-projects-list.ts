@@ -64,23 +64,7 @@ export function pmProjectNeedsAttention(project: Pick<DevFlowProjectSummary, "st
 }
 
 export function pmProjectOrchestrateRoute(project: Pick<DevFlowProjectSummary, "id" | "status">): string {
-  const id = project.id;
-  switch (project.status) {
-    case "AWAITING_GATE_1":
-      return `/pm/orchestrate/${id}/gate-1`;
-    case "AWAITING_GATE_2":
-      return `/pm/orchestrate/${id}/gate-2`;
-    case "FAILED":
-    case "PARSING_REQUIREMENTS":
-    case "NEGOTIATING_CONTRACT":
-    case "GENERATING_CODE":
-    case "COMMITTING":
-      return `/pm/orchestrate/${id}/run`;
-    case "DELIVERED":
-      return `/pm/orchestrate/${id}/delivery`;
-    default:
-      return `/pm/orchestrate/${id}/review`;
-  }
+  return `/pm/orchestrate/${project.id}`;
 }
 
 export function pmProjectAttentionMeta(

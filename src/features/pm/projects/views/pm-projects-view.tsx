@@ -128,7 +128,7 @@ export function PMProjectsView() {
   const handleProjectCreated = async (projectId?: string) => {
     setNewProjectOpen(false);
     await refreshBackendProjects();
-    if (projectId) router.push(`/pm/orchestrate/${projectId}/brief`);
+    if (projectId) router.push(`/pm/orchestrate/${projectId}`);
   };
 
   const projects = useMemo(() => {
