@@ -1,0 +1,405 @@
+/* CTASection - generated reference 05 */
+
+.cta {
+  position: relative;
+  scroll-margin-top: 88px;
+  padding: 86px 0 64px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  background: #030303;
+  overflow: hidden;
+}
+
+.cta::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 40%, rgba(255,255,255,0.08), transparent 42%),
+    linear-gradient(rgba(255,255,255,0.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+  background-size: auto, 110px 110px, 110px 110px;
+  pointer-events: none;
+}
+
+.cta-inner {
+  position: relative;
+  width: min(100% - 48px, 1440px);
+  margin: 0 auto;
+}
+
+.cta-head {
+  max-width: 760px;
+  margin: 0 auto 44px;
+  text-align: center;
+}
+
+.cta-head p {
+  margin: 0 0 22px;
+  color: rgba(255, 255, 255, 0.48);
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: 13px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.cta-head h2 {
+  margin: 0 0 22px;
+  color: #fff;
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: clamp(44px, 4.2vw, 76px);
+  line-height: 1.02;
+  font-weight: 500;
+  letter-spacing: -0.07em;
+}
+
+.cta-head span {
+  display: block;
+  max-width: 520px;
+  margin: 0 auto;
+  color: rgba(255, 255, 255, 0.62);
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.cta-grid {
+  display: grid;
+  grid-template-columns: minmax(560px, 1.55fr) minmax(360px, 0.82fr);
+  gap: 26px;
+  align-items: stretch;
+}
+
+.cta-terminal,
+.cta-form {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(8, 8, 8, 0.74);
+}
+
+.cta-terminal {
+  min-height: 500px;
+  overflow: hidden;
+  transition: border-color var(--motion-fast), box-shadow var(--motion-fast);
+}
+
+.cta-terminal-header {
+  height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.82);
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.cta-online {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 11px;
+}
+
+.cta-online i {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: #fff;
+}
+
+.cta-terminal-body {
+  position: relative;
+  min-height: 446px;
+  padding: 34px 24px;
+  overflow: hidden;
+}
+
+.cta-terminal-particles {
+  position: absolute;
+  inset: 0;
+  opacity: 0.72;
+  transition: opacity var(--motion-fast), filter var(--motion-fast);
+}
+
+.cta-terminal-lines {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 22px;
+  max-width: 480px;
+  font-family: "Geist Mono", ui-monospace, monospace;
+}
+
+.cta-terminal-lines p {
+  margin: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.cta-terminal-lines strong {
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.cta-terminal-lines span {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.cta-cursor-line {
+  display: flex !important;
+  align-items: center;
+  gap: 10px !important;
+}
+
+.cta-cursor {
+  width: 10px;
+  height: 18px;
+  background: #fff;
+  animation: ctaCursor 1s steps(2, end) infinite;
+}
+
+.cta:focus-within .cta-terminal {
+  border-color: rgba(255, 255, 255, 0.42);
+  box-shadow: 0 0 42px rgba(255, 255, 255, 0.08);
+}
+
+.cta:focus-within .cta-terminal-particles {
+  opacity: 0.92;
+  filter: contrast(1.2) brightness(1.16);
+}
+
+.cta:focus-within .cta-cursor {
+  animation-duration: 0.52s;
+  box-shadow: 0 0 18px rgba(255, 255, 255, 0.52);
+}
+
+.marketing-cinema[data-focused-control="cta-brief"] .cta-terminal-lines p:nth-child(2) span,
+.marketing-cinema[data-focused-control="cta-email"] .cta-terminal-lines p:nth-child(1) span {
+  color: #fff;
+  text-shadow: 0 0 18px rgba(255, 255, 255, 0.3);
+}
+
+.cta-form {
+  padding: 28px 26px 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.cta-form-head {
+  display: grid;
+  gap: 12px;
+}
+
+.cta-form-head h3 {
+  margin: 0;
+  color: #fff;
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cta-form-head p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.62);
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.cta-field {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cta-label {
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.66);
+}
+
+.cta-input,
+.cta-textarea {
+  width: 100%;
+  padding: 16px;
+  background: rgba(3, 3, 3, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 0;
+  color: #fff;
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: 14px;
+  transition: border-color var(--motion-fast), background var(--motion-fast);
+  resize: vertical;
+}
+
+.cta-input {
+  height: 52px;
+}
+
+.cta-textarea {
+  min-height: 126px;
+  line-height: 1.45;
+}
+
+.cta-input::placeholder,
+.cta-textarea::placeholder {
+  color: rgba(255, 255, 255, 0.38);
+}
+
+.cta-input:focus,
+.cta-textarea:focus {
+  border-color: rgba(255, 255, 255, 0.68);
+  background: rgba(0, 0, 0, 0.9);
+  outline: none;
+}
+
+.cta-button {
+  width: 100%;
+  height: 56px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  text-decoration: none;
+  padding: 0 28px;
+  background: #fff;
+  color: #030303;
+  border: 1px solid #fff;
+  border-radius: 0;
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background var(--motion-fast), color var(--motion-fast), opacity var(--motion-fast);
+}
+
+.cta-button:hover:not(:disabled) {
+  background: transparent;
+  color: #fff;
+}
+
+.cta-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cta-error {
+  margin: -8px 0 0;
+  color: var(--red);
+  font-size: 13px;
+}
+
+.cta-secure {
+  margin: -2px 0 0;
+  color: rgba(255, 255, 255, 0.48);
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: 12px;
+}
+
+.cta-success {
+  min-height: 420px;
+  display: grid;
+  place-content: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.cta-success-title {
+  margin: 0;
+  color: #fff;
+  font-size: 24px;
+  font-weight: 650;
+}
+
+.cta-success-body {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.62);
+  line-height: 1.55;
+}
+
+.cta-trust {
+  margin-top: 32px;
+  padding-top: 34px;
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
+  text-align: center;
+}
+
+.cta-trust > span {
+  display: block;
+  margin-bottom: 28px;
+  color: rgba(255, 255, 255, 0.52);
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: 13px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.cta-trust div {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 18px;
+}
+
+.cta-trust b {
+  color: rgba(255, 255, 255, 0.34);
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: 16px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+@keyframes ctaCursor {
+  50% {
+    opacity: 0;
+  }
+}
+
+@media (max-width: 980px) {
+  .cta-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .cta {
+    padding: 76px 0 52px;
+  }
+
+  .cta-inner {
+    width: min(100% - 40px, 1440px);
+  }
+
+  .cta-head h2 {
+    font-size: clamp(38px, 12vw, 58px);
+  }
+
+  .cta-terminal {
+    min-height: 430px;
+  }
+
+  .cta-terminal-body {
+    min-height: 376px;
+  }
+
+  .cta-trust div {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cta-cursor {
+    animation: none;
+  }
+}

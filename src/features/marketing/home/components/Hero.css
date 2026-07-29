@@ -1,0 +1,196 @@
+/* Hero - generated reference 01 */
+
+.hero {
+  position: relative;
+  min-height: 100dvh;
+  padding: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+  background: #030303;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: 80px 0 0;
+  z-index: 2;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 92px 92px;
+  mask-image: linear-gradient(90deg, rgba(0, 0, 0, 0.7), #000 25%, #000 72%, rgba(0, 0, 0, 0.7));
+  -webkit-mask-image: linear-gradient(90deg, rgba(0, 0, 0, 0.7), #000 25%, #000 72%, rgba(0, 0, 0, 0.7));
+  pointer-events: none;
+}
+
+.hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  background:
+    radial-gradient(circle at 18% 50%, rgba(255, 255, 255, 0.09), transparent 32%),
+    radial-gradient(circle at 82% 42%, rgba(255, 255, 255, 0.08), transparent 38%),
+    linear-gradient(90deg, rgba(3, 3, 3, 0.15), rgba(3, 3, 3, 0.02) 42%, rgba(3, 3, 3, 0.24));
+  pointer-events: none;
+}
+
+.hero-scene {
+  position: absolute;
+  top: 80px;
+  right: 0;
+  bottom: 0;
+  width: min(58vw, 920px);
+  z-index: 1;
+  pointer-events: auto;
+  opacity: 0.58;
+  mask-image: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, 0.3) 18%, #000 44%);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, 0.3) 18%, #000 44%);
+}
+
+.hero-scene canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.hero-agent-graph {
+  position: absolute;
+  right: 0;
+  top: 9%;
+  width: min(58vw, 960px);
+  height: 78%;
+  z-index: 6;
+  opacity: 0.88;
+  pointer-events: none;
+}
+
+.hero-agent-graph.is-interactive {
+  pointer-events: auto;
+}
+
+.hero-particles {
+  position: absolute;
+  inset: 80px 0 0;
+  z-index: 0;
+  opacity: 0.72;
+}
+
+.hero-inner {
+  position: relative;
+  z-index: 8;
+  min-height: 100dvh;
+  max-width: 1640px;
+  margin: 0 auto;
+  padding: 0 clamp(28px, 5vw, 90px) 10vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: flex-start;
+  pointer-events: none;
+}
+
+.hero-headline {
+  font-size: clamp(64px, 6vw, 118px);
+  line-height: 0.94;
+  font-weight: 400;
+  letter-spacing: -0.07em;
+  color: #fff;
+  margin: 0 0 clamp(24px, 2.8vw, 42px);
+  max-width: min(1000px, 62vw);
+  text-wrap: balance;
+}
+
+.hero-paragraph {
+  font-size: clamp(16px, 1.28vw, 22px);
+  line-height: 1.46;
+  color: rgba(250, 250, 250, 0.74);
+  margin: 0 0 clamp(30px, 3.4vw, 56px);
+  max-width: 610px;
+  letter-spacing: -0.025em;
+}
+
+.hero-cta {
+  display: flex;
+  align-items: center;
+}
+
+.hero-button {
+  min-width: 224px;
+  height: 56px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+  padding: 0 30px;
+  background: transparent;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.62);
+  border-radius: 0;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  pointer-events: auto;
+  transition:
+    background var(--motion-slow),
+    color var(--motion-slow),
+    border-color var(--motion-slow),
+    transform var(--motion-fast);
+}
+
+.hero-button:hover {
+  background: #fff;
+  color: #050505;
+  border-color: #fff;
+}
+
+@media (max-width: 1024px) {
+  .hero-headline {
+    max-width: 760px;
+  }
+
+  .hero-agent-graph {
+    width: 78vw;
+    opacity: 0.38;
+  }
+}
+
+@media (max-width: 768px) {
+  .hero::before,
+  .hero-particles {
+    inset: 72px 0 0;
+  }
+
+  .hero-scene {
+    top: 72px;
+    width: 86vw;
+    opacity: 0.18;
+  }
+
+  .hero-inner {
+    padding: 0 22px 72px;
+  }
+
+  .hero-headline {
+    max-width: 100%;
+    font-size: clamp(52px, 16vw, 82px);
+    letter-spacing: -0.06em;
+  }
+
+  .hero-paragraph {
+    max-width: 34rem;
+  }
+
+  .hero-agent-graph {
+    top: 18%;
+    right: -35%;
+    width: 130vw;
+    height: 58%;
+    opacity: 0.24;
+  }
+}

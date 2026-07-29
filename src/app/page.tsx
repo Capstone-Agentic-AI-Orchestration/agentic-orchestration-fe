@@ -1,13 +1,17 @@
-import { redirect } from "next/navigation";
+import type { Metadata } from "next";
+import { MarketingHomeView } from "@/features/marketing/home/views/marketing-home-view";
+import { MarketingFrame } from "@/features/marketing/loading/MarketingFrame";
 
-/**
- * Internal console root.
- *
- * This deployment is the private DevFlow console (dev / pm / admin). It has no
- * public landing page — visiting the root sends you straight to sign-in. The
- * public marketing + client experience lives in the separate Alphaexplora
- * client app.
- */
-export default function ConsoleRootPage() {
-  redirect("/sign-in");
+export const metadata: Metadata = {
+  title: "DevFlow — One prompt, build everything",
+  description:
+    "An Eve-powered multi-agent system for planning, building, reviewing, and shipping production software.",
+};
+
+export default function MarketingHomePage() {
+  return (
+    <MarketingFrame>
+      <MarketingHomeView />
+    </MarketingFrame>
+  );
 }

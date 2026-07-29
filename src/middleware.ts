@@ -15,7 +15,7 @@ import { NextResponse, type NextRequest } from "next/server";
 // per-persona paths are legacy redirect stubs that must stay public, or an
 // unauthenticated visitor following an old bookmark would be bounced by this
 // gate before the stub could forward them to /sign-in.
-const PUBLIC_PATHS = ["/sign-in", "/dev/sign-in", "/pm/sign-in"];
+const PUBLIC_PATHS = ["/", "/sign-in", "/dev/sign-in", "/pm/sign-in"];
 
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));

@@ -1,0 +1,37 @@
+/* Lusion-style right-edge draggable scroll bar */
+
+.scroll-indicator {
+  position: fixed;
+  top: 40vh;
+  right: 16px;
+  width: 6px;
+  height: 20vh;
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 3px;
+  z-index: 9999;
+  cursor: pointer;
+  transform: translateZ(0);
+}
+
+.scroll-indicator-fill {
+  width: 100%;
+  height: 100%;
+  background: var(--text, #fff);
+  border-radius: inherit;
+  transform-origin: top center;
+  transform: scaleY(0);
+  will-change: transform;
+  cursor: grab;
+}
+
+.scroll-indicator-fill.is-dragging,
+.scroll-indicator-fill:active {
+  cursor: grabbing;
+}
+
+/* Hide on touch/mobile where the indicator can feel crowded. */
+@media (max-width: 768px), (pointer: coarse) {
+  .scroll-indicator {
+    display: none;
+  }
+}

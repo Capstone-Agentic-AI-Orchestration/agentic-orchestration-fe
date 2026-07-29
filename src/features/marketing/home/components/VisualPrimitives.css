@@ -1,0 +1,237 @@
+.particle-field {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.agent-graph {
+  position: relative;
+  color: #fff;
+}
+
+.agent-graph.is-interactive {
+  pointer-events: auto;
+}
+
+.agent-graph svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.agent-graph-line {
+  stroke: rgba(255, 255, 255, 0.25);
+  stroke-width: 0.16;
+  vector-effect: non-scaling-stroke;
+  transition: stroke 180ms ease, stroke-width 180ms ease, opacity 180ms ease;
+}
+
+.agent-graph-line--active {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.72);
+  stroke-width: 0.42;
+  stroke-dasharray: 1.4 1.2;
+  animation: agentLineDrift 2.8s linear infinite;
+}
+
+.agent-graph-node,
+.agent-graph-origin {
+  fill: #fff;
+}
+
+.agent-graph-origin {
+  opacity: 0.9;
+}
+
+.agent-graph-label {
+  position: absolute;
+  transform: translate(9px, -11px);
+  display: grid;
+  gap: 1px;
+  color: rgba(255, 255, 255, 0.94);
+  font-size: 12px;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  text-shadow: 0 0 18px rgba(0, 0, 0, 0.9);
+  transition:
+    color 180ms ease,
+    border-color 180ms ease,
+    background 180ms ease,
+    box-shadow 180ms ease,
+    opacity 180ms ease;
+}
+
+button.agent-graph-label {
+  appearance: none;
+  border: 0;
+  background: rgba(255, 255, 255, 0.035);
+  padding: 5px 7px;
+  text-align: left;
+  font: inherit;
+  cursor: crosshair;
+}
+
+.agent-graph-label em {
+  display: none;
+  color: #48e56a;
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: 9px;
+  font-style: normal;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.agent-graph.is-interactive .agent-graph-line {
+  opacity: 0.72;
+  stroke-dasharray: 1.8 2.4;
+  animation: agentLineDrift 4.6s linear infinite;
+}
+
+.agent-graph.is-interactive .agent-graph-node {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: agentNodeIdle 2.8s ease-in-out infinite;
+}
+
+.agent-graph.is-interactive .agent-graph-label {
+  animation: agentLabelBreathe 3.4s ease-in-out infinite;
+}
+
+.marketing-cinema[data-live-agent="planner"] .agent-graph-label[data-agent="planner"],
+.marketing-cinema[data-live-agent="architect"] .agent-graph-label[data-agent="architect"],
+.marketing-cinema[data-live-agent="frontend"] .agent-graph-label[data-agent="frontend"],
+.marketing-cinema[data-live-agent="backend"] .agent-graph-label[data-agent="backend"],
+.marketing-cinema[data-live-agent="database"] .agent-graph-label[data-agent="database"],
+.marketing-cinema[data-live-agent="reviewer"] .agent-graph-label[data-agent="reviewer"],
+.marketing-cinema[data-live-agent="orchestrator"] .agent-graph-label[data-agent="orchestrator"],
+.marketing-cinema[data-live-agent="engineer"] .agent-graph-label[data-agent="engineer"],
+.marketing-cinema[data-live-agent="qa agent"] .agent-graph-label[data-agent="qa agent"],
+.marketing-cinema[data-live-agent="deployer"] .agent-graph-label[data-agent="deployer"],
+.marketing-cinema[data-live-agent="analyst"] .agent-graph-label[data-agent="analyst"],
+.marketing-cinema[data-live-agent="researcher"] .agent-graph-label[data-agent="researcher"] {
+  z-index: 3;
+  color: #fff;
+  border-color: rgba(72, 229, 106, 0.52);
+  background: rgba(72, 229, 106, 0.08);
+  box-shadow:
+    0 0 calc(16px + var(--agent-live-pulse, 0) * 20px) rgba(72, 229, 106, 0.18),
+    inset 0 0 0 1px rgba(72, 229, 106, 0.12);
+}
+
+.marketing-cinema[data-live-agent="planner"] .agent-graph-label[data-agent="planner"] em,
+.marketing-cinema[data-live-agent="architect"] .agent-graph-label[data-agent="architect"] em,
+.marketing-cinema[data-live-agent="frontend"] .agent-graph-label[data-agent="frontend"] em,
+.marketing-cinema[data-live-agent="backend"] .agent-graph-label[data-agent="backend"] em,
+.marketing-cinema[data-live-agent="database"] .agent-graph-label[data-agent="database"] em,
+.marketing-cinema[data-live-agent="reviewer"] .agent-graph-label[data-agent="reviewer"] em,
+.marketing-cinema[data-live-agent="orchestrator"] .agent-graph-label[data-agent="orchestrator"] em,
+.marketing-cinema[data-live-agent="engineer"] .agent-graph-label[data-agent="engineer"] em,
+.marketing-cinema[data-live-agent="qa agent"] .agent-graph-label[data-agent="qa agent"] em,
+.marketing-cinema[data-live-agent="deployer"] .agent-graph-label[data-agent="deployer"] em,
+.marketing-cinema[data-live-agent="analyst"] .agent-graph-label[data-agent="analyst"] em,
+.marketing-cinema[data-live-agent="researcher"] .agent-graph-label[data-agent="researcher"] em {
+  display: block;
+}
+
+.marketing-cinema[data-live-agent="planner"] .agent-graph-node[data-agent="planner"],
+.marketing-cinema[data-live-agent="architect"] .agent-graph-node[data-agent="architect"],
+.marketing-cinema[data-live-agent="frontend"] .agent-graph-node[data-agent="frontend"],
+.marketing-cinema[data-live-agent="backend"] .agent-graph-node[data-agent="backend"],
+.marketing-cinema[data-live-agent="database"] .agent-graph-node[data-agent="database"],
+.marketing-cinema[data-live-agent="reviewer"] .agent-graph-node[data-agent="reviewer"],
+.marketing-cinema[data-live-agent="orchestrator"] .agent-graph-node[data-agent="orchestrator"],
+.marketing-cinema[data-live-agent="engineer"] .agent-graph-node[data-agent="engineer"],
+.marketing-cinema[data-live-agent="qa agent"] .agent-graph-node[data-agent="qa agent"],
+.marketing-cinema[data-live-agent="deployer"] .agent-graph-node[data-agent="deployer"],
+.marketing-cinema[data-live-agent="analyst"] .agent-graph-node[data-agent="analyst"],
+.marketing-cinema[data-live-agent="researcher"] .agent-graph-node[data-agent="researcher"] {
+  fill: #48e56a;
+  opacity: 1;
+  transform: scale(calc(1.2 + var(--agent-live-pulse, 0) * 0.8));
+}
+
+.agent-graph.is-interactive:has(.agent-graph-label:hover) .agent-graph-line,
+.agent-graph.is-interactive:has(.agent-graph-label:focus-visible) .agent-graph-line {
+  stroke: rgba(255, 255, 255, 0.55);
+  stroke-width: 0.24;
+  opacity: 0.96;
+}
+
+.agent-graph.is-interactive .agent-graph-label:hover,
+.agent-graph.is-interactive .agent-graph-label:focus-visible {
+  z-index: 4;
+  color: #fff;
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 0 26px rgba(255, 255, 255, 0.2);
+}
+
+.agent-graph.is-interactive .agent-graph-label:hover em,
+.agent-graph.is-interactive .agent-graph-label:focus-visible em {
+  display: block;
+}
+
+.agent-graph-label small {
+  color: rgba(255, 255, 255, 0.64);
+  font-size: 11px;
+}
+
+.agent-graph--branch .agent-graph-label {
+  min-width: 132px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(5, 5, 5, 0.72);
+  transform: translate(12px, -50%);
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.agent-graph--branch .agent-graph-label small {
+  font-family: "Geist", system-ui, sans-serif;
+  font-size: 11px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+@keyframes agentLineDrift {
+  to {
+    stroke-dashoffset: -12;
+  }
+}
+
+@keyframes agentNodeIdle {
+  0%, 100% {
+    opacity: 0.72;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.26);
+  }
+}
+
+@keyframes agentLabelBreathe {
+  0%, 100% {
+    opacity: 0.82;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agent-graph-line--active,
+  .agent-graph.is-interactive .agent-graph-line,
+  .agent-graph.is-interactive .agent-graph-node,
+  .agent-graph.is-interactive .agent-graph-label {
+    animation: none;
+  }
+}

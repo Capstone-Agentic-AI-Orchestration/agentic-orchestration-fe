@@ -1,0 +1,287 @@
+/* HowItWorks - generated reference 03 */
+
+.how {
+  position: relative;
+  scroll-margin-top: 88px;
+  padding: 96px 0 112px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  background: #030303;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.how-particles {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.42;
+}
+
+.how::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    linear-gradient(rgba(255,255,255,0.034) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size: 84px 84px;
+  pointer-events: none;
+}
+
+.how-inner {
+  position: relative;
+  z-index: 2;
+  width: min(100% - 48px, 1520px);
+  margin: 0 auto;
+}
+
+.how-head {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 48px;
+}
+
+.how-eyebrow {
+  position: relative;
+  margin: 0;
+  padding-left: 22px;
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: 13px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.how-eyebrow::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border: 1px solid rgba(255,255,255,0.65);
+  border-radius: 999px;
+  transform: translateY(-50%);
+}
+
+.how-title {
+  margin: 0;
+  color: #fff;
+  font-size: clamp(34px, 2.4vw, 48px);
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: -0.045em;
+}
+
+.how-flow {
+  position: relative;
+}
+
+.how-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 18px;
+}
+
+.how-step {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(3, 3, 3, 0.62);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: border-color var(--motion-normal), background var(--motion-normal);
+}
+
+.how-step:hover {
+  border-color: rgba(255, 255, 255, 0.42);
+  background: rgba(18, 18, 18, 0.76);
+}
+
+.how-step:hover .how-step-icon,
+.how-step-trigger:focus-visible .how-step-icon {
+  border-color: rgba(72, 229, 106, 0.72);
+  color: #48e56a;
+  box-shadow: 0 0 22px rgba(72, 229, 106, 0.16);
+}
+
+.how-step.is-active {
+  border-color: rgba(255, 255, 255, 0.72);
+  background: rgba(12, 12, 12, 0.78);
+}
+
+.how-step-trigger {
+  width: 100%;
+  min-height: 112px;
+  display: grid;
+  grid-template-columns: 92px 72px minmax(0, 1fr) 74px;
+  align-items: center;
+  gap: 26px;
+  padding: 0 36px;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.how-step-n {
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: clamp(34px, 3vw, 54px);
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: -0.07em;
+}
+
+.how-step-icon,
+.how-step-control {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  color: rgba(255, 255, 255, 0.86);
+  font-family: "Geist Mono", ui-monospace, monospace;
+}
+
+.how-step-control {
+  justify-self: end;
+  width: 46px;
+  height: 46px;
+  border-radius: 999px;
+}
+
+.how-step-copy {
+  display: grid;
+  gap: 8px;
+}
+
+.how-step-copy strong {
+  color: #fff;
+  font-size: clamp(17px, 1.35vw, 23px);
+  font-weight: 650;
+  letter-spacing: -0.035em;
+}
+
+.how-step-copy small {
+  max-width: 620px;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.how-step-detail {
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: minmax(320px, 0.9fr) minmax(360px, 1fr);
+  border-top: 1px solid rgba(255, 255, 255, 0.58);
+}
+
+.how-detail-copy {
+  min-height: 286px;
+  padding: 42px 48px 44px clamp(160px, 14vw, 260px);
+  border-right: 1px solid rgba(255, 255, 255, 0.28);
+}
+
+.how-detail-copy h3 {
+  margin: 0 0 22px;
+  color: #fff;
+  font-size: clamp(24px, 2.1vw, 38px);
+  line-height: 1.08;
+  font-weight: 650;
+  letter-spacing: -0.045em;
+}
+
+.how-detail-copy p {
+  max-width: 580px;
+  margin: 0 0 40px;
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.how-detail-copy > span {
+  display: block;
+  margin-bottom: 14px;
+  color: rgba(255, 255, 255, 0.5);
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.how-agent-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.how-agent-chips span {
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.82);
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: 12px;
+}
+
+.how-agent-graph {
+  min-height: 286px;
+  overflow: hidden;
+}
+
+.how-step.is-active .how-agent-graph .agent-graph-line--active {
+  stroke: #48e56a;
+  stroke-width: 0.55;
+  animation-duration: 1.25s;
+}
+
+@media (max-width: 980px) {
+  .how-step-trigger {
+    grid-template-columns: 64px 56px minmax(0, 1fr) 48px;
+    gap: 18px;
+    padding: 0 22px;
+  }
+
+  .how-step-detail {
+    grid-template-columns: 1fr;
+  }
+
+  .how-detail-copy {
+    padding: 32px 24px;
+    border-right: 0;
+  }
+
+  .how-agent-graph {
+    min-height: 260px;
+  }
+}
+
+@media (max-width: 640px) {
+  .how {
+    padding: 78px 0;
+  }
+
+  .how-inner {
+    width: min(100% - 40px, 1520px);
+  }
+
+  .how-step-trigger {
+    min-height: auto;
+    grid-template-columns: 48px 1fr 40px;
+    padding: 22px 16px;
+  }
+
+  .how-step-icon {
+    display: none;
+  }
+
+  .how-step-n {
+    font-size: 34px;
+  }
+
+  .how-step-copy small {
+    font-size: 14px;
+  }
+}
