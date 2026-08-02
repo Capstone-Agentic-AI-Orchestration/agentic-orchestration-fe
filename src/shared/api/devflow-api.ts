@@ -314,6 +314,15 @@ export interface DevFlowProjectKickoff {
   updatedAt: string;
 }
 
+export type DevFlowClientStatus = "PROSPECT" | "ACTIVE" | "ARCHIVED";
+
+/** The client a project belongs to. Null means the project is unassigned. */
+export interface DevFlowProjectClientRef {
+  id: string;
+  name: string;
+  status: DevFlowClientStatus;
+}
+
 export interface DevFlowProjectSummary {
   id: string;
   companyName: string;
@@ -321,6 +330,11 @@ export interface DevFlowProjectSummary {
   createdAt: string;
   updatedAt: string;
   groupId: string | null;
+  /**
+   * Null for projects created before clients existed, or created without one. The console
+   * surfaces these as "unassigned" rather than hiding them.
+   */
+  client: DevFlowProjectClientRef | null;
   lifecycle: DevFlowProjectLifecycle;
 }
 
@@ -836,6 +850,13 @@ export interface DevFlowMessage {
   author: DevFlowProfile | null;
 }
 
+export interface DevFlowDocumentExtraction {
+  status: "PENDING" | "EXTRACTING" | "READY" | "FAILED";
+  error: string | null;
+  attempts: number;
+  updatedAt: string;
+}
+
 export interface DevFlowCollaborationDocument {
   id: string;
   projectId: string;
@@ -844,6 +865,9 @@ export interface DevFlowCollaborationDocument {
   description: string | null;
   fileName: string | null;
   externalUrl: string | null;
+  mimeType: string | null;
+  sizeBytes: number | null;
+  sha256: string | null;
   kind: DevFlowCollaborationDocumentKind;
   status: DevFlowCollaborationDocumentStatus;
   clientVisible: boolean;
@@ -855,6 +879,8 @@ export interface DevFlowCollaborationDocument {
   updatedAt: string;
   uploadedBy: DevFlowProfile | null;
   reviewedBy: DevFlowProfile | null;
+  /** Null for link-only records, which have no stored file to extract text from. */
+  extraction: DevFlowDocumentExtraction | null;
 }
 
 export type DevFlowProjectIntakeStatus = "DRAFT" | "SUBMITTED" | "CHANGES_REQUESTED" | "READY" | "LOCKED" | "SUPERSEDED";
@@ -914,17 +940,12 @@ export interface DevFlowIntakeComment {
   createdBy: Pick<DevFlowProfile, "id" | "fullName" | "email" | "role"> | null;
 }
 
-export interface DevFlowIntakeDocument extends DevFlowCollaborationDocument {
-  mimeType: string | null;
-  sizeBytes: number | null;
-  sha256: string | null;
-  extraction: {
-    status: "PENDING" | "EXTRACTING" | "READY" | "FAILED";
-    error: string | null;
-    attempts: number;
-    updatedAt: string;
-  } | null;
-}
+/**
+ * The intake route returns the same rows as the collaboration route but without the uploader and
+ * reviewer relations, so treat those as possibly absent when reading a document from intake.
+ */
+export type DevFlowIntakeDocument = Omit<DevFlowCollaborationDocument, "uploadedBy" | "reviewedBy"> &
+  Partial<Pick<DevFlowCollaborationDocument, "uploadedBy" | "reviewedBy">>;
 
 export interface DevFlowProjectIntake {
   id: string;
@@ -1039,6 +1060,11 @@ export interface CreateDevFlowProjectInput {
   companyName: string;
   brief: string;
   stackKey: string;
+  /**
+   * Client company this project is for. Optional so creation is never blocked, but a project
+   * without one is flagged as unassigned until it is linked.
+   */
+  clientId?: string;
   designGuidance?: DevFlowDesignGuidance;
   groupId?: string;
   repositoryName?: string;
@@ -1153,6 +1179,13 @@ export interface CreateDevFlowInquiryInput {
 
 export interface ReviewDevFlowInquiryInput {
   reviewNote?: string;
+  /**
+   * Existing client to file an approved lead under. Omitted means resolve-or-create by company
+   * name — the console suggests a match and the PM confirms it, rather than merging silently.
+   */
+  clientId?: string;
+  /** Name to create the client under when no existing client is chosen. */
+  clientName?: string;
 }
 
 export interface UpdateDevFlowProjectInput {
@@ -2445,14 +2478,29 @@ export function lockDevFlowProjectIntake(
 export function uploadDevFlowProjectIntakeDocument(
   projectId: string,
   file: File,
-  options: { title?: string; description?: string; kind?: DevFlowCollaborationDocumentKind } = {},
-): Promise<{ document: DevFlowIntakeDocument }> {
+  options: {
+    title?: string;
+    description?: string;
+    kind?: DevFlowCollaborationDocumentKind;
+    /**
+     * Whether the client can see this document back in their own document list.
+     * The API defaults it to false for staff uploads, so a PM uploading a file the
+     * client sent must opt in explicitly or the client cannot confirm we received it.
+     */
+    clientVisible?: boolean;
+  } = {},
+): Promise<{ document: DevFlowIntakeDocument; duplicate?: boolean }> {
   const formData = new FormData();
   formData.set("file", file);
   if (options.title) formData.set("title", options.title);
   if (options.description) formData.set("description", options.description);
   if (options.kind) formData.set("kind", options.kind);
-  return requestFormData<{ document: DevFlowIntakeDocument }>(`/projects/${projectId}/documents/upload`, formData);
+  // The API reads this as the string "true"; a boolean would serialise to "false" and read as opt-out.
+  if (options.clientVisible) formData.set("clientVisible", "true");
+  return requestFormData<{ document: DevFlowIntakeDocument; duplicate?: boolean }>(
+    `/projects/${projectId}/documents/upload`,
+    formData,
+  );
 }
 
 export function retryDevFlowProjectIntakeDocumentExtraction(
@@ -2462,19 +2510,212 @@ export function retryDevFlowProjectIntakeDocumentExtraction(
   return request<{ document: DevFlowIntakeDocument }>(`/projects/${projectId}/documents/${documentId}/retry-extraction`, { method: "POST" });
 }
 
-export async function downloadDevFlowProjectIntakeTemplate(projectId = "template"): Promise<void> {
+/**
+ * Downloads the requirements worksheet. Both formats are rendered server-side from one
+ * definition, so neither can drift from the intake form.
+ *
+ * "printable" is HTML rather than DOCX on purpose: Word and Google Docs open it directly and any
+ * browser prints it to PDF, with no document-generation dependency to keep in step.
+ */
+export async function downloadDevFlowProjectIntakeTemplate(
+  projectId = "template",
+  format: "markdown" | "printable" = "markdown",
+): Promise<void> {
   const {
     data: { session },
   } = await supabase.auth.getSession();
-  const response = await fetch(`${API_URL}/projects/${projectId}/intake/template`, {
+  const query = format === "printable" ? "?format=html" : "";
+  const response = await fetch(`${API_URL}/projects/${projectId}/intake/template${query}`, {
     headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : undefined,
   });
-  if (!response.ok) throw new Error("Unable to download the intake template.");
+  if (!response.ok) throw new Error("Unable to download the requirements worksheet.");
   const blob = await response.blob();
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = "Client-Project-Intake-Template.md";
+  anchor.download = `project-requirements-worksheet.${format === "printable" ? "html" : "md"}`;
   anchor.click();
   URL.revokeObjectURL(url);
+}
+
+// ─── Clients ──────────────────────────────────────────────────────────────────
+// A client is an external company. Distinct from a Group, which is an internal delivery team.
+
+export interface DevFlowClient {
+  id: string;
+  name: string;
+  status: DevFlowClientStatus;
+  primaryContactName: string | null;
+  primaryContactEmail: string | null;
+  notes: string | null;
+  createdById: string | null;
+  createdAt: string;
+  updatedAt: string;
+  createdBy?: DevFlowProfile | null;
+  _count?: { projects: number; contacts: number };
+}
+
+export interface DevFlowClientListItem {
+  id: string;
+  name: string;
+  status: DevFlowClientStatus;
+  primaryContactName: string | null;
+  primaryContactEmail: string | null;
+  projectCount: number;
+  contactCount: number;
+  lastProjectActivityAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DevFlowClientListResponse {
+  clients: DevFlowClientListItem[];
+  /** Projects with no client, surfaced so they are visible rather than merely absent. */
+  unassignedProjectCount: number;
+}
+
+export interface DevFlowClientProject {
+  id: string;
+  companyName: string;
+  status: DevFlowProjectStatus;
+  stackKey: string;
+  repoUrl: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DevFlowClientDocumentGroup {
+  projectId: string;
+  projectName: string;
+  documents: DevFlowCollaborationDocument[];
+}
+
+export interface DevFlowClientDocuments {
+  groups: DevFlowClientDocumentGroup[];
+  totals: { documents: number; readable: number; files: number };
+}
+
+export interface DevFlowClientContact {
+  id: string;
+  clientId: string;
+  profileId: string;
+  isPrimary: boolean;
+  createdAt: string;
+  profile: DevFlowProfile;
+  /**
+   * Projects this contact can actually open. Being listed as a contact is a directory fact and
+   * grants nothing on its own — access still comes from project membership.
+   */
+  accessibleProjects: Array<{ id: string; name: string }>;
+  hasProjectAccess: boolean;
+}
+
+export interface CreateDevFlowClientInput {
+  name: string;
+  status?: DevFlowClientStatus;
+  primaryContactName?: string;
+  primaryContactEmail?: string;
+  notes?: string;
+}
+
+export interface UpdateDevFlowClientInput extends Partial<CreateDevFlowClientInput> {}
+
+export function getDevFlowClients(search?: string): Promise<DevFlowClientListResponse> {
+  const query = search?.trim() ? `?search=${encodeURIComponent(search.trim())}` : "";
+  return request<DevFlowClientListResponse>(`/clients${query}`);
+}
+
+export function getDevFlowClient(clientId: string): Promise<DevFlowClient> {
+  return request<DevFlowClient>(`/clients/${clientId}`);
+}
+
+export function createDevFlowClient(input: CreateDevFlowClientInput): Promise<DevFlowClient> {
+  return request<DevFlowClient>("/clients", { method: "POST", body: JSON.stringify(input) });
+}
+
+export function updateDevFlowClient(
+  clientId: string,
+  input: UpdateDevFlowClientInput,
+): Promise<DevFlowClient> {
+  return request<DevFlowClient>(`/clients/${clientId}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function getDevFlowClientProjects(clientId: string): Promise<DevFlowClientProject[]> {
+  return request<DevFlowClientProject[]>(`/clients/${clientId}/projects`);
+}
+
+export function getDevFlowClientDocuments(clientId: string): Promise<DevFlowClientDocuments> {
+  return request<DevFlowClientDocuments>(`/clients/${clientId}/documents`);
+}
+
+export function getDevFlowClientContacts(clientId: string): Promise<DevFlowClientContact[]> {
+  return request<DevFlowClientContact[]>(`/clients/${clientId}/contacts`);
+}
+
+export function addDevFlowClientContact(
+  clientId: string,
+  input: { profileId: string; isPrimary?: boolean },
+): Promise<DevFlowClientContact> {
+  return request<DevFlowClientContact>(`/clients/${clientId}/contacts`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function removeDevFlowClientContact(
+  clientId: string,
+  contactId: string,
+): Promise<{ removed: boolean }> {
+  return request<{ removed: boolean }>(`/clients/${clientId}/contacts/${contactId}`, {
+    method: "DELETE",
+  });
+}
+
+export function getDevFlowUnassignedProjects(): Promise<DevFlowClientProject[]> {
+  return request<DevFlowClientProject[]>("/clients/unassigned-projects");
+}
+
+export function getDevFlowClientContactCandidates(search?: string): Promise<DevFlowProfile[]> {
+  const query = search?.trim() ? `?search=${encodeURIComponent(search.trim())}` : "";
+  return request<DevFlowProfile[]>(`/clients/contact-candidates${query}`);
+}
+
+/** Links a project to a client, or clears the link when `clientId` is null. */
+export function setDevFlowProjectClient(
+  projectId: string,
+  clientId: string | null,
+): Promise<{ id: string; clientId: string | null; companyName: string }> {
+  return request<{ id: string; clientId: string | null; companyName: string }>(
+    `/clients/projects/${projectId}/client`,
+    { method: "PATCH", body: JSON.stringify({ clientId }) },
+  );
+}
+
+export interface DevFlowClientSuggestion {
+  id: string;
+  name: string;
+  status: DevFlowClientStatus;
+  reason: string;
+}
+
+export interface DevFlowInquiryClientSuggestions {
+  suggestions: DevFlowClientSuggestion[];
+  /**
+   * Best client name available without asking a human, or null when one must be typed.
+   *
+   * The marketing call-to-action collects only an email and a brief, so it sends a placeholder
+   * company. This is derived from the contact's email domain in that case.
+   */
+  suggestedName: string | null;
+  /** True when the company on the inquiry is a stand-in like "TBD" rather than a real name. */
+  companyNameIsPlaceholder: boolean;
+}
+
+export function getDevFlowInquiryClientSuggestions(
+  inquiryId: string,
+): Promise<DevFlowInquiryClientSuggestions> {
+  return request<DevFlowInquiryClientSuggestions>(`/inquiries/${inquiryId}/client-suggestions`);
 }

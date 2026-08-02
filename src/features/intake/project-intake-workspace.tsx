@@ -17,6 +17,7 @@ import {
   uploadDevFlowProjectIntakeDocument,
 } from "@/shared/api/devflow-api";
 import { useSelectedDevFlowProject } from "@/shared/projects/selected-project-context";
+import { PMProjectSubnav } from "@/features/pm/projects/components/pm-project-subnav";
 
 type IntakeRole = "client" | "pm";
 type IntakeStep = "overview" | "roles" | "features" | "workflows" | "data" | "delivery" | "documents" | "review";
@@ -52,6 +53,25 @@ function statusTone(status: string) {
   if (status === "CHANGES_REQUESTED") return "amber";
   if (status === "SUBMITTED") return "purple";
   return "gray";
+}
+
+type ExtractionStatus = "PENDING" | "EXTRACTING" | "READY" | "FAILED" | undefined;
+
+function extractionTone(status: ExtractionStatus) {
+  if (status === "READY") return "green";
+  if (status === "FAILED") return "red";
+  return "amber";
+}
+
+/**
+ * Raw enum names read as internal jargon in the UI. Only a READY document contributes text to
+ * the agent context package, so the label says what the status actually means for the build.
+ */
+function extractionLabel(status: ExtractionStatus) {
+  if (status === "READY") return "Text extracted";
+  if (status === "FAILED") return "Extraction failed";
+  if (status === "EXTRACTING") return "Extracting";
+  return "Queued";
 }
 
 function SectionGuide({ step }: { step: (typeof STEPS)[number] }) {
@@ -151,6 +171,7 @@ export function ProjectIntakeWorkspace({ projectId, role }: { projectId: string;
   const [dirty, setDirty] = useState(false);
   const [error, setError] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [uploadNotice, setUploadNotice] = useState("");
   const [confirmedAccurate, setConfirmedAccurate] = useState(false);
 
   const updateResponse = (next: DevFlowProjectIntakeResponse) => {
@@ -173,7 +194,16 @@ export function ProjectIntakeWorkspace({ projectId, role }: { projectId: string;
 
   useEffect(() => { void refresh(); }, [projectId]);
 
+  // The intake payload stays client-owned: a PM must never silently rewrite what the client
+  // stated they want. Uploading a file the client sent is a different act from authoring their
+  // requirements, so the two permissions are deliberately separate rather than one `editable`.
   const editable = role === "client" && !!response && ["DRAFT", "CHANGES_REQUESTED"].includes(response.intake.status);
+  // Clients attach files while their intake is open; PMs attach on the client's behalf at any
+  // point, because documents often arrive by email after the intake has already been submitted.
+  const canUploadDocuments = !!response && (editable || role === "pm");
+  // A document added after lock is stored, but the locked snapshot the agents read is frozen,
+  // so it cannot influence orchestration until a new intake version is locked.
+  const uploadsBypassLockedSnapshot = role === "pm" && response?.intake.status === "LOCKED";
   const updatePayload = (next: DevFlowClientIntakePayload) => { setPayload(next); setDirty(true); };
   const save = async () => {
     if (!editable && response?.intake.status !== "LOCKED") return;
@@ -196,10 +226,22 @@ export function ProjectIntakeWorkspace({ projectId, role }: { projectId: string;
 
   const upload = async (file: File | null) => {
     if (!file) return;
-    setUploading(true); setError("");
+    setUploading(true); setError(""); setUploadNotice("");
     try {
-      await uploadDevFlowProjectIntakeDocument(projectId, file, { kind: "REQUIREMENT" });
+      const result = await uploadDevFlowProjectIntakeDocument(projectId, file, {
+        kind: "REQUIREMENT",
+        // A client-uploaded file is already theirs; a PM uploading on their behalf must opt in
+        // so the client sees the file listed back and knows it arrived.
+        clientVisible: true,
+        description: role === "pm" ? "Uploaded by the project manager on behalf of the client." : undefined,
+      });
+      setUploadNotice(
+        result.duplicate
+          ? `"${result.document.title}" is already attached to this project, so it was not added again.`
+          : `"${result.document.title}" uploaded. Text extraction runs automatically.`,
+      );
       await refresh();
+      // Extraction is asynchronous, so re-read shortly after to pick up the terminal status.
       window.setTimeout(() => void refresh(), 1500);
     } catch (nextError) { setError(nextError instanceof Error ? nextError.message : String(nextError)); }
     finally { setUploading(false); }
@@ -280,12 +322,108 @@ export function ProjectIntakeWorkspace({ projectId, role }: { projectId: string;
     <ListField disabled={!editable} label="Out of scope" helper="Name items that are explicitly excluded from this release." values={payload.experienceAndDelivery.outOfScope} onChange={(outOfScope) => setDelivery("outOfScope", outOfScope)} />
     <ListField disabled={!editable} label="Future phase" helper="Name valuable work that should not delay this first release." values={payload.experienceAndDelivery.futurePhase} onChange={(futurePhase) => setDelivery("futurePhase", futurePhase)} />
   </>;
-  else if (stepId === "documents") body = <>
-    <Card style={{ padding: 16, marginBottom: 12, borderColor: "rgba(245, 158, 11, .35)" }}><strong>Confidentiality notice</strong><p style={{ color: "var(--text-2)", fontSize: 13, lineHeight: 1.5 }}>Do not upload passwords, API keys, production credentials, private keys, or unnecessary personal data. Files are checked before storage. Supported: PDF, DOCX, XLSX, TXT, PNG, JPG, JPEG; max 25 MB each and 100 MB / 20 files per intake.</p></Card>
-    {editable && <Field label="Upload a supporting document" helper="Upload process maps, examples, brand material, or existing requirements. Extraction runs automatically."><Input type="file" accept=".pdf,.docx,.xlsx,.txt,.png,.jpg,.jpeg" disabled={uploading} onChange={(event) => void upload(event.target.files?.[0] ?? null)} /></Field>}
-    <label style={{ display: "block", margin: "14px 0", color: "var(--text-2)", fontSize: 13 }}><input disabled={!editable} type="checkbox" checked={!!payload.experienceAndDelivery.documentsNotApplicable} onChange={(event) => setDelivery("documentsNotApplicable", event.target.checked)} /> No supporting documents apply to this project</label>
-    <div style={{ display: "grid", gap: 10 }}>{docs.length ? docs.map((document) => <Card key={document.id} style={{ padding: 14 }}><div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}><div><strong>{document.title}</strong><div style={{ color: "var(--text-3)", fontSize: 12 }}>{document.fileName} · {document.sizeBytes ? `${Math.ceil(document.sizeBytes / 1024)} KB` : ""}</div>{document.extraction?.error && <div className="field-error">{document.extraction.error}</div>}</div><Badge tone={document.extraction?.status === "READY" ? "green" : document.extraction?.status === "FAILED" ? "red" : "amber"}>{document.extraction?.status ?? "PENDING"}</Badge></div>{document.extraction?.status === "FAILED" && <Button variant="secondary" size="sm" style={{ marginTop: 10 }} onClick={async () => { await retryDevFlowProjectIntakeDocumentExtraction(projectId, document.id); await refresh(); }}>Retry extraction</Button>}</Card>) : <Card style={{ padding: 18, color: "var(--text-2)" }}>No files uploaded. Mark this section not applicable if none exist.</Card>}</div>
-  </>;
+  else if (stepId === "documents") body = (
+    <div className="intake-documents-step">
+      <Card style={{ padding: 16, borderColor: "rgba(245, 158, 11, .35)" }}>
+        <strong>Confidentiality notice</strong>
+        <p style={{ color: "var(--text-2)", fontSize: 13, lineHeight: 1.5, margin: "6px 0 0" }}>
+          Do not upload passwords, API keys, production credentials, private keys, or unnecessary
+          personal data. Supported: PDF, DOCX, XLSX, TXT, PNG, JPG, JPEG. Maximum 25 MB per file,
+          and 100 MB across at most 20 files per project.
+        </p>
+      </Card>
+
+      {canUploadDocuments ? (
+        <Card style={{ padding: 18 }}>
+          <Field
+            label={role === "pm" ? "Upload a document on the client's behalf" : "Upload a supporting document"}
+            helper={
+              role === "pm"
+                ? "Attach files the client sent you. They are marked client-visible so the client can confirm receipt, and text extraction runs automatically."
+                : "Upload process maps, examples, brand material, or existing requirements. Text extraction runs automatically."
+            }
+          >
+            <Input
+              type="file"
+              accept=".pdf,.docx,.xlsx,.txt,.png,.jpg,.jpeg"
+              disabled={uploading}
+              onChange={(event) => {
+                void upload(event.target.files?.[0] ?? null);
+                // Clear the input so re-selecting the same file after a failure still fires onChange.
+                event.target.value = "";
+              }}
+            />
+          </Field>
+          {uploading && <div style={{ color: "var(--text-3)", fontSize: 12.5, marginTop: 10 }}>Uploading and queueing extraction…</div>}
+          {uploadNotice && <div style={{ color: "#6EE7B7", fontSize: 12.5, marginTop: 10 }}>{uploadNotice}</div>}
+          {uploadsBypassLockedSnapshot && (
+            <div style={{ color: "#FCD34D", fontSize: 12.5, marginTop: 10, lineHeight: 1.5 }}>
+              This intake is locked. The file will be stored on the project, but the agents read a
+              frozen snapshot — lock a new intake version to include it in orchestration.
+            </div>
+          )}
+        </Card>
+      ) : (
+        <Card style={{ padding: 18, color: "var(--text-2)", fontSize: 13, lineHeight: 1.55 }}>
+          Uploads are closed while the intake is {response.intake.status.replaceAll("_", " ").toLowerCase()}.
+          Ask your project manager to request changes if you need to attach another file.
+        </Card>
+      )}
+
+      <label className="intake-na-toggle">
+        <input
+          disabled={!editable}
+          type="checkbox"
+          checked={!!payload.experienceAndDelivery.documentsNotApplicable}
+          onChange={(event) => setDelivery("documentsNotApplicable", event.target.checked)}
+        />
+        <span>No supporting documents apply to this project</span>
+      </label>
+
+      <div className="intake-documents-list">
+        {docs.length ? (
+          docs.map((document) => (
+            <Card key={document.id} style={{ padding: 16 }}>
+              <div className="intake-document-row">
+                <div className="intake-document-main">
+                  <strong>{document.title}</strong>
+                  <div style={{ color: "var(--text-3)", fontSize: 12, marginTop: 3 }}>
+                    {[document.fileName, document.sizeBytes ? `${Math.ceil(document.sizeBytes / 1024)} KB` : null]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </div>
+                  {document.extraction?.error && (
+                    <div className="field-error" style={{ marginTop: 6 }}>{document.extraction.error}</div>
+                  )}
+                </div>
+                <Badge tone={extractionTone(document.extraction?.status)}>
+                  {extractionLabel(document.extraction?.status)}
+                </Badge>
+              </div>
+              {document.extraction?.status === "FAILED" && role !== "client" && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  style={{ marginTop: 12 }}
+                  onClick={async () => {
+                    await retryDevFlowProjectIntakeDocumentExtraction(projectId, document.id);
+                    await refresh();
+                  }}
+                >
+                  Retry extraction
+                </Button>
+              )}
+            </Card>
+          ))
+        ) : (
+          <Card style={{ padding: 20, color: "var(--text-2)", fontSize: 13 }}>
+            No files uploaded yet. If the project genuinely has no supporting documents, tick the
+            box above so the intake can be submitted.
+          </Card>
+        )}
+      </div>
+    </div>
+  );
   else body = <>
     <Card style={{ padding: 18, marginBottom: 14 }}><strong>Submission checks</strong><p style={{ color: "var(--text-2)", fontSize: 13, marginBottom: 0 }}>Requirements should be specific, testable, scoped, and linked to a user or business outcome. The PM can request targeted changes before locking.</p></Card>
     <Card style={{ padding: 18, marginBottom: 14 }}><strong>Generated summary</strong><div style={{ display: "grid", gap: 8, color: "var(--text-2)", fontSize: 13, marginTop: 10 }}><div><strong>Business goal:</strong> {payload.overview.businessGoal || "Not yet provided"}</div><div><strong>Roles:</strong> {payload.roles.map((item) => item.name).filter(Boolean).join(", ") || "Not yet provided"}</div><div><strong>Must-haves:</strong> {payload.features.filter((item) => item.priority === "MUST_HAVE").map((item) => item.title).filter(Boolean).join(", ") || "Not yet provided"}</div><div><strong>Workflows:</strong> {payload.workflows.map((item) => item.title).filter(Boolean).join(", ") || "Not yet provided"}</div><div><strong>Out of scope:</strong> {payload.experienceAndDelivery.outOfScope.join(", ") || "None recorded"}</div></div></Card>
@@ -294,14 +432,47 @@ export function ProjectIntakeWorkspace({ projectId, role }: { projectId: string;
     <CommentList comments={response.intake.comments} />
   </>;
 
-  return <div style={{ display: "grid", gap: 18 }}>
+  const intakeContent = <div className="pm-intake-workspace" style={{ display: "grid", gap: 18 }}>
     <Card glass style={{ padding: 20 }}><div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "start", flexWrap: "wrap" }}><div><div style={{ fontSize: 12, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: ".08em" }}>Client requirements intake · {progress}</div><h1 style={{ fontSize: 24, margin: "5px 0 4px" }}>{payload.overview.projectName || "Project intake"}</h1><div style={{ color: "var(--text-2)", fontSize: 13 }}>Autosaves while you work. Locked versions are read-only and used as agent evidence.</div></div><div style={{ display: "flex", gap: 8, alignItems: "center" }}><Badge tone={statusTone(response.intake.status)}>{response.intake.status.replaceAll("_", " ")}</Badge>{dirty && <span style={{ color: "var(--text-3)", fontSize: 12 }}>Saving…</span>}</div></div></Card>
     <div style={{ display: "grid", gridTemplateColumns: role === "pm" ? "minmax(0, 1fr) 330px" : "minmax(190px, 240px) minmax(0, 1fr)", gap: 18, alignItems: "start" }} className="intake-workspace-grid">
       {role === "client" && <Card glass style={{ padding: 10, position: "sticky", top: 16 }}>{STEPS.map((step) => <button type="button" key={step.id} onClick={() => setStepId(step.id)} style={{ display: "block", width: "100%", textAlign: "left", border: 0, borderRadius: 8, padding: "10px 11px", marginBottom: 3, background: step.id === stepId ? "rgba(74, 112, 255, .18)" : "transparent", color: step.id === stepId ? "white" : "var(--text-2)", cursor: "pointer", fontWeight: step.id === stepId ? 650 : 500 }}>{STEPS.findIndex((item) => item.id === step.id) + 1}. {step.label}</button>)}</Card>}
-      <Card style={{ padding: 22 }}><div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", marginBottom: 14 }}><div><h2 style={{ fontSize: 18, margin: 0 }}>{current.label}</h2><div style={{ fontSize: 12, color: "var(--text-3)", marginTop: 4 }}>Clear answers reduce rework and make the scope easier to approve.</div></div>{role === "client" && <Button variant="ghost" size="sm" disabled={!editable || saving} onClick={() => void save()}>Save now</Button>}</div>{role === "pm" && <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>{STEPS.map((step) => <Button key={step.id} size="sm" variant={step.id === stepId ? "primary" : "ghost"} onClick={() => setStepId(step.id)}>{step.label}</Button>)}</div>}<SectionGuide step={current} /><CommentList comments={response.intake.comments} section={stepId} />{body}{error && <div className="field-error" style={{ marginTop: 14 }}>{error}</div>}<div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap", marginTop: 22, paddingTop: 16, borderTop: "1px solid var(--border, rgba(255,255,255,.12))" }}><div style={{ display: "flex", gap: 8 }}>{STEPS.findIndex((step) => step.id === stepId) > 0 && <Button variant="ghost" onClick={() => setStepId(STEPS[STEPS.findIndex((step) => step.id === stepId) - 1].id)}>Back</Button>}{role === "client" && response.intake.status === "LOCKED" && <Button onClick={() => void save()}>Start a new intake version</Button>}</div>{stepId !== "review" ? <Button onClick={() => setStepId(STEPS[Math.min(STEPS.length - 1, STEPS.findIndex((step) => step.id === stepId) + 1)].id)}>Continue</Button> : role === "client" && <Button disabled={!editable || saving || !response.readiness.readyForSubmission || !confirmedAccurate} onClick={() => void submit()}>Confirm accuracy and submit to PM</Button>}</div>{stepId === "documents" && <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}><Button variant="ghost" size="sm" onClick={() => void downloadDevFlowProjectIntakeTemplate()}>Download Markdown template</Button><a className="btn btn-ghost btn-sm" href="/templates/Client-Project-Intake-Template.docx" download>Download DOCX template</a></div>}</Card>
+      <Card style={{ padding: 22 }}><div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", marginBottom: 14 }}><div><h2 style={{ fontSize: 18, margin: 0 }}>{current.label}</h2><div style={{ fontSize: 12, color: "var(--text-3)", marginTop: 4 }}>Clear answers reduce rework and make the scope easier to approve.</div></div>{role === "client" && <Button variant="ghost" size="sm" disabled={!editable || saving} onClick={() => void save()}>Save now</Button>}</div>{role === "pm" && <div className="pm-intake-step-tabs">{STEPS.map((step) => <Button key={step.id} size="sm" variant={step.id === stepId ? "primary" : "ghost"} onClick={() => setStepId(step.id)}>{step.label}</Button>)}</div>}<SectionGuide step={current} /><CommentList comments={response.intake.comments} section={stepId} />{body}{error && <div className="field-error" style={{ marginTop: 14 }}>{error}</div>}<div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap", marginTop: 22, paddingTop: 16, borderTop: "1px solid var(--border, rgba(255,255,255,.12))" }}><div style={{ display: "flex", gap: 8 }}>{STEPS.findIndex((step) => step.id === stepId) > 0 && <Button variant="ghost" onClick={() => setStepId(STEPS[STEPS.findIndex((step) => step.id === stepId) - 1].id)}>Back</Button>}{role === "client" && response.intake.status === "LOCKED" && <Button onClick={() => void save()}>Start a new intake version</Button>}</div>{stepId !== "review" ? <Button onClick={() => setStepId(STEPS[Math.min(STEPS.length - 1, STEPS.findIndex((step) => step.id === stepId) + 1)].id)}>Continue</Button> : role === "client" && <Button disabled={!editable || saving || !response.readiness.readyForSubmission || !confirmedAccurate} onClick={() => void submit()}>Confirm accuracy and submit to PM</Button>}</div>{stepId === "documents" && (
+        <div className="intake-worksheet-downloads">
+          <div className="intake-worksheet-copy">
+            <strong>Prefer to draft this offline?</strong>
+            <span>
+              Download the requirements worksheet, fill it in with your team, then copy your
+              answers into this form. The form is what your delivery team works from.
+            </span>
+          </div>
+          <div className="intake-worksheet-actions">
+            <Button variant="ghost" size="sm" onClick={() => void downloadDevFlowProjectIntakeTemplate(projectId, "printable")}>
+              Printable worksheet
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => void downloadDevFlowProjectIntakeTemplate(projectId, "markdown")}>
+              Markdown worksheet
+            </Button>
+          </div>
+        </div>
+      )}</Card>
       {role === "pm" && <PMReviewPanel projectId={projectId} response={response} onResult={updateResponse} />}
     </div>
   </div>;
+
+  if (role !== "pm") return intakeContent;
+
+  return (
+    <div className="pm-project-workspace" data-screen-label={`PM - Project Intake - ${projectId}`}>
+      <PMProjectSubnav
+        projectId={projectId}
+        projectName={payload.overview.projectName || "Project intake"}
+        activeItem="intake"
+      />
+      <section className="pm-project-workspace-content pm-project-intake-content">
+        {intakeContent}
+      </section>
+    </div>
+  );
 }
 
 export function ClientProjectIntakeView() {
