@@ -9,59 +9,91 @@ import type { BackendKickoffPanelViewModel } from "../view-model/use-kickoff-pan
 
 export function BackendKickoffPanelView({ vm }: { vm: BackendKickoffPanelViewModel }) {
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 360px", gap: 18 }}>
-      <Card style={{ padding: 22 }}>
-        <div className="row" style={{ justifyContent: "space-between", gap: 14, alignItems: "flex-start", flexWrap: "wrap" }}>
+    <div className="pm-tab-layout pm-tab-layout--aside">
+      <Card className="pm-tab-panel pm-tab-panel--padded">
+        <div className="pm-tab-header">
           <SectionTitle title="Project kickoff" subtitle={`${vm.completedChecks} of ${vm.totalChecks} checks complete`} />
           <Badge tone={vm.statusTone}>{vm.statusLabel}</Badge>
         </div>
-        {vm.kickoffError && <div style={{ color: "#FCA5A5", fontSize: 12.5, marginTop: 10 }}>{compactBackendError(vm.kickoffError)}</div>}
-        {vm.error && <div style={{ color: "#FCA5A5", fontSize: 12.5, marginTop: 10 }}>{compactBackendError(vm.error)}</div>}
+        {vm.kickoffError && <div className="pm-tab-message pm-tab-message--danger" style={{ marginTop: 14 }}>{compactBackendError(vm.kickoffError)}</div>}
+        {vm.error && <div className="pm-tab-message pm-tab-message--danger" style={{ marginTop: 14 }}>{compactBackendError(vm.error)}</div>}
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12, marginTop: 16 }}>
-          {BACKEND_KICKOFF_TEXT_FIELDS.map((field) => (
-            <Field key={field.key} label={field.label}>
-              <Textarea
-                rows={4}
-                value={vm.form[field.key]}
-                onChange={(event) => vm.actions.setValue(field.key, event.target.value)}
-              />
-            </Field>
-          ))}
+        <div className="pm-tab-section">
+          <div className="pm-tab-section-heading">
+            <h4>Kickoff details</h4>
+            <p>Define what will be delivered and what the team needs before work starts.</p>
+          </div>
+          <div className="pm-tab-form-grid">
+            {BACKEND_KICKOFF_TEXT_FIELDS.map((field) => (
+              <Field key={field.key} label={field.label}>
+                <Textarea
+                  rows={4}
+                  value={vm.form[field.key]}
+                  onChange={(event) => vm.actions.setValue(field.key, event.target.value)}
+                />
+              </Field>
+            ))}
+          </div>
         </div>
 
-        <div style={{ marginTop: 18, display: "grid", gap: 10 }}>
-          {vm.checklist.map((item) => (
-            <label key={item.key} className="row" style={{ gap: 12, alignItems: "flex-start", padding: "11px 12px", border: "1px solid var(--border)", borderRadius: 8, background: item.checked ? "rgba(16,185,129,.08)" : "rgba(8,14,32,.35)", cursor: "pointer" }}>
-              <input
-                type="checkbox"
-                checked={item.checked}
-                onChange={(event) => vm.actions.setValue(item.key, event.target.checked)}
-                style={{ marginTop: 2, width: 16, height: 16 }}
-              />
-              <span style={{ minWidth: 0, flex: 1 }}>
-                <span style={{ display: "block", color: "white", fontSize: 13, fontWeight: 700 }}>{item.label}</span>
-                <span style={{ display: "block", color: "var(--text-3)", fontSize: 12, marginTop: 3, lineHeight: 1.45 }}>{item.body}</span>
-              </span>
-            </label>
-          ))}
+        <div className="pm-tab-section">
+          <div className="pm-tab-section-heading">
+            <h4>Readiness checklist</h4>
+            <p>Complete each requirement before generating execution work.</p>
+          </div>
+          <div className="pm-tab-checklist">
+            {vm.checklist.map((item) => (
+              <label
+                key={item.key}
+                className="pm-tab-checklist-item"
+                data-checked={item.checked}
+                data-blocked={item.blockedReason ? true : undefined}
+              >
+                <input
+                  type="checkbox"
+                  checked={item.checked}
+                  // A blocked check is one the project cannot honestly claim yet, so ticking it
+                  // is refused rather than merely discouraged. Already-ticked items stay
+                  // untickable-off-and-on but remain visible with their reason.
+                  disabled={Boolean(item.blockedReason) && !item.checked}
+                  onChange={(event) => vm.actions.setValue(item.key, event.target.checked)}
+                />
+                <span style={{ minWidth: 0, flex: 1 }}>
+                  <strong>{item.label}</strong>
+                  <span>{item.body}</span>
+                  {item.blockedReason && (
+                    <span className="pm-tab-checklist-blocked">{item.blockedReason}</span>
+                  )}
+                </span>
+              </label>
+            ))}
+          </div>
         </div>
 
-        <div className="row gap-2" style={{ marginTop: 16, flexWrap: "wrap" }}>
+        <div className="pm-tab-actions" style={{ marginTop: 18 }}>
           <Button variant="primary" size="sm" icon={<IconCheckCircle size={13} />} onClick={vm.actions.saveKickoff} disabled={vm.saving}>
             {vm.saving ? "Saving..." : "Save kickoff"}
           </Button>
+        </div>
+
+        <div className="pm-tab-section">
+          <div className="pm-tab-section-heading">
+            <h4>After kickoff</h4>
+            <p>Create the initial delivery records after the kickoff details are saved.</p>
+          </div>
+          <div className="pm-tab-actions">
           <Button variant="secondary" size="sm" icon={<IconClipboard size={13} />} onClick={vm.actions.createStarterTasks} disabled={vm.action === "tasks" || vm.loading}>
             {vm.action === "tasks" ? "Creating..." : "Create starter tasks"}
           </Button>
           <Button variant="secondary" size="sm" icon={<IconWorkflow size={13} />} onClick={vm.actions.createStarterWorkOrders} disabled={vm.action === "work-orders" || vm.loading}>
             {vm.action === "work-orders" ? "Creating..." : "Create starter work orders"}
           </Button>
+          </div>
         </div>
       </Card>
 
-      <div style={{ display: "grid", gap: 18, alignContent: "start" }}>
-        <Card style={{ padding: 20 }}>
+      <aside className="pm-tab-aside">
+        <Card className="pm-tab-panel pm-tab-panel--padded">
           <SectionTitle title="Client onboarding" subtitle={vm.inviteSubtitle} />
           <div style={{ display: "grid", gap: 10, marginTop: 12 }}>
             {!vm.hasInvites ? (
@@ -79,9 +111,9 @@ export function BackendKickoffPanelView({ vm }: { vm: BackendKickoffPanelViewMod
           </div>
         </Card>
 
-        <Card style={{ padding: 20 }}>
+        <Card className="pm-tab-panel pm-tab-panel--padded">
           <SectionTitle title="Kickoff outputs" subtitle="Task and work-order hooks" />
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 12 }}>
+          <div className="pm-tab-stat-grid" style={{ marginTop: 12 }}>
             <MiniStat label="Tasks" value={String(vm.taskCount)} />
             <MiniStat label="Work orders" value={String(vm.workOrderCount)} />
           </div>
@@ -89,7 +121,7 @@ export function BackendKickoffPanelView({ vm }: { vm: BackendKickoffPanelViewMod
             {vm.outputMessage}
           </div>
         </Card>
-      </div>
+      </aside>
     </div>
   );
 }
