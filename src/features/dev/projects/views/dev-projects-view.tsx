@@ -3,15 +3,22 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Badge, Button, Card } from "@/shared/components/ui";
+import { Button, Card } from "@/shared/components/ui";
 import { useSelectedDevFlowProject } from "@/shared/projects/selected-project-context";
 import {
-  IconActivity,
   IconArrowLeft,
   IconArrowRight,
+  IconCpu,
+  IconRefresh,
 } from "@/shared/components/icons";
 import { DevPageHeader } from "@/features/dev/shared/components/dev-page-header";
 import { DevFlowProjectTimeline } from "@/shared/components/project-timeline/devflow-project-timeline";
+import {
+  getStageIndex,
+  LIFECYCLE_STAGES,
+  mapProjectStatusToLifecycleStage,
+  ProjectLifecycleIndicator,
+} from "@/shared/components/project-lifecycle/project-lifecycle-indicator";
 import {
   useDevFlowProject,
   useDevFlowProjects,
@@ -19,9 +26,8 @@ import {
 import {
   compactDevFlowError,
   devflowLifecycleView,
-  formatDevFlowDate,
 } from "@/shared/utils/devflow-projects";
-import { DevProjectDetailContentView } from "../view/dev-project-detail-view";
+import { DevProjectDetailContentView, DevProjectMembersView } from "../view/dev-project-detail-view";
 import { DevArtifactsPanelView } from "../view/dev-artifacts-panel-view";
 import { DevTasksPanelView } from "../view/dev-tasks-panel-view";
 import { DevWorkOrdersPanelView } from "../view/dev-work-orders-panel-view";
@@ -29,6 +35,7 @@ import { useDevProjectDetailViewModel } from "../view-model/use-dev-project-deta
 import { useDevArtifactsPanelViewModel } from "../view-model/use-dev-artifacts-panel-view-model";
 import { useDevTasksPanelViewModel } from "../view-model/use-dev-tasks-panel-view-model";
 import { useDevWorkOrdersPanelViewModel } from "../view-model/use-dev-work-orders-panel-view-model";
+import { DevProjectSubnav } from "../components/dev-project-subnav";
 
 export function DevProjectsView() {
   const router = useRouter();
@@ -46,21 +53,12 @@ export function DevProjectsView() {
   };
 
   return (
-    <div data-screen-label="Dev - My Projects" className="dev-workspace-page">
-      <DevPageHeader
-        title="My projects"
-        subtitle="Assigned delivery work, progress, and the next action in one scan."
-        actions={
-          <Button
-            variant="secondary"
-            size="sm"
-            icon={<IconActivity size={13} />}
-            onClick={refresh}
-          >
-            Refresh
-          </Button>
-        }
-      />
+    <div data-screen-label="Dev - My Projects" className="pm-projects-flat-page dev-projects-flat-page">
+      <div className="pm-projects-flat-actions">
+        <button type="button" className="pm-project-create-tab" onClick={refresh}>
+          <IconRefresh size={14} /> Refresh projects
+        </button>
+      </div>
 
       <BackendAssignedProjects
         projects={backendProjects}
@@ -75,87 +73,70 @@ export function DevProjectsView() {
 function BackendAssignedProjects({ projects, loading, error, onOpen }) {
   if (loading && projects.length === 0) {
     return (
-      <Card className="dev-muted-state">
-        Loading assigned projects…
-      </Card>
+      <div className="pm-projects-flat-loading" aria-label="Loading assigned projects">
+        {[0, 1, 2].map((index) => <span key={index} />)}
+      </div>
     );
   }
 
   if (error) {
     return (
-      <Card className="dev-error-state">
-        <strong>Projects unavailable</strong>
-        <span>{compactDevFlowError(error)}</span>
-      </Card>
+      <p className="pm-projects-flat-message is-error">{compactDevFlowError(error)}</p>
     );
   }
 
   if (projects.length === 0) {
     return (
-      <Card className="dev-empty-lead">
+      <div className="dev-projects-flat-empty">
         <h2>No assignments yet</h2>
         <p>
           A project manager must add this developer profile to a project before
           it appears here.
         </p>
-      </Card>
+      </div>
     );
   }
 
   return (
-    <Card className="dev-list-card">
-          <div className="dev-project-table-head" aria-hidden="true">
-            <span>Project</span>
-            <span>Status</span>
-            <span>Progress</span>
-            <span>My work</span>
-            <span>Next action</span>
-            <span>Updated</span>
-            <span />
-          </div>
-      <div className="dev-project-list" role="list">
-        {projects.map((project) => (
+    <div className="pm-projects-flat-list" role="list">
+        {projects.map((project, index) => (
           <BackendProjectRow
             key={project.id}
             project={project}
+            index={index}
             onOpen={() => onOpen(project.id)}
           />
         ))}
-      </div>
-    </Card>
+    </div>
   );
 }
 
-function BackendProjectRow({ project, onOpen }) {
+function BackendProjectRow({ project, index, onOpen }) {
   const lifecycle = devflowLifecycleView(project);
+  const signals = lifecycle.signals ?? {};
 
   return (
-    <button
-      className="dev-project-table-row"
-      onClick={onOpen}
-      role="listitem"
-    >
-      <div className="dev-project-row-name">
-        <strong>{project.companyName}</strong>
-        <span>{project.id}</span>
-      </div>
-      <Badge tone={lifecycle.tone}>{lifecycle.label}</Badge>
-      <div className="dev-table-progress">
-        <div>
+    <article className="pm-project-flat-row reveal" style={{ "--i": index }} role="listitem">
+      <button type="button" className="pm-project-flat-main" onClick={onOpen}>
+        <span className="pm-project-flat-identity">
+          <strong>{project.companyName}</strong>
+          <small className="mono">{project.id}</small>
+        </span>
+
+        <span className="pm-project-flat-stage">
+          <small>{signals.openTasks || 0} tasks · {signals.activeWorkOrders || 0} handoffs</small>
+          <strong>{lifecycle.label}</strong>
+        </span>
+
+        <span className="pm-project-flat-progress" aria-label={`${lifecycle.progress}% complete`}>
           <span style={{ width: `${lifecycle.progress}%` }} />
-        </div>
-        <small>{lifecycle.progress}%</small>
-      </div>
-      <div className="dev-project-row-work">
-        <span>{lifecycle.signals?.openTasks || 0} tasks</span>
-        <span>{lifecycle.signals?.activeWorkOrders || 0} handoffs</span>
-      </div>
-      <span className="dev-project-row-next">{lifecycle.nextAction}</span>
-      <span className="dev-project-row-date">
-        {formatDevFlowDate(project.updatedAt || project.createdAt)}
-      </span>
-      <IconArrowRight size={14} aria-hidden />
-    </button>
+        </span>
+      </button>
+
+      <button type="button" className="pm-project-flat-action" onClick={onOpen}>
+        {lifecycle.nextAction || "Open project"} <IconArrowRight size={14} />
+      </button>
+    </article>
   );
 }
 
@@ -226,66 +207,82 @@ function BackendDevProjectDetail({ project, onBack }) {
     onOpenOrchestrator: openOrchestrator,
   });
   const outputs = vm.outputs;
-  const tabs = [
-    { id: "overview", label: "Overview" },
-    { id: "tasks", label: "Tasks", count: outputs.tasks.length },
-    { id: "handoffs", label: "Handoffs", count: outputs.workOrders.length },
-    { id: "artifacts", label: "Artifacts", count: outputs.artifacts.length },
-    { id: "activity", label: "Activity", count: outputs.timeline.length },
-  ];
+  const lifecycleStageId = mapProjectStatusToLifecycleStage(project.status, project.kickoffStatus);
+  const completedStages = LIFECYCLE_STAGES
+    .slice(0, getStageIndex(lifecycleStageId))
+    .map((stage) => stage.id);
 
   return (
-    <div className="dev-project-detail">
-      <nav className="dev-detail-tabs" aria-label="Project workspace">
-        {tabs.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            className={tab === item.id ? "is-active" : undefined}
-            aria-current={tab === item.id ? "page" : undefined}
-            onClick={() => setTab(item.id)}
-          >
-            {item.label}
-            {typeof item.count === "number" && <span>{item.count}</span>}
-          </button>
-        ))}
-      </nav>
+    <div className="pm-project-workspace dev-project-workspace" data-screen-label={`Dev - Backend Project - ${project.id}`}>
+      <DevProjectSubnav projectName={project.companyName} activeItem={tab} onSelect={setTab} />
 
-      {tab === "overview" && <DevProjectDetailContentView vm={vm} />}
-      {tab === "tasks" && (
-        <DevBackendTasks
-          projectId={project.id}
-          tasks={outputs.tasks}
-          loading={outputs.loading}
-          error={outputs.error}
-          onChanged={outputs.refresh}
+      <section className="pm-project-workspace-content">
+        <DevPageHeader
+          title={project.companyName}
+          subtitle={`${project.stackKey} - ${project.id}`}
+          actions={
+            <>
+              <Button variant="secondary" size="sm" icon={<IconArrowLeft size={13} />} onClick={onBack}>
+                All projects
+              </Button>
+              <Button variant="secondary" size="sm" icon={<IconCpu size={13} />} onClick={openOrchestrator}>
+                Open Orchestrator
+              </Button>
+            </>
+          }
         />
-      )}
-      {tab === "handoffs" && (
-        <DevBackendWorkOrders
-          workOrders={outputs.workOrders}
-          loading={outputs.loading}
-          error={outputs.error}
-        />
-      )}
-      {tab === "artifacts" && (
-        <DevBackendArtifacts
-          artifacts={outputs.artifacts}
-          loading={outputs.loading}
-          error={outputs.error}
-        />
-      )}
-      {tab === "activity" && (
-        <Card className="dev-activity-panel">
-          <DevFlowProjectTimeline
-            timeline={outputs.timeline}
-            loading={outputs.loading}
-            error={outputs.error}
-            emptyText="No project timeline events yet."
-            compactError={compactDevFlowError}
-          />
-        </Card>
-      )}
+
+        <div className="pm-project-section-stack">
+          {tab === "overview" && (
+            <>
+              <div className="project-detail-lifecycle">
+                <ProjectLifecycleIndicator
+                  currentStage={lifecycleStageId}
+                  maxReachedStage={lifecycleStageId}
+                  completedStages={completedStages}
+                  onClickStage={openOrchestrator}
+                />
+              </div>
+              <DevProjectDetailContentView vm={vm} />
+            </>
+          )}
+          {tab === "tasks" && (
+            <DevBackendTasks
+              projectId={project.id}
+              tasks={outputs.tasks}
+              loading={outputs.loading}
+              error={outputs.error}
+              onChanged={outputs.refresh}
+            />
+          )}
+          {tab === "handoffs" && (
+            <DevBackendWorkOrders
+              workOrders={outputs.workOrders}
+              loading={outputs.loading}
+              error={outputs.error}
+            />
+          )}
+          {tab === "artifacts" && (
+            <DevBackendArtifacts
+              artifacts={outputs.artifacts}
+              loading={outputs.loading}
+              error={outputs.error}
+            />
+          )}
+          {tab === "members" && <DevProjectMembersView vm={vm} />}
+          {tab === "activity" && (
+            <Card className="dev-activity-panel">
+              <DevFlowProjectTimeline
+                timeline={outputs.timeline}
+                loading={outputs.loading}
+                error={outputs.error}
+                emptyText="No project timeline events yet."
+                compactError={compactDevFlowError}
+              />
+            </Card>
+          )}
+        </div>
+      </section>
     </div>
   );
 }

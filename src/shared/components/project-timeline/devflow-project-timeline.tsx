@@ -5,36 +5,38 @@ import { Badge, Card } from "@/shared/components/ui";
 import { IconActivity, IconCheck, IconFileText, IconMessageCircle, IconPlus, IconUser } from "@/shared/components/icons";
 
 export function DevFlowProjectTimeline({ timeline, loading, error, emptyText, compactError }) {
-  if (loading) return <Card style={{ padding: 22, color: "var(--text-2)" }}>Loading project timeline...</Card>;
-  if (error) return <Card style={{ padding: 22, color: "#FCA5A5", border: "1px solid rgba(239,68,68,.30)" }}>{compactError ? compactError(error) : error}</Card>;
-  if (!timeline.length) return <Card style={{ padding: 22, color: "var(--text-3)" }}>{emptyText || "No project timeline events yet."}</Card>;
+  if (loading) return <Card className="pm-tab-panel pm-tab-empty">Loading project timeline...</Card>;
+  if (error) return <Card className="pm-tab-panel pm-tab-message pm-tab-message--danger">{compactError ? compactError(error) : error}</Card>;
+  if (!timeline.length) return <Card className="pm-tab-panel pm-tab-empty">{emptyText || "No project timeline events yet."}</Card>;
 
   return (
-    <Card style={{ padding: 0, overflow: "hidden" }}>
+    <Card className="pm-tab-panel">
       <div style={{ padding: 16, borderBottom: "1px solid var(--border)" }}>
         <div style={{ fontSize: 15, fontWeight: 700 }}>Project timeline</div>
-        <div style={{ color: "var(--text-3)", fontSize: 12, marginTop: 3 }}>{timeline.length} recent project events</div>
+        <div style={{ color: "var(--text-3)", fontSize: 12, marginTop: 3 }}>A chronological record of {timeline.length} recent project events.</div>
       </div>
-      {timeline.map((event) => {
+      <div className="pm-tab-list">{timeline.map((event) => {
         const view = timelineView(event.type);
         return (
-          <div key={event.id} className="row gap-3" style={{ padding: "13px 16px", borderBottom: "1px solid var(--border)", alignItems: "flex-start" }}>
-            <div style={{ width: 34, height: 34, borderRadius: 9, background: `${view.color}20`, color: view.color, display: "grid", placeItems: "center", flexShrink: 0 }}>
-              {view.icon}
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div className="row gap-2" style={{ flexWrap: "wrap" }}>
-                <div style={{ fontSize: 13.5, fontWeight: 700 }}>{event.title}</div>
-                <Badge tone={event.visibility === "CLIENT" ? "green" : event.visibility === "TEAM" ? "blue" : "gray"}>{event.visibility}</Badge>
+          <div key={event.id} className="pm-tab-list-row">
+            <div className="row gap-3 pm-tab-list-row__content" style={{ alignItems: "flex-start" }}>
+              <div style={{ width: 34, height: 34, borderRadius: 9, background: `${view.color}20`, color: view.color, display: "grid", placeItems: "center", flexShrink: 0 }}>
+                {view.icon}
               </div>
-              {event.body && <div style={{ color: "var(--text-2)", fontSize: 12.5, lineHeight: 1.45, marginTop: 4, whiteSpace: "pre-wrap" }}>{event.body}</div>}
-              <div style={{ color: "var(--text-3)", fontSize: 11.5, marginTop: 6 }}>
-                {event.actor?.fullName || event.actor?.email || "System"} - {formatTimelineDate(event.createdAt)}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="row gap-2" style={{ flexWrap: "wrap" }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 700 }}>{event.title}</div>
+                  <Badge tone={event.visibility === "CLIENT" ? "green" : event.visibility === "TEAM" ? "blue" : "gray"}>{event.visibility}</Badge>
+                </div>
+                {event.body && <div style={{ color: "var(--text-2)", fontSize: 12.5, lineHeight: 1.45, marginTop: 4, whiteSpace: "pre-wrap" }}>{event.body}</div>}
+                <div style={{ color: "var(--text-3)", fontSize: 11.5, marginTop: 6 }}>
+                  {event.actor?.fullName || event.actor?.email || "System"} - {formatTimelineDate(event.createdAt)}
+                </div>
               </div>
             </div>
           </div>
         );
-      })}
+      })}</div>
     </Card>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
-import { Badge, Button, Card } from "@/shared/components/ui";
-import { IconArrowLeft, IconCpu, IconExternalLink } from "@/shared/components/icons";
+import { Badge, Card } from "@/shared/components/ui";
+import { IconExternalLink } from "@/shared/components/icons";
 import type {
   DevProjectDetailFact,
   DevProjectDetailStat,
@@ -17,33 +17,13 @@ export function DevProjectDetailContentView({
 
   return (
     <div className="dev-project-overview" data-screen-label={vm.screenLabel}>
-      <button className="dev-back-link" onClick={vm.actions.back}>
-        <IconArrowLeft size={13} /> My projects
-      </button>
-
-      <div className="dev-project-overview-header">
-        <div className="dev-project-identity">
-          <div className="dev-project-avatar">{vm.initials}</div>
-          <div>
-            <div className="dev-project-id">
-              Assigned project · <span className="mono">{vm.projectId}</span>
-            </div>
-            <h1>{vm.companyName}</h1>
-            <div className="dev-project-badges">
-              <Badge tone={vm.lifecycleBadge.tone}>{vm.lifecycleBadge.label}</Badge>
-              <Badge tone={vm.statusBadge.tone}>{vm.statusBadge.label}</Badge>
-              <Badge tone="purple">Developer</Badge>
-            </div>
-          </div>
+      <div className="dev-project-overview-status">
+        <div className="dev-project-badges">
+          <Badge tone={vm.lifecycleBadge.tone}>{vm.lifecycleBadge.label}</Badge>
+          <Badge tone={vm.statusBadge.tone}>{vm.statusBadge.label}</Badge>
+          <Badge tone="purple">Developer</Badge>
         </div>
-        <Button
-          variant="primary"
-          size="sm"
-          icon={<IconCpu size={14} />}
-          onClick={vm.actions.openOrchestrator}
-        >
-          Open Orchestrator
-        </Button>
+        <span>Assigned project workspace</span>
       </div>
 
       <div className="dev-project-overview-stats">
@@ -74,32 +54,6 @@ export function DevProjectDetailContentView({
             </div>
           </Card>
 
-          <Card className="dev-overview-card">
-            <div className="dev-overview-card-heading">
-              <div>
-                <span className="dev-section-kicker">Delivery team</span>
-                <h2>Project members</h2>
-              </div>
-              <Badge tone="purple">{vm.developerCountLabel}</Badge>
-            </div>
-            {!vm.hasMembers ? (
-              <div className="dev-muted-state">No members are assigned yet.</div>
-            ) : (
-              <div className="dev-member-list">
-                {vm.members.map((member) => (
-                  <div key={member.id} className="dev-member-row">
-                    <div className="dev-member-avatar" style={{ background: member.color }}>
-                      {member.initials}
-                    </div>
-                    <div>
-                      <strong>{member.name}</strong>
-                      <span>{member.role}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Card>
         </div>
 
         <aside className="dev-project-overview-side">
@@ -137,6 +91,37 @@ export function DevProjectDetailContentView({
         </aside>
       </div>
     </div>
+  );
+}
+
+export function DevProjectMembersView({ vm }: { vm: DevProjectDetailViewModel }) {
+  return (
+    <Card className="dev-overview-card dev-project-members-panel">
+      <div className="dev-overview-card-heading">
+        <div>
+          <span className="dev-section-kicker">Delivery team</span>
+          <h2>Project members</h2>
+        </div>
+        <Badge tone="purple">{vm.developerCountLabel}</Badge>
+      </div>
+      {!vm.hasMembers ? (
+        <div className="dev-muted-state">No members are assigned yet.</div>
+      ) : (
+        <div className="dev-member-list">
+          {vm.members.map((member) => (
+            <div key={member.id} className="dev-member-row">
+              <div className="dev-member-avatar" style={{ background: member.color }}>
+                {member.initials}
+              </div>
+              <div>
+                <strong>{member.name}</strong>
+                <span>{member.role}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
   );
 }
 
