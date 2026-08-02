@@ -60,6 +60,7 @@ import {
   getDevFlowOrchestrationRuns,
   getDevFlowProjectTaskActivity,
   getDevFlowProject,
+  startDevFlowProjectDelivery,
   getDevFlowProjectArtifact,
   handleDevFlowArtifactRevision,
   publishDevFlowArtifactOutput,
@@ -196,6 +197,7 @@ function BackendProjectDetail({ project, onBack }) {
   const router = useRouter();
   const [detail, setDetail] = useState(project);
   const [tab, setTab] = useState("overview");
+  const [startingDelivery, setStartingDelivery] = useState(false);
   const outputs = useDevFlowProjectOutputs(detail.id, { includeDocuments: true, includeEvents: true, includeTasks: true, includeTimeline: true, includeWorkOrders: true });
   const orchestration = useDevFlowOrchestrationStatus(detail.id);
   const provider = useDevFlowOrchestrationProviderStatus(detail.id);
@@ -597,6 +599,32 @@ function BackendProjectDetail({ project, onBack }) {
           </div>
         }
       />
+
+      {detail.status === "DISCOVERY" && (
+        <Card className="pm-discovery-banner">
+          <div className="pm-discovery-copy">
+            <strong>This project is in discovery</strong>
+            <span>
+              Talk to the client and collect the documents you need. Nothing is built and
+              orchestration stays locked until you start delivery.
+            </span>
+          </div>
+          <Button
+            disabled={startingDelivery}
+            onClick={async () => {
+              setStartingDelivery(true);
+              try {
+                await startDevFlowProjectDelivery(detail.id);
+                setDetail(await getDevFlowProject(detail.id));
+              } finally {
+                setStartingDelivery(false);
+              }
+            }}
+          >
+            {startingDelivery ? "Starting..." : "Start delivery"}
+          </Button>
+        </Card>
+      )}
 
       {detail.client ? (
         <button

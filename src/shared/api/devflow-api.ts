@@ -46,6 +46,8 @@ export class DevFlowApiError extends Error {
 export const NOT_A_TEAM_MEMBER = "NOT_A_TEAM_MEMBER";
 
 export type DevFlowProjectStatus =
+  /** Accepted lead in conversation with the client. No delivery work, no orchestration. */
+  | "DISCOVERY"
   | "PENDING"
   | "PARSING_REQUIREMENTS"
   | "NEGOTIATING_CONTRACT"
@@ -59,7 +61,7 @@ export type DevFlowProjectStatus =
 export type DevFlowUserRole = "CLIENT" | "PM" | "DEV" | "ADMIN";
 export type DevFlowProfileStatus = "PENDING" | "ACTIVE" | "SUSPENDED";
 
-export type DevFlowInquiryStatus = "NEW" | "APPROVED" | "REJECTED";
+export type DevFlowInquiryStatus = "NEW" | "IN_DISCOVERY" | "APPROVED" | "REJECTED";
 
 export type DevFlowScheduleEventType = "MILESTONE" | "MEETING" | "DUE_DATE" | "REMINDER" | "OTHER";
 export type DevFlowScheduleVisibility = "PRIVATE" | "TEAM" | "CLIENT";
@@ -247,6 +249,13 @@ export interface DevFlowInquiry {
   updatedAt: string;
   reviewedBy: DevFlowProfile | null;
   clientInvite: Pick<DevFlowClientInvite, "id" | "status" | "projectId" | "email" | "acceptedAt"> | null;
+  accountInvitation?: DevFlowAccountInvitationDelivery;
+}
+
+export interface DevFlowAccountInvitationDelivery {
+  status: "SENT" | "EXISTING_ACCOUNT" | "FAILED";
+  email: string;
+  message: string;
 }
 
 export interface DevFlowClientInvite {
@@ -1608,6 +1617,14 @@ export function rejectDevFlowInquiry(
   });
 }
 
+export function sendDevFlowInquiryAccountInvite(
+  id: string,
+): Promise<DevFlowAccountInvitationDelivery> {
+  return request<DevFlowAccountInvitationDelivery>(`/inquiries/${id}/send-account-invite`, {
+    method: "POST",
+  });
+}
+
 export function listDevFlowProjectDetails(): Promise<DevFlowProjectDetail[]> {
   return request<DevFlowProjectDetail[]>("/projects/details");
 }
@@ -2672,6 +2689,21 @@ export function removeDevFlowClientContact(
   return request<{ removed: boolean }>(`/clients/${clientId}/contacts/${contactId}`, {
     method: "DELETE",
   });
+}
+
+/**
+ * Promotes a discovery workspace into a delivery project.
+ *
+ * Accepting an inquiry opens discovery so the PM can talk to the client and gather documents;
+ * this is the separate, deliberate act of committing to build.
+ */
+export function startDevFlowProjectDelivery(
+  projectId: string,
+): Promise<{ id: string; status: DevFlowProjectStatus; companyName: string }> {
+  return request<{ id: string; status: DevFlowProjectStatus; companyName: string }>(
+    `/projects/${projectId}/start-delivery`,
+    { method: "POST" },
+  );
 }
 
 export function getDevFlowUnassignedProjects(): Promise<DevFlowClientProject[]> {

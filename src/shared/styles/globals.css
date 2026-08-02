@@ -9383,35 +9383,128 @@ details.pricing-faq[open] summary .pricing-faq-toggle {
 }
 
 /* Inquiry review: choosing which client an approved lead belongs to */
+.pm-inquiry-review {
+  display: grid;
+  gap: 14px;
+  /* Without this a grid item refuses to shrink below its content, which pushed the dialog
+     wider than its own max-width and produced a horizontal scrollbar. */
+  min-width: 0;
+}
+.pm-inquiry-review > * { min-width: 0; }
+
 .pm-inquiry-client-options {
   display: grid;
   gap: 8px;
   margin-top: 12px;
+  min-width: 0;
 }
+
+/* The bordered card. Selecting an option can reveal fields inside it, so the card is a
+   container and the clickable region is the button within — a button cannot legally nest
+   another interactive control. */
 .pm-inquiry-client-option {
-  display: grid;
-  gap: 3px;
-  padding: 11px 13px;
-  text-align: left;
   border: 1px solid var(--border);
   border-radius: 10px;
   background: rgba(8,14,32,.4);
-  color: var(--text);
-  cursor: pointer;
   transition: border-color .18s ease, background .18s ease;
+  min-width: 0;
+  overflow: hidden;
 }
 .pm-inquiry-client-option:hover { border-color: rgba(79,139,255,.3); }
 .pm-inquiry-client-option.is-active {
   border-color: rgba(47,107,255,.5);
-  background: rgba(47,107,255,.1);
+  background: rgba(47,107,255,.08);
 }
-.pm-inquiry-client-option strong { font-size: 13px; }
-.pm-inquiry-client-option span { color: var(--text-3); font-size: 11.5px; }
+
+.pm-inquiry-client-choice {
+  display: grid;
+  gap: 3px;
+  width: 100%;
+  padding: 11px 13px;
+  text-align: left;
+  border: 0;
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+  min-width: 0;
+}
+.pm-inquiry-client-choice strong {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.pm-inquiry-client-choice span {
+  color: var(--text-3);
+  font-size: 11.5px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+/* Sits inside the selected card, separated by a rule rather than its own border. */
 .pm-inquiry-client-name {
-  padding: 12px 13px;
-  border: 1px solid rgba(47,107,255,.28);
-  border-top: 0;
-  border-radius: 0 0 10px 10px;
-  background: rgba(47,107,255,.05);
-  margin-top: -8px;
+  padding: 0 13px 13px;
+  border-top: 1px solid rgba(79,139,255,.18);
+  padding-top: 12px;
+  min-width: 0;
+}
+
+/* Decision buttons live in the modal footer so they stay visible while the body scrolls.
+   They wrap instead of overflowing when the dialog is narrow. */
+.pm-inquiry-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  width: 100%;
+  min-width: 0;
+}
+.pm-inquiry-actions-note {
+  flex: 1 1 220px;
+  min-width: 0;
+  margin: 0;
+  color: var(--text-3);
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+@media (max-width: 620px) {
+  /* Stacked, the note reads as a caption above full-width buttons rather than being squeezed
+     onto the same row as three of them. */
+  .pm-inquiry-actions { justify-content: stretch; }
+  .pm-inquiry-actions-note { flex: 1 1 100%; }
+  .pm-inquiry-actions .btn { flex: 1 1 auto; justify-content: center; }
+}
+
+/* Discovery: an accepted lead, before any delivery work starts */
+.pm-discovery-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  border-color: rgba(139,92,246,.30);
+  background: rgba(139,92,246,.07);
+}
+.pm-discovery-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  flex: 1 1 320px;
+}
+.pm-discovery-copy strong { font-size: 13.5px; }
+.pm-discovery-copy span {
+  color: var(--text-2);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.proj-card-discovery-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+  border: 1px solid rgba(139,92,246,.32);
+  background: rgba(139,92,246,.12);
+  color: #c4b5fd;
 }

@@ -29,11 +29,33 @@ export function useDevFlowInquiries(status?: DevFlowInquiryStatus | "ALL") {
     let active = true;
     setLoading(true);
     setError("");
-    listDevFlowInquiries(status && status !== "ALL" ? status : undefined)
-      .then((result) => { if (active) setInquiries(result); })
-      .catch((nextError) => { if (active) { setInquiries([]); setError(nextError instanceof Error ? nextError.message : String(nextError)); } })
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
+    const load = (initial = false) => {
+      listDevFlowInquiries(status && status !== "ALL" ? status : undefined)
+        .then((result) => {
+          if (active) {
+            setInquiries(result);
+            setError("");
+          }
+        })
+        .catch((nextError) => {
+          if (active) {
+            if (initial) setInquiries([]);
+            setError(nextError instanceof Error ? nextError.message : String(nextError));
+          }
+        })
+        .finally(() => { if (active && initial) setLoading(false); });
+    };
+
+    load(true);
+    const intervalId = window.setInterval(() => load(false), 15_000);
+    const refreshOnFocus = () => load(false);
+    window.addEventListener("focus", refreshOnFocus);
+
+    return () => {
+      active = false;
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", refreshOnFocus);
+    };
   }, [status]);
 
   return { inquiries, loading, error, refresh };

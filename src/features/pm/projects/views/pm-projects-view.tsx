@@ -901,9 +901,15 @@ function LifecycleGridCard({ project, index, onOpen, onContinue }) {
               <div className="proj-card-id mono">{project.id}</div>
             </div>
           </div>
-          <span className={`lifecycle-badge-${stageId}`} style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 6, border: "1px solid", whiteSpace: "nowrap" }}>
-            {stage?.shortLabel ?? stageId}
-          </span>
+          {project.status === "DISCOVERY" ? (
+            // A discovery project is an accepted lead, not delivery work. Labelling it by
+            // lifecycle stage ("draft") would imply build progress that has not begun.
+            <span className="proj-card-discovery-badge">Discovery</span>
+          ) : (
+            <span className={`lifecycle-badge-${stageId}`} style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 6, border: "1px solid", whiteSpace: "nowrap" }}>
+              {stage?.shortLabel ?? stageId}
+            </span>
+          )}
         </div>
 
         <div className="proj-card-progress">
