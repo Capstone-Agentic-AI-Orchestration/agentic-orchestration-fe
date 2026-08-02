@@ -1,7 +1,7 @@
 // @ts-nocheck
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { Badge, Button, Card, Field, Input, Modal, Select, Textarea } from "@/shared/components/ui";
 import {
@@ -23,6 +23,7 @@ import {
 } from "@/shared/components/icons";
 import {
   createDevFlowProject,
+  getDevFlowClients,
   listDevFlowGroups,
   listDevFlowProjects,
   type DevFlowAutoAnalyzeResult,
@@ -33,6 +34,8 @@ import {
 import { requestFastBriefAnalysis } from "@/shared/ai/brief-analysis";
 import { DesignGuidancePanel } from "@/shared/components/design/design-guidance-panel";
 import { DEFAULT_DESIGN_GUIDANCE, describeDesignGuidance, saveDesignGuidance } from "@/shared/design-guidance";
+import { useSelectedTeamWorkspace } from "@/shared/projects/selected-team-workspace-context";
+import { useSelectedDevFlowProject } from "@/shared/projects/selected-project-context";
 import {
   LIFECYCLE_STAGES,
   mapProjectStatusToLifecycleStage,
@@ -96,8 +99,10 @@ function nextAction(stageId: LifecycleStageId, project): string {
   return pmProjectNextAction(stageId, project);
 }
 
-export function PMProjectsView() {
+export function PMProjectsView({ cardsOnly = false }: { cardsOnly?: boolean }) {
   const router = useRouter();
+  const { selectedTeamId, selectedTeam } = useSelectedTeamWorkspace();
+  const { refreshProjects: refreshWorkspaceProjects, setSelectedProjectId } = useSelectedDevFlowProject();
   const [view, setView] = useState("grid");
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
@@ -127,24 +132,74 @@ export function PMProjectsView() {
 
   const handleProjectCreated = async (projectId?: string) => {
     setNewProjectOpen(false);
-    await refreshBackendProjects();
-    if (projectId) router.push(`/pm/orchestrate/${projectId}`);
+    await Promise.all([refreshBackendProjects(), refreshWorkspaceProjects()]);
+    if (projectId) {
+      setSelectedProjectId(projectId);
+      router.push(`/pm/orchestrate/${projectId}`);
+    }
   };
 
+  const workspaceProjects = useMemo(
+    () => selectedTeamId ? backendProjects.filter((project) => project.groupId === selectedTeamId) : [],
+    [backendProjects, selectedTeamId],
+  );
+
   const projects = useMemo(() => {
-    return filterPmProjects({ projects: backendProjects, filter, search, sort });
-  }, [backendProjects, filter, search, sort]);
+    return filterPmProjects({ projects: workspaceProjects, filter, search, sort });
+  }, [filter, search, sort, workspaceProjects]);
 
   const attentionProjects = useMemo(
-    () => pmAttentionProjects(backendProjects),
-    [backendProjects],
+    () => pmAttentionProjects(workspaceProjects),
+    [workspaceProjects],
   );
   const projectStats = useMemo(() => {
-    return buildPmProjectStats(backendProjects);
-  }, [backendProjects]);
+    return buildPmProjectStats(workspaceProjects);
+  }, [workspaceProjects]);
 
   const openProject = (id: string) => router.push(`/pm/project/${id}`);
-  const hasNoProjects = !loadingBackend && !apiError && backendProjects.length === 0;
+  const hasNoProjects = !loadingBackend && !apiError && workspaceProjects.length === 0;
+
+  if (cardsOnly) {
+    return (
+      <div className="pm-projects-flat-page" data-screen-label="PM - Workspace projects">
+        <div className="pm-projects-flat-actions">
+          <button type="button" className="pm-project-create-tab" onClick={openNewProject}>
+            <IconPlus size={15} /> Create project
+          </button>
+        </div>
+
+        {apiError ? (
+          <p className="pm-projects-flat-message is-error">{compactApiError(apiError)}</p>
+        ) : loadingBackend ? (
+          <div className="pm-projects-flat-loading" aria-label="Loading projects">
+            {[0, 1, 2].map((index) => <span key={index} />)}
+          </div>
+        ) : projects.length === 0 ? (
+          <p className="pm-projects-flat-message">No projects in this workspace.</p>
+        ) : (
+          <div className="pm-projects-flat-list">
+            {projects.map((project, i) => (
+              <LifecycleProjectRow
+                key={project.id}
+                project={project}
+                index={i}
+                onOpen={() => openProject(project.id)}
+                onContinue={() => router.push(orchestrateRoute(project))}
+              />
+            ))}
+          </div>
+        )}
+
+        <NewProjectWizardModal
+          open={newProjectOpen}
+          onClose={() => setNewProjectOpen(false)}
+          onCreated={handleProjectCreated}
+          onError={setApiError}
+          initialGroupId={selectedTeamId}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="pm-command-screen" data-screen-label="PM - Projects">
@@ -161,7 +216,7 @@ export function PMProjectsView() {
           <section className="pm-inventory-shell">
             <div className="pm-inventory-head">
               <div>
-                <span className="pm-command-kicker">Project inventory</span>
+                <span className="pm-command-kicker">{selectedTeam ? `${selectedTeam.name} workspace` : "Project inventory"}</span>
                 <h2>Active work</h2>
               </div>
               <div className="pm-inventory-actions">
@@ -178,7 +233,7 @@ export function PMProjectsView() {
               <div className="pm-filter-row">
               {FILTERS.map((item) => {
                 const count =
-                  pmProjectFilterCount(backendProjects, item.id);
+                  pmProjectFilterCount(workspaceProjects, item.id);
                 return (
                   <button
                     key={item.id}
@@ -238,6 +293,7 @@ export function PMProjectsView() {
         onClose={() => setNewProjectOpen(false)}
         onCreated={handleProjectCreated}
         onError={setApiError}
+        initialGroupId={selectedTeamId}
       />
     </div>
   );
@@ -248,15 +304,18 @@ function NewProjectWizardModal({
   onClose,
   onCreated,
   onError,
+  initialGroupId,
 }: {
   open: boolean;
   onClose: () => void;
   onCreated: (projectId?: string) => Promise<void>;
   onError: (message: string) => void;
+  initialGroupId: string | null;
 }) {
   const [stepIndex, setStepIndex] = useState(0);
   const [creating, setCreating] = useState(false);
-  const [form, setForm] = useState({ companyName: "", brief: "", stackKey: "nextjs-nestjs-supabase", groupId: "", repositoryName: "" });
+  const [form, setForm] = useState({ companyName: "", brief: "", stackKey: "nextjs-nestjs-supabase", groupId: "", repositoryName: "", clientId: "" });
+  const [clientOptions, setClientOptions] = useState([]);
   const [groups, setGroups] = useState<DevFlowGroup[]>([]);
   const [designGuidance, setDesignGuidance] = useState<DevFlowDesignGuidance>(DEFAULT_DESIGN_GUIDANCE);
   const [analyzing, setAnalyzing] = useState(false);
@@ -275,16 +334,16 @@ function NewProjectWizardModal({
     activeStep.id === "design" ? true :
     canCreate;
 
-  const resetWizard = () => {
+  const resetWizard = useCallback(() => {
     setStepIndex(0);
     setCreating(false);
-    setForm({ companyName: "", brief: "", stackKey: "nextjs-nestjs-supabase", groupId: "", repositoryName: "" });
+    setForm({ companyName: "", brief: "", stackKey: "nextjs-nestjs-supabase", groupId: initialGroupId || "", repositoryName: "", clientId: "" });
     setDesignGuidance(DEFAULT_DESIGN_GUIDANCE);
     setAnalyzing(false);
     setAnalyzeResult(null);
     setAnalyzeError("");
     setCreateError("");
-  };
+  }, [initialGroupId]);
 
   useEffect(() => {
     if (open) {
@@ -293,11 +352,17 @@ function NewProjectWizardModal({
         .then((items) => {
           const active = items.filter((group) => group.status === "ACTIVE");
           setGroups(active);
-          if (active[0]) setForm((current) => ({ ...current, groupId: active[0].id }));
+          const workspaceTeam = active.find((group) => group.id === initialGroupId);
+          if (workspaceTeam || active[0]) setForm((current) => ({ ...current, groupId: workspaceTeam?.id || active[0].id }));
         })
         .catch((error) => setCreateError(error instanceof Error ? error.message : String(error)));
+      // Clients populate the picker on the first wizard step. A failure here must not block
+      // project creation, since a project may legitimately be created unassigned.
+      getDevFlowClients()
+        .then((result) => setClientOptions(result.clients.filter((client) => client.status !== "ARCHIVED")))
+        .catch(() => setClientOptions([]));
     }
-  }, [open]);
+  }, [initialGroupId, open, resetWizard]);
 
   const handleAnalyze = async () => {
     const requestId = analyzeRequestRef.current + 1;
@@ -337,7 +402,7 @@ function NewProjectWizardModal({
     const stackKey = form.stackKey.trim();
     const repositoryName = form.repositoryName.trim();
     if (!companyName || brief.length < 10 || !stackKey || !form.groupId || !repositoryName) {
-      setCreateError("Company, group, repository name, stack, and a brief of at least 10 characters are required.");
+      setCreateError("Company, team, repository name, stack, and a brief of at least 10 characters are required.");
       return;
     }
     setCreating(true);
@@ -346,6 +411,7 @@ function NewProjectWizardModal({
     try {
       const result = await createDevFlowProject({
         companyName,
+        clientId: form.clientId || undefined,
         brief,
         stackKey,
         groupId: form.groupId,
@@ -436,7 +502,31 @@ function NewProjectWizardModal({
                 <p>Name the client/project and choose the scaffold the OpenCode path should generate against.</p>
               </div>
               <div className="newproj-grid">
-                <Field label="Company">
+                <Field
+                  label="Client"
+                  helper="Leave unassigned only if you genuinely do not know yet; the project is flagged until it is linked."
+                >
+                  <Select
+                    value={form.clientId}
+                    onChange={(event) => {
+                      const clientId = event.target.value;
+                      const picked = clientOptions.find((option) => option.id === clientId);
+                      // Fill the company name from the client so the two cannot disagree, but
+                      // leave it editable for projects named differently to the company.
+                      setForm((current) => ({
+                        ...current,
+                        clientId,
+                        companyName: picked && !current.companyName.trim() ? picked.name : current.companyName,
+                      }));
+                    }}
+                  >
+                    <option value="">Unassigned (flagged for follow-up)</option>
+                    {clientOptions.map((option) => (
+                      <option key={option.id} value={option.id}>{option.name}</option>
+                    ))}
+                  </Select>
+                </Field>
+                <Field label="Project name" helper="Defaults to the client name; change it if this project has its own name.">
                   <Input
                     value={form.companyName}
                     onChange={(event) => setForm((current) => ({ ...current, companyName: event.target.value }))}
@@ -453,12 +543,13 @@ function NewProjectWizardModal({
                     <option value="nextjs-only">Next.js only</option>
                   </Select>
                 </Field>
-                <Field label="Delivery group">
+                <Field label="Team workspace">
                   <Select
                     value={form.groupId}
+                    disabled={Boolean(initialGroupId && groups.some((group) => group.id === initialGroupId))}
                     onChange={(event) => setForm((current) => ({ ...current, groupId: event.target.value }))}
                   >
-                    <option value="">Select a group</option>
+                    <option value="">Select a team</option>
                     {groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}
                   </Select>
                 </Field>
@@ -471,7 +562,7 @@ function NewProjectWizardModal({
                 </Field>
               </div>
               {groups.length === 0 && (
-                <div className="wizard-info-banner warning"><IconAlertTriangle size={16} /><span>Create an active group under Groups &amp; repos before starting a project.</span></div>
+                <div className="wizard-info-banner warning"><IconAlertTriangle size={16} /><span>Create an active team under Teams before starting a project.</span></div>
               )}
             </div>
           )}
@@ -553,7 +644,7 @@ function NewProjectWizardModal({
                   <strong>{stackLabel(form.stackKey)}</strong>
                 </div>
                 <div className="newproj-summary-card">
-                  <span>Group</span>
+                  <span>Team workspace</span>
                   <strong>{groups.find((group) => group.id === form.groupId)?.name || "Not set"}</strong>
                 </div>
                 <div className="newproj-summary-card">
@@ -810,9 +901,15 @@ function LifecycleGridCard({ project, index, onOpen, onContinue }) {
               <div className="proj-card-id mono">{project.id}</div>
             </div>
           </div>
-          <span className={`lifecycle-badge-${stageId}`} style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 6, border: "1px solid", whiteSpace: "nowrap" }}>
-            {stage?.shortLabel ?? stageId}
-          </span>
+          {project.status === "DISCOVERY" ? (
+            // A discovery project is an accepted lead, not delivery work. Labelling it by
+            // lifecycle stage ("draft") would imply build progress that has not begun.
+            <span className="proj-card-discovery-badge">Discovery</span>
+          ) : (
+            <span className={`lifecycle-badge-${stageId}`} style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 6, border: "1px solid", whiteSpace: "nowrap" }}>
+              {stage?.shortLabel ?? stageId}
+            </span>
+          )}
         </div>
 
         <div className="proj-card-progress">
@@ -835,6 +932,47 @@ function LifecycleGridCard({ project, index, onOpen, onContinue }) {
       <button className={`proj-card-cta ${attention ? "is-attention" : ""}`} onClick={onContinue}>
         <span>{action}</span>
         <IconArrowRight size={14} />
+      </button>
+    </article>
+  );
+}
+
+/* ─── Flat workspace project row ─────────────────────────────────── */
+function LifecycleProjectRow({ project, index, onOpen, onContinue }) {
+  const stageId = mapProjectStatusToLifecycleStage(project.status, project.kickoffStatus);
+  const stage = LIFECYCLE_STAGES.find((item) => item.id === stageId);
+  const action = nextAction(stageId, project);
+
+  return (
+    <article className="pm-project-flat-row reveal" style={{ "--i": index } as CSSProperties}>
+      <button
+        type="button"
+        className="pm-project-flat-main"
+        onClick={onOpen}
+        aria-label={`Open ${project.companyName}`}
+      >
+        <span className="pm-project-flat-identity">
+          <strong>{project.companyName}</strong>
+          <small className="mono">{project.id}</small>
+        </span>
+
+        <span className="pm-project-flat-stage">
+          <small>Stage {getStageIndex(stageId) + 1} of 5</small>
+          <strong className={`lifecycle-text-${stageId}`}>{stage?.label ?? stageId}</strong>
+        </span>
+
+        <span className="pm-project-flat-progress" aria-label={`${getStageProgress(stageId)}% complete`}>
+          <span
+            style={{
+              width: `${getStageProgress(stageId)}%`,
+              background: stageId === "delivered" ? "#34D399" : "linear-gradient(90deg, #F5F5F5, #737373)",
+            }}
+          />
+        </span>
+      </button>
+
+      <button type="button" className="pm-project-flat-action" onClick={onContinue}>
+        {action} <IconArrowRight size={14} />
       </button>
     </article>
   );

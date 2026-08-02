@@ -25,45 +25,45 @@ import type { BackendArtifactsPanelViewModel } from "../view-model/use-artifacts
 
 export function BackendArtifactsPanelView({ vm }: { vm: BackendArtifactsPanelViewModel }) {
   if (vm.loading) {
-    return <Card style={{ padding: 22, color: "var(--text-2)" }}>Loading artifacts...</Card>;
+    return <Card className="pm-tab-panel pm-tab-empty">Loading artifacts...</Card>;
   }
 
   if (vm.error) {
     return (
-      <Card style={{ padding: 22, color: "#FCA5A5", border: "1px solid rgba(239,68,68,.30)" }}>
+      <Card className="pm-tab-panel pm-tab-message pm-tab-message--danger">
         {compactBackendError(vm.error)}
       </Card>
     );
   }
 
   if (!vm.hasArtifacts) {
-    return <Card style={{ padding: 22, color: "var(--text-3)" }}>{vm.emptyText}</Card>;
+    return <Card className="pm-tab-panel pm-tab-empty">{vm.emptyText}</Card>;
   }
 
   return (
-    <>
+    <div className="pm-tab-layout">
       {vm.hasUnresolvedRevisions && (
-        <Card style={{ padding: 0, overflow: "hidden", border: "1px solid rgba(245,158,11,.34)", marginBottom: 14 }}>
+        <Card className="pm-tab-panel" style={{ border: "1px solid rgba(245,158,11,.34)" }}>
           <div style={{ padding: 16, borderBottom: "1px solid rgba(245,158,11,.22)", background: "rgba(245,158,11,.08)" }}>
-            <SectionTitle title="Needs PM action" subtitle={vm.unresolvedSubtitle} />
+            <SectionTitle title="Needs your review" subtitle={vm.unresolvedSubtitle} />
           </div>
-          {vm.unresolvedRevisions.map((row) => (
-            <RevisionRequestButton key={row.id} row={row} vm={vm} />
-          ))}
+          <div className="pm-tab-list">{vm.unresolvedRevisions.map((row) => (
+              <RevisionRequestButton key={row.id} row={row} vm={vm} />
+            ))}</div>
         </Card>
       )}
 
-      <Card style={{ padding: 0, overflow: "hidden" }}>
+      <Card className="pm-tab-panel">
         <div style={{ padding: 16, borderBottom: "1px solid var(--border)" }}>
-          <SectionTitle title="Generated artifacts" subtitle={vm.artifactSubtitle} />
+          <SectionTitle title="Project artifacts" subtitle={vm.artifactSubtitle} />
         </div>
-        {vm.artifactRows.map((row) => (
-          <ArtifactRowButton key={row.id} row={row} vm={vm} />
-        ))}
+        <div className="pm-tab-list">{vm.artifactRows.map((row) => (
+            <ArtifactRowButton key={row.id} row={row} vm={vm} />
+          ))}</div>
       </Card>
 
       <ArtifactPreviewModal vm={vm} />
-    </>
+    </div>
   );
 }
 
@@ -81,18 +81,22 @@ function RevisionRequestButton({
   return (
     <button
       onClick={() => vm.actions.openPreview(row.id)}
-      className="row gap-3"
-      style={{ width: "100%", padding: "12px 16px", border: 0, borderBottom: "1px solid var(--border)", background: "transparent", color: "white", cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}
+      className="pm-tab-list-row pm-artifact-row"
+      style={{ width: "100%", borderRight: 0, borderBottom: 0, borderLeft: 0, background: "transparent", color: "white", cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}
     >
-      <div style={{ width: 34, height: 34, borderRadius: 8, background: "rgba(245,158,11,.16)", color: "#FCD34D", display: "grid", placeItems: "center", flexShrink: 0 }}>
-        <IconAlertTriangle size={15} />
+      <div className="row gap-3 pm-tab-list-row__content">
+        <div style={{ width: 34, height: 34, borderRadius: 8, background: "rgba(245,158,11,.16)", color: "#FCD34D", display: "grid", placeItems: "center", flexShrink: 0 }}>
+          <IconAlertTriangle size={15} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="mono" style={{ fontSize: 12.5, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis" }}>{row.title}</div>
+          <div style={{ color: "var(--text-3)", fontSize: 11.5, marginTop: 3 }}>{row.requestedLabel}</div>
+        </div>
       </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div className="mono" style={{ fontSize: 12.5, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis" }}>{row.title}</div>
-        <div style={{ color: "var(--text-3)", fontSize: 11.5, marginTop: 3 }}>{row.requestedLabel}</div>
+      <div className="pm-artifact-row__badges">
+        {row.hasLinkedTask && <Badge tone="blue">Task linked</Badge>}
+        <Badge tone="amber">Open request</Badge>
       </div>
-      {row.hasLinkedTask && <Badge tone="blue">Task linked</Badge>}
-      <Badge tone="amber">Open request</Badge>
     </button>
   );
 }
@@ -107,9 +111,10 @@ function ArtifactRowButton({
   return (
     <button
       onClick={() => vm.actions.openPreview(row.id)}
-      style={{ width: "100%", padding: "12px 16px", border: 0, borderBottom: "1px solid var(--border)", background: "transparent", color: "white", cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}
+      className="pm-tab-list-row pm-artifact-row"
+      style={{ width: "100%", borderRight: 0, borderBottom: 0, borderLeft: 0, background: "transparent", color: "white", cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}
     >
-      <div className="row gap-3" style={{ alignItems: "flex-start" }}>
+      <div className="row gap-3 pm-tab-list-row__content" style={{ alignItems: "flex-start" }}>
         <div style={{ width: 34, height: 34, borderRadius: 9, background: "rgba(79,139,255,.14)", color: "#93C5FD", display: "grid", placeItems: "center", flexShrink: 0 }}>
           <IconFileText size={15} />
         </div>
@@ -117,13 +122,13 @@ function ArtifactRowButton({
           <div className="mono" style={{ fontSize: 12.5, fontWeight: 700, color: "white", overflow: "hidden", textOverflow: "ellipsis" }}>{row.title}</div>
           <div style={{ color: "var(--text-3)", fontSize: 11.5, marginTop: 3 }}>{row.subtitle}</div>
         </div>
-        <div className="row gap-2" style={{ flexShrink: 0 }}>
-          <ArtifactBadge badge={row.review} />
-          <ArtifactBadge badge={row.outputReview} />
-          <ArtifactBadge badge={row.validation} />
-          {row.hasLinkedTask && <Badge tone="blue">Task linked</Badge>}
-          <Badge tone={row.visibilityTone}>{row.visibilityLabel}</Badge>
-        </div>
+      </div>
+      <div className="pm-artifact-row__badges">
+        <ArtifactBadge badge={row.review} />
+        <ArtifactBadge badge={row.outputReview} />
+        <ArtifactBadge badge={row.validation} />
+        {row.hasLinkedTask && <Badge tone="blue">Task linked</Badge>}
+        <Badge tone={row.visibilityTone}>{row.visibilityLabel}</Badge>
       </div>
     </button>
   );

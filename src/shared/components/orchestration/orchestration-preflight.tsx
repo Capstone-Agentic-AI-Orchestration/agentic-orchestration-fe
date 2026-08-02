@@ -36,6 +36,7 @@ export function OrchestrationPreflight({
   starting,
   initialTokenBudget = 200_000,
   initialMaxRetries = 2,
+  showEntry = true,
   onOpen,
   onClose,
   onLaunch,
@@ -49,6 +50,7 @@ export function OrchestrationPreflight({
   starting: boolean;
   initialTokenBudget?: number;
   initialMaxRetries?: number;
+  showEntry?: boolean;
   onOpen: () => void;
   onClose: () => void;
   onLaunch: (controls: DevFlowOrchestrationRunControls) => Promise<void>;
@@ -91,7 +93,7 @@ export function OrchestrationPreflight({
 
   return (
     <>
-      <section className="orchestration-preflight-entry" aria-labelledby="orchestration-preflight-entry-title">
+      {showEntry && <section className="orchestration-preflight-entry" aria-labelledby="orchestration-preflight-entry-title">
         <div className="orchestration-preflight-entry__mark" aria-hidden="true">
           <IconRocket size={18} />
         </div>
@@ -124,7 +126,7 @@ export function OrchestrationPreflight({
         >
           {activeRunId ? "Run in progress" : "Review and launch"}
         </Button>
-      </section>
+      </section>}
 
       <Modal
         open={open}

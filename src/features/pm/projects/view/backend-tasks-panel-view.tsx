@@ -13,30 +13,30 @@ import type { DevFlowProjectTaskStatus } from "@/shared/api/devflow-api";
 
 export function BackendTasksPanelView({ vm }: { vm: BackendTasksPanelViewModel }) {
   if (vm.loading) {
-    return <Card style={{ padding: 22, color: "var(--text-2)" }}>Loading project tasks...</Card>;
+    return <Card className="pm-tab-panel pm-tab-empty">Loading project tasks...</Card>;
   }
 
   if (vm.error) {
     return (
-      <Card style={{ padding: 22, color: "#FCA5A5", border: "1px solid rgba(239,68,68,.30)" }}>
+      <Card className="pm-tab-panel pm-tab-message pm-tab-message--danger">
         {compactBackendError(vm.error)}
       </Card>
     );
   }
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 360px", gap: 18 }}>
-      <Card style={{ padding: 0, overflow: "hidden" }}>
+    <div className="pm-tab-layout pm-tab-layout--aside">
+      <Card className="pm-tab-panel">
         <div style={{ padding: 16, borderBottom: "1px solid var(--border)" }}>
           <SectionTitle title="Project work queue" subtitle={vm.taskSubtitle} />
-          {vm.taskError && <div style={{ color: "#FCA5A5", fontSize: 12.5, marginTop: 8 }}>{compactBackendError(vm.taskError)}</div>}
+          {vm.taskError && <div className="pm-tab-message pm-tab-message--danger" style={{ marginTop: 12 }}>{compactBackendError(vm.taskError)}</div>}
         </div>
         {!vm.hasTasks ? (
-          <div style={{ padding: 18, color: "var(--text-3)", fontSize: 13 }}>No tasks created yet.</div>
-        ) : vm.taskRows.map((row) => <BackendTaskListRow key={row.id} row={row} vm={vm} />)}
+          <div className="pm-tab-empty">No tasks created yet. Use the task form to define the first piece of delivery work.</div>
+        ) : <div className="pm-tab-list">{vm.taskRows.map((row) => <BackendTaskListRow key={row.id} row={row} vm={vm} />)}</div>}
       </Card>
 
-      <Card style={{ padding: 22 }}>
+      <Card className="pm-tab-panel pm-tab-panel--padded">
         <SectionTitle title="New task" subtitle="Assign work to a project developer" />
         <div style={{ display: "grid", gap: 12, marginTop: 14 }}>
           <Field label="Title">
@@ -134,17 +134,19 @@ function BackendTaskListRow({
   vm: BackendTasksPanelViewModel;
 }) {
   return (
-    <div className="row gap-3" style={{ padding: "14px 16px", borderBottom: "1px solid var(--border)", alignItems: "flex-start" }}>
-      <ProjectTaskStatusDot status={row.status} />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 13.5, fontWeight: 700 }}>{row.title}</div>
-        {row.description && <div style={{ color: "var(--text-2)", fontSize: 12.5, marginTop: 4, lineHeight: 1.45 }}>{row.description}</div>}
-        <div className="row gap-2" style={{ marginTop: 8, flexWrap: "wrap" }}>
+    <div className="pm-tab-list-row">
+      <div className="pm-tab-list-row__content">
+        <div className="row gap-2" style={{ alignItems: "center" }}>
+          <ProjectTaskStatusDot status={row.status} />
+          <div style={{ fontSize: 13.5, fontWeight: 700 }}>{row.title}</div>
+        </div>
+        {row.description && <div style={{ color: "var(--text-2)", fontSize: 12.5, marginTop: 6, lineHeight: 1.5 }}>{row.description}</div>}
+        <div className="row gap-2" style={{ marginTop: 9, flexWrap: "wrap" }}>
           <Badge tone="blue">{row.assigneeLabel}</Badge>
           {row.artifactLabel && <Badge tone="purple">{row.artifactLabel}</Badge>}
         </div>
       </div>
-      <div style={{ display: "grid", gap: 8, justifyItems: "end" }}>
+      <div className="pm-tab-list-row__actions">
         <Select
           value={row.status}
           onChange={(event) => vm.actions.updateTaskStatus(row.task, event.target.value as DevFlowProjectTaskStatus)}

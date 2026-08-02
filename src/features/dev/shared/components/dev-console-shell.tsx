@@ -5,18 +5,19 @@ import { AppShell, type ShellNavItem } from "@/shared/components/layout/app-shel
 import { SelectedProjectProvider } from "@/shared/projects/selected-project-context";
 import { ProjectSwitcher } from "@/shared/projects/project-switcher";
 import { DevFlowNotificationBell } from "@/shared/components/notifications/devflow-notification-bell";
-import { IconCpu, IconFolder, IconHome, IconMessageCircle, IconUsers } from "@/shared/components/icons";
+import { IconCpu, IconFolder, IconHome, IconMessageCircle, IconSettings, IconUsers } from "@/shared/components/icons";
 
 export const DEV_NAV: ShellNavItem[] = [
-  { id: "dashboard", label: "Dashboard", icon: <IconHome size={17} /> },
+  { id: "dashboard", label: "Home", icon: <IconHome size={17} /> },
   { id: "projects", label: "Projects", icon: <IconFolder size={17} />, aliases: ["project"] },
   { id: "orchestrator", label: "Orchestrator", icon: <IconCpu size={17} /> },
   { id: "messages", label: "Messages", icon: <IconMessageCircle size={17} /> },
   { id: "groups", label: "Teams", icon: <IconUsers size={17} />, aliases: ["team", "repositories"] },
+  { id: "settings", label: "Settings", icon: <IconSettings size={17} /> },
 ];
 
 export const DEV_TITLES: Record<string, string> = {
-  dashboard: "Dashboard",
+  dashboard: "Home",
   projects: "Projects",
   project: "Projects",
   orchestrator: "Orchestrator",
@@ -42,8 +43,9 @@ export function DevConsoleShell({ children }: { children: ReactNode }) {
         showOnlineDot
         showSupport={false}
         showSecurity={false}
-        personaName="Developer"
-        personaMeta="Alphaexplora · Internal"
+        hoverExpandSidebar
+        brandInTopbar
+        sidebarHeader={<></>}
         rightSlot={
           <>
             <ProjectSwitcher compact />

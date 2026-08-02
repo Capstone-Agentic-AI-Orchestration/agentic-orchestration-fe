@@ -3,7 +3,18 @@ import {
   buildBackendKickoffForm,
   buildBackendKickoffInviteRows,
   buildBackendKickoffPanelModel,
+  buildDocumentsCheck,
+  type BackendKickoffForm,
+  type KickoffDocumentState,
 } from "./kickoff-panel";
+
+function documentsForm(requiredDocuments = ""): BackendKickoffForm {
+  return { ...buildBackendKickoffForm({ detail: projectDetail() }), requiredDocuments };
+}
+
+function file(extraction: KickoffDocumentState["extraction"]): KickoffDocumentState {
+  return { isFile: true, extraction };
+}
 
 function projectDetail(overrides: Record<string, unknown> = {}) {
   return {
@@ -16,6 +27,59 @@ function projectDetail(overrides: Record<string, unknown> = {}) {
     ...overrides,
   } as never;
 }
+
+describe("kickoff documents check", () => {
+  it("reports nothing received rather than echoing the PM's request list as progress", () => {
+    const check = buildDocumentsCheck({ form: documentsForm("Brand guide, ERD"), documents: [] });
+
+    expect(check.body).toBe("None received yet. Requested: Brand guide, ERD");
+    // Nothing has arrived, but a project may legitimately need no documents, so allow the tick.
+    expect(check.blockedReason).toBeUndefined();
+  });
+
+  it("counts only extracted files as readable by the agents", () => {
+    const check = buildDocumentsCheck({
+      form: documentsForm(),
+      documents: [file("READY"), file("READY"), { isFile: false, extraction: "NOT_APPLICABLE" }],
+    });
+
+    expect(check.body).toBe("2 of 2 received files readable by agents.");
+    expect(check.blockedReason).toBeUndefined();
+  });
+
+  it("blocks confirmation while extraction is still running", () => {
+    const check = buildDocumentsCheck({
+      form: documentsForm(),
+      documents: [file("READY"), file("EXTRACTING")],
+    });
+
+    expect(check.body).toBe("1 of 2 received files readable by agents · 1 still processing.");
+    expect(check.blockedReason).toBe("Wait for text extraction to finish before confirming.");
+  });
+
+  it("blocks confirmation when a document failed extraction", () => {
+    const check = buildDocumentsCheck({ form: documentsForm(), documents: [file("FAILED")] });
+
+    expect(check.body).toBe("0 of 1 received file readable by agents · 1 failed extraction.");
+    expect(check.blockedReason).toBe("Retry or replace the failed document before confirming.");
+  });
+
+  it("surfaces the documents state through the checklist row", () => {
+    const detail = projectDetail();
+    const checklist = buildBackendKickoffChecklist({
+      detail,
+      form: documentsForm(),
+      tasks: [],
+      workOrders: [],
+      documents: [file("FAILED")],
+    });
+
+    expect(checklist.find((item) => item.key === "documentsConfirmed")).toMatchObject({
+      body: "0 of 1 received file readable by agents · 1 failed extraction.",
+      blockedReason: "Retry or replace the failed document before confirming.",
+    });
+  });
+});
 
 describe("backend kickoff panel model", () => {
   it("builds form defaults from kickoff and project detail", () => {

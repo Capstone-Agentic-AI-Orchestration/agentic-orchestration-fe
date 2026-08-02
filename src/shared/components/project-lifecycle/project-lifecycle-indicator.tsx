@@ -91,6 +91,10 @@ export function mapProjectStatusToLifecycleStage(status: string, _kickoffStatus?
     case "PARSING_REQUIREMENTS":
     case "NEGOTIATING_CONTRACT":
       return "build";
+    case "DISCOVERY":
+      // Accepted lead, still in conversation. Explicit rather than relying on the default so a
+      // future stage rename cannot silently move it.
+      return "draft";
     case "PENDING":
       return "kickoff";
     case "FAILED":

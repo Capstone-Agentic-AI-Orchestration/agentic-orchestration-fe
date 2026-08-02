@@ -54,6 +54,9 @@ export function pmProjectLifecycleStage(
   ) {
     return "build";
   }
+  // An accepted lead still in conversation with the client. Explicit rather than falling through
+  // to the default, so the stage cannot silently move if the default changes.
+  if (status === "DISCOVERY") return "draft";
   if (status === "PENDING") return "kickoff";
   if (status === "FAILED") return "build";
   return "draft";

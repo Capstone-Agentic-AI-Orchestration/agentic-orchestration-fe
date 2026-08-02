@@ -18,33 +18,33 @@ import type { DevFlowWorkOrderStatus } from "@/shared/api/devflow-api";
 
 export function BackendWorkOrdersPanelView({ vm }: { vm: BackendWorkOrdersPanelViewModel }) {
   if (vm.loading) {
-    return <Card style={{ padding: 22, color: "var(--text-2)" }}>Loading work orders...</Card>;
+    return <Card className="pm-tab-panel pm-tab-empty">Loading work orders...</Card>;
   }
 
   if (vm.error) {
     return (
-      <Card style={{ padding: 22, color: "#FCA5A5", border: "1px solid rgba(239,68,68,.30)" }}>
+      <Card className="pm-tab-panel pm-tab-message pm-tab-message--danger">
         {compactBackendError(vm.error)}
       </Card>
     );
   }
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 380px", gap: 18 }}>
-      <Card style={{ padding: 0, overflow: "hidden" }}>
+    <div className="pm-tab-layout pm-tab-layout--aside">
+      <Card className="pm-tab-panel">
         <div style={{ padding: 16, borderBottom: "1px solid var(--border)" }}>
           <SectionTitle title="Orchestration handoff" subtitle={vm.workOrderSubtitle} />
-          {vm.workOrderError && <div style={{ color: "#FCA5A5", fontSize: 12.5, marginTop: 8 }}>{compactBackendError(vm.workOrderError)}</div>}
+          {vm.workOrderError && <div className="pm-tab-message pm-tab-message--danger" style={{ marginTop: 12 }}>{compactBackendError(vm.workOrderError)}</div>}
         </div>
 
         {!vm.hasWorkOrders ? (
-          <div style={{ padding: 18, color: "var(--text-3)", fontSize: 13 }}>No work orders created yet.</div>
-        ) : vm.workOrderRows.map((row) => (
+          <div className="pm-tab-empty">No work orders created yet. Package a task into a specialist handoff when it is ready for execution.</div>
+        ) : <div className="pm-tab-list">{vm.workOrderRows.map((row) => (
           <BackendWorkOrderRowView key={row.id} row={row} vm={vm} />
-        ))}
+        ))}</div>}
       </Card>
 
-      <Card style={{ padding: 22 }}>
+      <Card className="pm-tab-panel pm-tab-panel--padded">
         <SectionTitle title="New work order" subtitle="Package a task or artifact for a specialist persona" />
         <div style={{ display: "grid", gap: 12, marginTop: 14 }}>
           <Field label="Source task">
@@ -57,7 +57,12 @@ export function BackendWorkOrdersPanelView({ vm }: { vm: BackendWorkOrdersPanelV
           </Field>
 
           {vm.taskShortcuts.length > 0 && (
-            <div style={{ display: "grid", gap: 6, maxHeight: 132, overflow: "auto", paddingRight: 2 }}>
+            <div className="pm-tab-section" style={{ marginTop: 0, paddingTop: 0, borderTop: 0 }}>
+              <div className="pm-tab-section-heading">
+                <h4>Quick start from a task</h4>
+                <p>Select an existing task to prefill this handoff.</p>
+              </div>
+              <div style={{ display: "grid", gap: 6, maxHeight: 150, overflow: "auto", paddingRight: 2 }}>
               {vm.taskShortcuts.map((shortcut) => (
                 <button
                   key={shortcut.id}
@@ -68,6 +73,7 @@ export function BackendWorkOrdersPanelView({ vm }: { vm: BackendWorkOrdersPanelV
                   <div style={{ color: "var(--text-3)", fontSize: 11.5, marginTop: 2 }}>{shortcut.meta}</div>
                 </button>
               ))}
+              </div>
             </div>
           )}
 
@@ -77,7 +83,7 @@ export function BackendWorkOrdersPanelView({ vm }: { vm: BackendWorkOrdersPanelV
           <Field label="Instructions">
             <Textarea rows={5} value={vm.form.instructions} onChange={vm.actions.onInstructionsChange} placeholder="Acceptance notes, scope, constraints, and files to inspect." />
           </Field>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <div className="pm-tab-form-grid">
             <Field label="Agent">
               <Select value={vm.form.agentType} onChange={vm.actions.onAgentTypeChange}>
                 {WORK_ORDER_AGENT_OPTIONS.map((option) => (
@@ -125,9 +131,8 @@ function BackendWorkOrderRowView({
   vm: BackendWorkOrdersPanelViewModel;
 }) {
   return (
-    <div style={{ padding: "14px 16px", borderBottom: "1px solid var(--border)" }}>
-      <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-start", gap: 14 }}>
-        <div style={{ minWidth: 0, flex: 1 }}>
+    <div className="pm-tab-list-row">
+        <div className="pm-tab-list-row__content">
           <div className="row gap-2" style={{ flexWrap: "wrap", marginBottom: 7 }}>
             <WorkOrderStatusBadge status={row.status} />
             <WorkOrderPriorityBadge priority={row.priority} />
@@ -151,7 +156,7 @@ function BackendWorkOrderRowView({
             </div>
           )}
         </div>
-        <div style={{ display: "grid", gap: 8, justifyItems: "end", minWidth: 152 }}>
+        <div className="pm-tab-list-row__actions">
           <Select
             value={row.status}
             onChange={(event) => vm.actions.changeStatus(row.workOrder, event.target.value as DevFlowWorkOrderStatus)}
@@ -173,7 +178,6 @@ function BackendWorkOrderRowView({
           </Button>
           {row.dispatchBlocker && <div style={{ color: "var(--text-3)", fontSize: 11, maxWidth: 152, textAlign: "right" }}>{row.dispatchBlocker}</div>}
         </div>
-      </div>
     </div>
   );
 }

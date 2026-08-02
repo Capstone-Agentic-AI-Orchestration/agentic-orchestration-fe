@@ -37,6 +37,10 @@ export interface AppShellProps {
   sidebarHeader?: ReactNode;
   /** Topbar controls between search and the avatar (project switcher, notification bell, …). */
   rightSlot?: ReactNode;
+  /** Desktop icon rail that expands over the page on hover or keyboard focus. */
+  hoverExpandSidebar?: boolean;
+  /** Places the product logo and wordmark at the start of the full-width topbar. */
+  brandInTopbar?: boolean;
   children: ReactNode;
 }
 
@@ -104,6 +108,8 @@ export function AppShell({
   personaMeta,
   sidebarHeader,
   rightSlot,
+  hoverExpandSidebar = false,
+  brandInTopbar = false,
   children,
 }: AppShellProps) {
   const router = useRouter();
@@ -129,13 +135,21 @@ export function AppShell({
 
   const isActive = (item: ShellNavItem) => base === item.id || (item.aliases?.includes(base) ?? false);
 
+  const shellClassName = [
+    "cs-shell",
+    hoverExpandSidebar && "cs-shell--hover-sidebar",
+    brandInTopbar && "cs-shell--topbar-brand",
+  ].filter(Boolean).join(" ");
+
   return (
-    <div className="cs-shell">
+    <div className={shellClassName}>
       <aside className={"cs-sidebar" + (mobileOpen ? " is-mobile-open" : "")}>
         <div className="cs-sidebar-inner">
-          <div className="cs-brand">
-            <Logo />
-          </div>
+          {!brandInTopbar && (
+            <div className="cs-brand">
+              <Logo />
+            </div>
+          )}
 
           {sidebarHeader ?? (
             <div className="pm-org">
@@ -175,13 +189,13 @@ export function AppShell({
           <div className="cs-spacer" />
           {showSupport && (
             <a className="cs-support">
-              <IconLifeBuoy size={15} /> Help &amp; Support
+              <IconLifeBuoy size={15} /> <span className="cs-support-label">Help &amp; Support</span>
             </a>
           )}
 
           <div className="cs-user">
             <Avatar initials={profile.initials} online={showOnlineDot} />
-            <div style={{ minWidth: 0, flex: 1 }}>
+            <div className="cs-user-details" style={{ minWidth: 0, flex: 1 }}>
               <div style={{ fontWeight: 600, fontSize: 13.5, color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{profile.name}</div>
               <div style={{ fontSize: 12, color: "var(--text-3)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{profile.email}</div>
             </div>
@@ -198,6 +212,7 @@ export function AppShell({
           showSearch={showSearch}
           showSearchHint={showSearchHint}
           showSecurity={showSecurity}
+          showBrand={brandInTopbar}
           rightSlot={rightSlot}
           profile={profile}
           onMenu={() => setMobileOpen((open) => !open)}
@@ -216,6 +231,7 @@ function AppTopBar({
   showSearch,
   showSearchHint,
   showSecurity,
+  showBrand,
   rightSlot,
   profile,
   onMenu,
@@ -227,6 +243,7 @@ function AppTopBar({
   showSearch: boolean;
   showSearchHint?: boolean;
   showSecurity: boolean;
+  showBrand: boolean;
   rightSlot?: ReactNode;
   profile: ShellProfile;
   onMenu: () => void;
@@ -246,6 +263,12 @@ function AppTopBar({
   return (
     <header className="cs-topbar">
       <div className="cs-topbar-inner">
+        {showBrand && (
+          <div className="cs-topbar-brand">
+            <Logo size={18} />
+          </div>
+        )}
+
         <button className="cs-mobile-menu" onClick={onMenu} aria-label="Menu">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <path d="M3 6h18M3 12h18M3 18h18" />

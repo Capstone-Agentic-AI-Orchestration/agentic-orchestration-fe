@@ -13,6 +13,7 @@ import {
   createDevFlowKickoffTasks,
   createDevFlowKickoffWorkOrders,
   updateDevFlowProjectKickoff,
+  type DevFlowCollaborationDocument,
 } from "@/shared/api/devflow-api";
 
 type KickoffAction = "" | "tasks" | "work-orders";
@@ -21,6 +22,8 @@ export interface BackendKickoffPanelInput {
   detail: BackendKickoffDetail;
   tasks: unknown[];
   workOrders: unknown[];
+  /** Drives the Documents check from what was actually received rather than from a text field. */
+  documents?: DevFlowCollaborationDocument[];
   loading?: boolean;
   error?: string | null;
   onChanged?: () => void | Promise<void>;
@@ -58,6 +61,11 @@ export function useBackendKickoffPanelViewModel(
     form,
     tasks: input.tasks,
     workOrders: input.workOrders,
+    documents: (input.documents ?? []).map((document) => ({
+      // A link-only record has no stored file, so there is nothing to extract or to read.
+      isFile: Boolean(document.fileName || document.extraction),
+      extraction: document.extraction?.status ?? (document.fileName ? "PENDING" : "NOT_APPLICABLE"),
+    })),
   });
 
   useEffect(() => {

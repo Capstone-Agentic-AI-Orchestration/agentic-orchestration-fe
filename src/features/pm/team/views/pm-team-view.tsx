@@ -2,18 +2,28 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Badge, Button, Card, Field, Input, Select, Textarea, useToast } from "@/shared/components/ui";
+import { Badge, Button, Card, Field, Input, Select, Tabs, Textarea, useToast } from "@/shared/components/ui";
 import { IconArrowLeft, IconGitHub, IconPlus, IconRefresh, IconUsers } from "@/shared/components/icons";
 import {
+  assignDevFlowRepository,
   createDevFlowProject,
+  inviteDevFlowGroupMember,
+  listDevFlowGroupEligibleUsers,
   listDevFlowGroups,
   listDevFlowProjects,
   listDevFlowRepositories,
+  removeDevFlowGroupMember,
+  revokeDevFlowRepositoryAssignment,
+  updateDevFlowGroupMemberRole,
+  type DevFlowGroupPerson,
+  type DevFlowGroupRole,
   type DevFlowGroup,
   type DevFlowProjectSummary,
   type DevFlowRepository,
 } from "@/shared/api/devflow-api";
 import { pmProjectOrchestrateRoute } from "@/features/pm/projects/model/pm-projects-list";
+import { useSelectedTeamWorkspace } from "@/shared/projects/selected-team-workspace-context";
+import { useSelectedDevFlowProject } from "@/shared/projects/selected-project-context";
 
 const EMPTY_FORM = {
   companyName: "",
@@ -32,16 +42,25 @@ const STACK_LABELS: Record<string, string> = {
   expo: "Expo", "react-native": "React Native CLI",
 };
 
+const MANAGED_ROLES: Exclude<DevFlowGroupRole, "LEAD">[] = ["DELEGATED_LEAD", "MEMBER", "VIEWER"];
+
 export function PMTeamView({ groupId }: { groupId: string }) {
   const router = useRouter();
   const toast = useToast();
+  const { setSelectedTeamId } = useSelectedTeamWorkspace();
+  const { refreshProjects: refreshWorkspaceProjects } = useSelectedDevFlowProject();
   const [group, setGroup] = useState<DevFlowGroup | null>(null);
   const [projects, setProjects] = useState<DevFlowProjectSummary[]>([]);
   const [repositories, setRepositories] = useState<DevFlowRepository[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [form, setForm] = useState(EMPTY_FORM);
+  const [eligible, setEligible] = useState<DevFlowGroupPerson[]>([]);
+  const [invite, setInvite] = useState({ userId: "", role: "MEMBER" as Exclude<DevFlowGroupRole, "LEAD"> });
+  const [assignmentUsers, setAssignmentUsers] = useState<Record<string, string>>({});
+  const [activeTab, setActiveTab] = useState<"members" | "projects">("members");
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -63,6 +82,43 @@ export function PMTeamView({ groupId }: { groupId: string }) {
   }, [groupId]);
 
   useEffect(() => { void refresh(); }, [refresh]);
+
+  useEffect(() => {
+    setSelectedTeamId(groupId);
+  }, [groupId, setSelectedTeamId]);
+
+  useEffect(() => {
+    const syncTabFromUrl = () => {
+      const tab = new URLSearchParams(window.location.search).get("tab");
+      setActiveTab(tab === "projects" ? "projects" : "members");
+    };
+    syncTabFromUrl();
+    window.addEventListener("popstate", syncTabFromUrl);
+    return () => window.removeEventListener("popstate", syncTabFromUrl);
+  }, [groupId]);
+
+  useEffect(() => {
+    if (!group?.id || group.status === "ARCHIVED") {
+      setEligible([]);
+      return;
+    }
+    listDevFlowGroupEligibleUsers(group.id).then(setEligible).catch(() => setEligible([]));
+  }, [group?.id, group?.status, group?.updatedAt]);
+
+  const developers = group?.members.filter((member) => member.user.role === "DEV") ?? [];
+
+  const run = async (action: () => Promise<unknown>) => {
+    setBusy(true);
+    setError("");
+    try {
+      await action();
+      await refresh();
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : String(requestError));
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const ready =
     form.companyName.trim().length > 0 &&
@@ -96,7 +152,7 @@ export function PMTeamView({ groupId }: { groupId: string }) {
         `Provisioning ${form.repositoryName.trim()}-be, ${form.repositoryName.trim()}-fe${form.includeMobile ? ", " + form.repositoryName.trim() + "-mobile" : ""}. A developer starts orchestration once they're ready.`,
       );
       setForm(EMPTY_FORM);
-      await refresh();
+      await Promise.all([refresh(), refreshWorkspaceProjects()]);
     } catch (requestError) {
       const message = requestError instanceof Error ? requestError.message : String(requestError);
       setError(message);
@@ -106,34 +162,97 @@ export function PMTeamView({ groupId }: { groupId: string }) {
     }
   };
 
+  const changeTab = (tab: string) => {
+    const nextTab = tab === "projects" ? "projects" : "members";
+    setActiveTab(nextTab);
+    router.replace(`/pm/team/${groupId}${nextTab === "projects" ? "?tab=projects" : ""}`);
+  };
+
   return (
     <div data-screen-label="PM - Team platform">
       <button type="button" className="auth-link auth-link-btn" onClick={() => router.push("/pm/groups")} style={{ marginBottom: 14, color: "var(--text-2)", fontSize: 13 }}>
-        <IconArrowLeft size={14} /> Back to groups
+        <IconArrowLeft size={14} /> Back to teams
       </button>
 
       <div className="row" style={{ justifyContent: "space-between", marginBottom: 18, gap: 12, flexWrap: "wrap" }}>
         <div>
           <span className="eyebrow"><IconUsers size={14} /> Team platform</span>
           <h1 style={{ marginTop: 8 }}>{group?.name ?? (loading ? "Loading team…" : "Team")}</h1>
-          <p style={{ color: "var(--text-2)" }}>{group?.description || "Create projects (each gets a GitHub repository); developers start orchestration from their workspace once the repo is ready."}</p>
+          <p style={{ color: "var(--text-2)" }}>{group?.description || "Manage the people and delivery work assigned to this team workspace."}</p>
         </div>
         <Button variant="secondary" size="sm" icon={<IconRefresh size={14} />} disabled={loading} onClick={() => void refresh()}>
           {loading ? "Refreshing…" : "Refresh"}
         </Button>
       </div>
 
-      {group && (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 16 }}>
-          {group.members.map((member) => (
-            <Badge key={member.id} tone="gray">{member.user.fullName || member.user.email} · {member.role.replaceAll("_", " ")}</Badge>
-          ))}
-        </div>
-      )}
-
       {error && <Card style={{ padding: 14, color: "#FCA5A5", marginBottom: 14 }}>{error}</Card>}
 
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(320px, 420px) minmax(0, 1fr)", gap: 18, alignItems: "start" }}>
+      <Tabs
+        items={[
+          { value: "members", label: `Members${group ? ` (${group.members.length})` : ""}` },
+          { value: "projects", label: `Projects (${projects.length})` },
+        ]}
+        value={activeTab}
+        onChange={changeTab}
+      />
+
+      {activeTab === "members" && group && (
+        <Card style={{ padding: 20, marginTop: 18 }}>
+          <div className="row" style={{ justifyContent: "space-between", marginBottom: 14 }}>
+            <div><strong>Members</strong><p style={{ color: "var(--text-3)", marginTop: 4 }}>Only PM and developer personas can be added.</p></div>
+            <Badge tone="blue">{group.members.length}</Badge>
+          </div>
+          <div style={{ display: "grid", gap: 8 }}>
+            {group.members.map((member) => (
+              <div key={member.id} className="row" style={{ justifyContent: "space-between", gap: 12, padding: "10px 0", borderTop: "1px solid var(--border)", flexWrap: "wrap" }}>
+                <div><strong>{member.user.fullName || member.user.email || member.userId}</strong><small style={{ display: "block", color: "var(--text-3)" }}>{member.user.githubLogin ? `@${member.user.githubLogin}` : "GitHub login not captured yet"}</small></div>
+                <div className="row gap-2">
+                  {member.role === "LEAD" ? <Badge tone="purple">LEAD</Badge> : (
+                    <Select
+                      value={member.role}
+                      disabled={busy || group.status === "ARCHIVED"}
+                      onChange={(event) => void run(() => updateDevFlowGroupMemberRole(group.id, member.userId, event.target.value as Exclude<DevFlowGroupRole, "LEAD">))}
+                    >
+                      {MANAGED_ROLES.map((role) => <option key={role} value={role}>{role.replaceAll("_", " ")}</option>)}
+                    </Select>
+                  )}
+                  {member.role !== "LEAD" && <Button variant="ghost" size="sm" disabled={busy || group.status === "ARCHIVED"} onClick={() => void run(() => removeDevFlowGroupMember(group.id, member.userId))}>Remove</Button>}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {group.status === "ACTIVE" && (
+            <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 180px auto", gap: 10, marginTop: 18 }}>
+              <Select value={invite.userId} onChange={(event) => setInvite({ ...invite, userId: event.target.value })}>
+                <option value="">Select a PM or developer</option>
+                {eligible.map((person) => {
+                  const notOnSystem = person.onSystem === false || !person.id;
+                  return (
+                    <option key={person.id ?? person.githubLogin ?? person.email} value={person.id ?? ""} disabled={notOnSystem}>
+                      {notOnSystem
+                        ? `${person.githubLogin ?? person.email} · ${person.role} — not on DevFlow yet`
+                        : `${person.fullName || person.email || person.githubLogin} · ${person.role}`}
+                    </option>
+                  );
+                })}
+              </Select>
+              <Select value={invite.role} onChange={(event) => setInvite({ ...invite, role: event.target.value as Exclude<DevFlowGroupRole, "LEAD"> })}>
+                {MANAGED_ROLES.map((role) => <option key={role} value={role}>{role.replaceAll("_", " ")}</option>)}
+              </Select>
+              <Button variant="primary" disabled={busy || !invite.userId} onClick={() => void run(async () => {
+                const invitee = eligible.find((person) => person.id === invite.userId);
+                await inviteDevFlowGroupMember(group.id, invite);
+                setInvite({ userId: "", role: "MEMBER" });
+                toast.success("Invitation sent", `${invitee?.fullName || invitee?.email || invitee?.githubLogin || "The member"} was invited to ${group.name}.`);
+              })}>Invite</Button>
+            </div>
+          )}
+        </Card>
+      )}
+
+      {activeTab === "projects" && (
+      <div style={{ display: "grid", gridTemplateColumns: "minmax(320px, 420px) minmax(0, 1fr)", gap: 18, alignItems: "start", marginTop: 18 }}>
         {/* Create project (scoped to this team) */}
         <Card style={{ padding: 20 }}>
           <div className="row gap-2" style={{ marginBottom: 14 }}><IconPlus size={16} /><strong>Create project</strong></div>
@@ -214,11 +333,40 @@ export function PMTeamView({ groupId }: { groupId: string }) {
                   <Badge tone={repository.status === "ACTIVE" ? "green" : repository.status === "FAILED" ? "red" : "gray"}>{repository.status}</Badge>
                   {repository.htmlUrl && <a className="btn btn-secondary btn-sm" href={repository.htmlUrl} target="_blank" rel="noreferrer">Open GitHub</a>}
                 </div>
+                {developers.length > 0 && repository.status === "ACTIVE" && (
+                  <div className="row gap-2" style={{ width: "100%", marginTop: 4 }}>
+                    <Select value={assignmentUsers[repository.id] || ""} onChange={(event) => setAssignmentUsers({ ...assignmentUsers, [repository.id]: event.target.value })}>
+                      <option value="">Assign a developer</option>
+                      {developers
+                        .filter((member) => !repository.assignments.some((assignment) => assignment.desiredState === "ASSIGNED" && assignment.userId === member.userId))
+                        .map((member) => <option key={member.userId} value={member.userId}>{member.user.fullName || member.user.email}</option>)}
+                    </Select>
+                    <Button variant="secondary" size="sm" disabled={busy || !assignmentUsers[repository.id]} onClick={() => void run(async () => {
+                      const devName = developers.find((member) => member.userId === assignmentUsers[repository.id])?.user.fullName;
+                      await assignDevFlowRepository(repository.id, assignmentUsers[repository.id]);
+                      setAssignmentUsers((previous) => ({ ...previous, [repository.id]: "" }));
+                      toast.success("Developer granted access", `${devName || "The developer"} can now see ${repository.name} in this team.`);
+                    })}>Grant access</Button>
+                  </div>
+                )}
+                {repository.assignments.filter((assignment) => assignment.desiredState === "ASSIGNED").length > 0 && (
+                  <div style={{ width: "100%", marginTop: 4, display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {repository.assignments.filter((assignment) => assignment.desiredState === "ASSIGNED").map((assignment) => (
+                      <span key={assignment.id} className="row gap-2">
+                        <Badge tone={assignment.effectiveState === "ACTIVE" ? "green" : assignment.effectiveState === "FAILED" ? "red" : "yellow"}>
+                          {assignment.user.fullName || assignment.user.email} · {assignment.effectiveState}
+                        </Badge>
+                        <Button variant="ghost" size="sm" disabled={busy} onClick={() => void run(() => revokeDevFlowRepositoryAssignment(repository.id, assignment.userId))}>Revoke</Button>
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </Card>
         </div>
       </div>
+      )}
     </div>
   );
 }

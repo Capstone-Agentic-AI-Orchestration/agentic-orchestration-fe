@@ -38,6 +38,21 @@ export interface BackendKickoffChecklistItem {
   label: string;
   body: string;
   checked: boolean;
+  /**
+   * Set when the check cannot honestly be confirmed yet. The Documents check used to be a bare
+   * checkbox over a free-text wish list, so a PM could mark documents "confirmed" with nothing
+   * received and no readable text — the checklist then reported a readiness that did not exist.
+   */
+  blockedReason?: string;
+}
+
+/**
+ * The slice of a project document the kickoff checklist needs. Kept structural rather than
+ * importing the API type so the model stays pure and trivially testable.
+ */
+export interface KickoffDocumentState {
+  isFile: boolean;
+  extraction: "PENDING" | "EXTRACTING" | "READY" | "FAILED" | "NOT_APPLICABLE";
 }
 
 export interface BackendKickoffInviteRow {
@@ -88,17 +103,59 @@ export function buildBackendKickoffForm(input: {
   };
 }
 
+/**
+ * Describes the Documents check from the documents that actually exist, not from the PM's
+ * free-text request list. `requiredDocuments` stays meaningful — it is what the PM *asked* for —
+ * but it can never again stand in for what was *received*.
+ */
+export function buildDocumentsCheck(input: {
+  form: BackendKickoffForm;
+  documents: KickoffDocumentState[];
+}): { body: string; blockedReason?: string } {
+  const files = input.documents.filter((document) => document.isFile);
+  const readable = files.filter((document) => document.extraction === "READY");
+  const pending = files.filter((document) => document.extraction === "PENDING" || document.extraction === "EXTRACTING");
+  const failed = files.filter((document) => document.extraction === "FAILED");
+  const requested = input.form.requiredDocuments.trim();
+
+  if (files.length === 0) {
+    return {
+      body: requested
+        ? `None received yet. Requested: ${requested}`
+        : "No documents received. Confirm only if this project genuinely needs none.",
+    };
+  }
+
+  const parts = [`${readable.length} of ${files.length} received file${files.length === 1 ? "" : "s"} readable by agents`];
+  if (pending.length) parts.push(`${pending.length} still processing`);
+  if (failed.length) parts.push(`${failed.length} failed extraction`);
+
+  let blockedReason: string | undefined;
+  if (pending.length) blockedReason = "Wait for text extraction to finish before confirming.";
+  else if (failed.length) blockedReason = "Retry or replace the failed document before confirming.";
+
+  return { body: `${parts.join(" · ")}.`, blockedReason };
+}
+
 export function buildBackendKickoffChecklist(input: {
   form: BackendKickoffForm;
   detail: BackendKickoffDetail;
   tasks: unknown[];
   workOrders: unknown[];
+  documents?: KickoffDocumentState[];
 }): BackendKickoffChecklistItem[] {
   const memberCount = input.detail.members.length;
+  const documentsCheck = buildDocumentsCheck({ form: input.form, documents: input.documents ?? [] });
   return [
     { key: "scopeConfirmed", label: "Scope", body: input.form.scopeSummary || input.detail.brief, checked: input.form.scopeConfirmed },
     { key: "milestonesConfirmed", label: "Milestones", body: input.form.milestones || "No milestones saved", checked: input.form.milestonesConfirmed },
-    { key: "documentsConfirmed", label: "Documents", body: input.form.requiredDocuments || "No required documents saved", checked: input.form.documentsConfirmed },
+    {
+      key: "documentsConfirmed",
+      label: "Documents",
+      body: documentsCheck.body,
+      checked: input.form.documentsConfirmed,
+      blockedReason: documentsCheck.blockedReason,
+    },
     { key: "techStackConfirmed", label: "Stack", body: input.form.techStackNotes || input.detail.stackKey, checked: input.form.techStackConfirmed },
     {
       key: "rolesConfirmed",
@@ -145,6 +202,7 @@ export function buildBackendKickoffPanelModel(input: {
   form: BackendKickoffForm;
   tasks: unknown[];
   workOrders: unknown[];
+  documents?: KickoffDocumentState[];
 }): BackendKickoffPanelModel {
   const kickoff = input.detail.kickoff;
   const checklist = buildBackendKickoffChecklist(input);

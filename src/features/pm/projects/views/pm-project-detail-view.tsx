@@ -8,7 +8,7 @@ import { ActivityConsole } from "@/shared/components/orchestration/activity-cons
 import { RunStatusBanner } from "@/shared/components/orchestration/run-status-banner";
 import { useSocketSubscription } from "@/shared/hooks/use-socket-subscription";
 import { PMPageHeader } from "@/features/pm/shared/components/pm-page-header";
-import { Badge, Button, Card, Field, Input, Modal, Select, Tabs, Textarea } from "@/shared/components/ui";
+import { Badge, Button, Card, Field, Input, Modal, Select, Textarea } from "@/shared/components/ui";
 import { DevFlowProjectTimeline } from "@/shared/components/project-timeline/devflow-project-timeline";
 import { OrchestrationProviderStatusPanel } from "@/shared/components/orchestration/orchestration-provider-status-panel";
 import { OrchestrationLiveVisualizer } from "@/shared/components/orchestration/orchestration-live-visualizer";
@@ -16,23 +16,18 @@ import { OrchestrationPreflight } from "@/shared/components/orchestration/orches
 import { BlockingIssuePanel, GuidedActionPanel } from "@/shared/components/journey";
 import { makeProjectJourneyContext } from "@/shared/journey";
 import {
-  IconActivity,
   IconAlertTriangle,
   IconArrowLeft,
+  IconBriefcase,
   IconArrowRight,
-  IconCalendar,
   IconCheck,
-  IconCheckCircle,
   IconCircle,
-  IconClipboard,
   IconClose,
   IconCode,
-  IconCpu,
   IconDatabase,
   IconDownload,
   IconEdit,
   IconExternalLink,
-  IconFileText,
   IconFolder,
   IconGitBranch,
   IconGitHub,
@@ -43,15 +38,11 @@ import {
   IconPlus,
   IconPlay,
   IconRefresh,
-  IconRocket,
   IconSearch,
   IconSend,
-  IconSettings,
-  IconShield,
   IconStar,
   IconUpload,
   IconUser,
-  IconUsers,
   IconWorkflow,
 } from "@/shared/components/icons";
 import {
@@ -69,6 +60,7 @@ import {
   getDevFlowOrchestrationRuns,
   getDevFlowProjectTaskActivity,
   getDevFlowProject,
+  startDevFlowProjectDelivery,
   getDevFlowProjectArtifact,
   handleDevFlowArtifactRevision,
   publishDevFlowArtifactOutput,
@@ -113,10 +105,13 @@ import {
 import { BackendWorkOrdersPanel } from "../components/backend-work-orders-panel";
 import { BackendOrchestrationPanel } from "../components/backend-orchestration-panel";
 import { BackendKickoffPanel } from "../components/backend-kickoff-panel";
+import { ProjectConversationPanel } from "@/shared/components/collaboration/project-conversation-panel";
+import { BackendDocumentsPanel } from "../components/backend-documents-panel";
 import { BackendTasksPanel } from "../components/backend-tasks-panel";
 import { BackendDeliveryReviewPanel } from "../components/backend-delivery-review-panel";
 import { BackendArtifactsPanel } from "../components/backend-artifacts-panel";
 import { ProjectNextActionHero } from "../components/project-next-action-hero";
+import { PMProjectSubnav, PM_PROJECT_SECTION_IDS } from "../components/pm-project-subnav";
 import {
   kickoffFormFromDetail,
   clientInviteSummary,
@@ -162,7 +157,7 @@ export function PMProjectDetailView({ projectId }: { projectId: string }) {
   }, [projectId]);
 
   if (backendProject) {
-    return <BackendProjectDetail project={backendProject} onBack={() => router.push("/pm/projects")} />;
+    return <BackendProjectDetail project={backendProject} onBack={() => router.push("/pm/workspace-projects")} />;
   }
 
   if (backendLoading) {
@@ -171,7 +166,7 @@ export function PMProjectDetailView({ projectId }: { projectId: string }) {
         <PMPageHeader
           title="Loading project"
           subtitle={`Checking backend record for ${projectId}.`}
-          actions={<Button variant="secondary" size="sm" icon={<IconArrowLeft size={14} />} onClick={() => router.push("/pm/projects")}>Back to projects</Button>}
+          actions={<Button variant="secondary" size="sm" icon={<IconArrowLeft size={14} />} onClick={() => router.push("/pm/workspace-projects")}>Back to projects</Button>}
         />
         <Card style={{ padding: 32, color: "var(--text-2)" }}>Loading backend project...</Card>
       </div>
@@ -183,7 +178,7 @@ export function PMProjectDetailView({ projectId }: { projectId: string }) {
       <PMPageHeader
         title="Project not found"
         subtitle={`No backend project exists for ${projectId}.`}
-        actions={<Button variant="secondary" size="sm" icon={<IconArrowLeft size={14} />} onClick={() => router.push("/pm/projects")}>Back to projects</Button>}
+        actions={<Button variant="secondary" size="sm" icon={<IconArrowLeft size={14} />} onClick={() => router.push("/pm/workspace-projects")}>Back to projects</Button>}
       />
       <Card style={{ padding: 32 }}>
         <div className="row gap-3">
@@ -199,9 +194,11 @@ export function PMProjectDetailView({ projectId }: { projectId: string }) {
 }
 
 function BackendProjectDetail({ project, onBack }) {
+  const router = useRouter();
   const [detail, setDetail] = useState(project);
-  const [tab, setTab] = useState("build");
-  const outputs = useDevFlowProjectOutputs(detail.id, { includeEvents: true, includeTasks: true, includeTimeline: true, includeWorkOrders: true });
+  const [tab, setTab] = useState("overview");
+  const [startingDelivery, setStartingDelivery] = useState(false);
+  const outputs = useDevFlowProjectOutputs(detail.id, { includeDocuments: true, includeEvents: true, includeTasks: true, includeTimeline: true, includeWorkOrders: true });
   const orchestration = useDevFlowOrchestrationStatus(detail.id);
   const provider = useDevFlowOrchestrationProviderStatus(detail.id);
   const modelSelection = useOrchestrationModelSelection(detail.id);
@@ -218,6 +215,13 @@ function BackendProjectDetail({ project, onBack }) {
   const [llmVerificationLoading, setLlmVerificationLoading] = useState(false);
   const [llmVerificationError, setLlmVerificationError] = useState("");
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const requestedTab = new URLSearchParams(window.location.search).get("tab");
+    if (requestedTab && requestedTab !== "intake" && PM_PROJECT_SECTION_IDS.has(requestedTab)) {
+      setTab(requestedTab);
+    }
+  }, [project.id]);
   const [starting, setStarting] = useState(false);
   const [preflightOpen, setPreflightOpen] = useState(false);
   const [orchestrationAction, setOrchestrationAction] = useState("");
@@ -480,7 +484,7 @@ function BackendProjectDetail({ project, onBack }) {
     }
     if (blockers.length && !detail.runId) {
       setError(blockers[0]);
-      setTab(blockers[0].includes("work order") ? "build" : "build");
+      setTab(blockers[0].includes("work order") ? "work-orders" : "setup");
       return;
     }
 
@@ -496,7 +500,7 @@ function BackendProjectDetail({ project, onBack }) {
       setDetail(await getDevFlowProject(detail.id));
       await Promise.all([outputs.refresh?.(), orchestration.refresh?.(), provider.refresh?.(), refreshOrchestrationRuns(), refreshDeliveryReadiness()]);
       setPreflightOpen(false);
-      setTab("build");
+      setTab("orchestration");
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : String(nextError));
     } finally {
@@ -563,16 +567,28 @@ function BackendProjectDetail({ project, onBack }) {
     blockers: orchestrationBlockers,
     primaryAction: {
       label: canStartOrchestration ? "Start build run" : detail.runId ? "Open build run" : "Resolve blockers",
-      onClick: canStartOrchestration ? () => setPreflightOpen(true) : () => setTab("build"),
+      onClick: canStartOrchestration ? () => setPreflightOpen(true) : () => setTab("setup"),
       disabled: starting,
     },
     secondaryAction: { label: "Open project build", href: `/pm/orchestrate/${detail.id}`, variant: "secondary", icon: <IconWorkflow size={13} /> },
   });
 
   return (
-    <div data-screen-label={`PM - Backend Project - ${detail.id}`}>
+    <div className="pm-project-workspace" data-screen-label={`PM - Backend Project - ${detail.id}`}>
+      <PMProjectSubnav
+        projectId={detail.id}
+        projectName={detail.companyName}
+        activeItem={tab}
+        onSelect={(nextTab) => {
+          setTab(nextTab);
+          const query = nextTab === "overview" ? "" : `?tab=${encodeURIComponent(nextTab)}`;
+          router.replace(`/pm/project/${detail.id}${query}`, { scroll: false });
+        }}
+      />
+
+      <section className="pm-project-workspace-content">
       <PMPageHeader
-        title={detail.companyName}
+        title={detail.client?.name ?? detail.companyName}
         subtitle={`${detail.stackKey} - ${detail.id}`}
         actions={
           <div className="row gap-2">
@@ -580,49 +596,101 @@ function BackendProjectDetail({ project, onBack }) {
             <Button variant="secondary" size="sm" icon={<IconWorkflow size={13} />} onClick={() => router.push(`/pm/orchestrate/${detail.id}`)}>
               Open project build
             </Button>
-            <Button variant="secondary" size="sm" icon={<IconClipboard size={13} />} onClick={() => router.push(`/pm/project/${detail.id}/intake`)}>
-              Review intake
-            </Button>
           </div>
         }
       />
 
-      {/* Lifecycle indicator */}
-      <div className="project-detail-lifecycle">
-        <ProjectLifecycleIndicator
-          currentStage={lifecycleStageId}
-          maxReachedStage={lifecycleStageId}
-          completedStages={completedStagesFromProject}
-          onClickStage={() => router.push(`/pm/orchestrate/${detail.id}`)}
-        />
-      </div>
+      {detail.status === "DISCOVERY" && (
+        <Card className="pm-discovery-banner">
+          <div className="pm-discovery-copy">
+            <strong>This project is in discovery</strong>
+            <span>
+              Talk to the client and collect the documents you need. Nothing is built and
+              orchestration stays locked until you start delivery.
+            </span>
+          </div>
+          <Button
+            disabled={startingDelivery}
+            onClick={async () => {
+              setStartingDelivery(true);
+              try {
+                await startDevFlowProjectDelivery(detail.id);
+                setDetail(await getDevFlowProject(detail.id));
+              } finally {
+                setStartingDelivery(false);
+              }
+            }}
+          >
+            {startingDelivery ? "Starting..." : "Start delivery"}
+          </Button>
+        </Card>
+      )}
 
-      <ProjectNextActionHero
-        projectName={detail.companyName}
-        stackKey={detail.stackKey}
-        status={detail.status}
-        runId={detail.runId}
-        repoUrl={detail.repoUrl}
-        artifactCount={outputs.artifacts.length}
-        hasRunBudget={Boolean(detail.runBudget)}
-        tokensConsumed={detail.runBudget?.tokensConsumed}
-        tokenBudget={detail.runBudget?.tokenBudget}
-        retryCount={detail.runBudget?.retryCount}
-        maxRetries={detail.runBudget?.maxRetries}
-        orchestrationBlockers={orchestrationBlockers}
-        providerAvailable={provider.status?.available}
-        providerReason={provider.status?.reason || provider.error}
-        isStarting={starting}
-        onStart={() => setPreflightOpen(true)}
-        onApproveGate1={() => approveGate("architecture", true)}
-        onRejectGate1={() => approveGate("architecture", false)}
-        onApproveGate2={() => approveGate("code", true)}
-        onRejectGate2={() => approveGate("code", false)}
-        onCreateRepo={handleCreateRepo}
-      />
+      {detail.client ? (
+        <button
+          type="button"
+          className="pm-project-client-chip"
+          onClick={() => router.push(`/pm/clients/${detail.client.id}`)}
+        >
+          <IconBriefcase size={13} />
+          <span>{detail.client.name}</span>
+          <span className="pm-project-client-chip-hint">View client</span>
+        </button>
+      ) : (
+        <button
+          type="button"
+          className="pm-unassigned-banner"
+          style={{ marginBottom: 14 }}
+          onClick={() => router.push("/pm/clients/unassigned")}
+        >
+          <span className="pm-unassigned-icon" aria-hidden="true"><IconAlertTriangle size={15} /></span>
+          <span className="pm-unassigned-copy">
+            <strong>This project has no client</strong>
+            <span>It will not appear on any client page until you link it to a company.</span>
+          </span>
+          <span className="pm-unassigned-action">Link a client</span>
+        </button>
+      )}
 
-      <GuidedActionPanel context={projectJourney} />
-      <BlockingIssuePanel issues={projectJourney.blockers} />
+      {tab === "overview" && (
+        <div className="pm-project-section-stack">
+          <div className="project-detail-lifecycle">
+            <ProjectLifecycleIndicator
+              currentStage={lifecycleStageId}
+              maxReachedStage={lifecycleStageId}
+              completedStages={completedStagesFromProject}
+              onClickStage={() => router.push(`/pm/orchestrate/${detail.id}`)}
+            />
+          </div>
+
+          <ProjectNextActionHero
+            projectName={detail.companyName}
+            stackKey={detail.stackKey}
+            status={detail.status}
+            runId={detail.runId}
+            repoUrl={detail.repoUrl}
+            artifactCount={outputs.artifacts.length}
+            hasRunBudget={Boolean(detail.runBudget)}
+            tokensConsumed={detail.runBudget?.tokensConsumed}
+            tokenBudget={detail.runBudget?.tokenBudget}
+            retryCount={detail.runBudget?.retryCount}
+            maxRetries={detail.runBudget?.maxRetries}
+            orchestrationBlockers={orchestrationBlockers}
+            providerAvailable={provider.status?.available}
+            providerReason={provider.status?.reason || provider.error}
+            isStarting={starting}
+            onStart={() => setPreflightOpen(true)}
+            onApproveGate1={() => approveGate("architecture", true)}
+            onRejectGate1={() => approveGate("architecture", false)}
+            onApproveGate2={() => approveGate("code", true)}
+            onRejectGate2={() => approveGate("code", false)}
+            onCreateRepo={handleCreateRepo}
+          />
+
+          <GuidedActionPanel context={projectJourney} />
+          <BlockingIssuePanel issues={projectJourney.blockers} />
+        </div>
+      )}
 
       {error && (
         <Card style={{ padding: 14, marginBottom: 16, color: "#FCA5A5", border: "1px solid rgba(239,68,68,.30)" }}>
@@ -630,24 +698,13 @@ function BackendProjectDetail({ project, onBack }) {
         </Card>
       )}
 
-      <Tabs
-        items={[
-          { value: "build", label: "Build" },
-          { value: "review", label: "Review" },
-          { value: "team", label: "Team" },
-          { value: "settings", label: "Settings" },
-        ]}
-        value={tab}
-        onChange={setTab}
-      />
-
-      <div style={{ marginTop: 18 }}>
-        {tab === "build" && (
-          <div style={{ display: "grid", gap: 18 }}>
+      <div className="pm-project-section-stack">
+        {tab === "setup" && (
             <BackendKickoffPanel
               detail={detail}
               tasks={outputs.tasks}
               workOrders={outputs.workOrders}
+              documents={outputs.documents}
               loading={outputs.loading}
               error={outputs.error}
               onChanged={async () => {
@@ -655,6 +712,9 @@ function BackendProjectDetail({ project, onBack }) {
                 await Promise.all([outputs.refresh?.(), refreshDeliveryReadiness()]);
               }}
             />
+        )}
+
+        {tab === "tasks" && (
             <BackendTasksPanel
               projectId={detail.id}
               tasks={outputs.tasks}
@@ -666,6 +726,9 @@ function BackendProjectDetail({ project, onBack }) {
                 await Promise.all([outputs.refresh?.(), refreshDeliveryReadiness()]);
               }}
             />
+        )}
+
+        {tab === "work-orders" && (
             <BackendWorkOrdersPanel
               projectId={detail.id}
               workOrders={outputs.workOrders}
@@ -677,6 +740,10 @@ function BackendProjectDetail({ project, onBack }) {
                 await Promise.all([outputs.refresh?.(), refreshDeliveryReadiness()]);
               }}
             />
+        )}
+
+        {tab === "orchestration" && (
+          <>
             <OrchestrationPreflight
               open={preflightOpen}
               projectName={detail.companyName}
@@ -691,6 +758,7 @@ function BackendProjectDetail({ project, onBack }) {
               starting={starting}
               initialTokenBudget={detail.runBudget?.tokenBudget}
               initialMaxRetries={detail.runBudget?.maxRetries}
+              showEntry={false}
               onOpen={() => setPreflightOpen(true)}
               onClose={() => setPreflightOpen(false)}
               onLaunch={startRun}
@@ -730,78 +798,116 @@ function BackendProjectDetail({ project, onBack }) {
                 await Promise.all([outputs.refresh?.(), orchestration.refresh?.(), provider.refresh?.(), refreshOrchestrationRuns(), refreshDeliveryReadiness()]);
               }}
             />
-          </div>
+          </>
         )}
 
-        {tab === "review" && (
-          <div style={{ display: "grid", gap: 18 }}>
-            {detail.gates.length > 0 && (
-              <Card style={{ padding: 22 }}>
-                <SectionTitle title="Gate decisions" subtitle="Architecture and code review gates" />
-                <div style={{ marginTop: 12 }}>
-                  {detail.gates.map((gate) => (
-                    <div key={gate.id} style={{ padding: "11px 0", borderBottom: "1px solid var(--border)" }}>
-                      <div className="row" style={{ justifyContent: "space-between", gap: 12 }}>
-                        <div style={{ fontWeight: 600, fontSize: 13 }}>{gate.gateType}</div>
-                        <Badge tone={gate.decision === "APPROVED" ? "green" : "red"}>{gate.decision}</Badge>
-                      </div>
-                      <div style={{ color: "var(--text-3)", fontSize: 12, marginTop: 4 }}>{formatBackendDate(gate.decidedAt)}</div>
-                      {gate.notes && <div style={{ color: "var(--text-2)", fontSize: 13, marginTop: 6 }}>{gate.notes}</div>}
-                    </div>
-                  ))}
+        {tab === "gates" && (
+          <Card className="pm-tab-panel pm-tab-panel--padded">
+            <div className="pm-tab-header">
+              <SectionTitle title="Gate decisions" subtitle="Review the approval history for architecture and delivery gates." />
+              <Badge tone={detail.gates.length > 0 ? "blue" : "gray"}>{detail.gates.length} decisions</Badge>
+            </div>
+            <div className="pm-tab-section">
+              {detail.gates.length === 0 ? (
+                <div className="pm-tab-empty" style={{ padding: 0 }}>No gate decisions have been recorded yet.</div>
+              ) : <div className="pm-tab-list">{detail.gates.map((gate) => (
+                <div key={gate.id} className="pm-tab-list-row">
+                  <div className="pm-tab-list-row__content">
+                  <div className="row" style={{ justifyContent: "space-between", gap: 12 }}>
+                    <div style={{ fontWeight: 600, fontSize: 13 }}>{gate.gateType}</div>
+                    <Badge tone={gate.decision === "APPROVED" ? "green" : "red"}>{gate.decision}</Badge>
+                  </div>
+                  <div style={{ color: "var(--text-3)", fontSize: 12, marginTop: 4 }}>{formatBackendDate(gate.decidedAt)}</div>
+                  {gate.notes && <div style={{ color: "var(--text-2)", fontSize: 13, marginTop: 6 }}>{gate.notes}</div>}
+                  </div>
                 </div>
-              </Card>
-            )}
-            <BackendArtifactsPanel
-              projectId={detail.id}
-              artifacts={outputs.artifacts}
-              tasks={outputs.tasks}
-              members={detail.members}
-              loading={outputs.loading}
-              error={outputs.error}
-              emptyText="No generated artifacts have been recorded for this project yet."
-              onChanged={outputs.refresh}
-            />
-            <BackendDeliveryReviewPanel
-              review={detail.deliveryReview}
-              readiness={deliveryReadiness}
-              readinessLoading={deliveryReadinessLoading}
-              readinessError={deliveryReadinessError}
-              onRefreshReadiness={refreshDeliveryReadiness}
-              onResolve={async (note) => {
-                await resolveDevFlowProjectDeliveryRevision(detail.id, { note });
-                setDetail(await getDevFlowProject(detail.id));
-                await Promise.all([outputs.refresh?.(), refreshDeliveryReadiness()]);
-              }}
-            />
-          </div>
+              ))}</div>}
+            </div>
+          </Card>
         )}
 
-        {tab === "team" && (
-          <div style={{ display: "grid", gap: 18 }}>
-            <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 360px", gap: 18 }}>
-              <Card style={{ padding: 22 }}>
-                <SectionTitle title="Project members" subtitle="Users who can access this project" />
-                <div style={{ marginTop: 12 }}>
+        {tab === "artifacts" && (
+          <BackendArtifactsPanel
+            projectId={detail.id}
+            artifacts={outputs.artifacts}
+            tasks={outputs.tasks}
+            members={detail.members}
+            loading={outputs.loading}
+            error={outputs.error}
+            emptyText="No generated artifacts have been recorded for this project yet."
+            onChanged={outputs.refresh}
+          />
+        )}
+
+        {tab === "delivery-review" && (
+          <BackendDeliveryReviewPanel
+            review={detail.deliveryReview}
+            readiness={deliveryReadiness}
+            readinessLoading={deliveryReadinessLoading}
+            readinessError={deliveryReadinessError}
+            onRefreshReadiness={refreshDeliveryReadiness}
+            onResolve={async (note) => {
+              await resolveDevFlowProjectDeliveryRevision(detail.id, { note });
+              setDetail(await getDevFlowProject(detail.id));
+              await Promise.all([outputs.refresh?.(), refreshDeliveryReadiness()]);
+            }}
+          />
+        )}
+
+        {tab === "messages" && (
+          <ProjectConversationPanel
+            projectId={detail.id}
+            title="Client conversation"
+            subtitle="Threads the client can see and reply to. Use Work orders or the team workspace for internal discussion."
+            defaultVisibility="CLIENT"
+            defaultCategory="GENERAL"
+            emptyText="No client conversation yet. Start a thread to ask for the documents or details this project still needs."
+          />
+        )}
+
+        {tab === "documents" && (
+          <BackendDocumentsPanel
+            projectId={detail.id}
+            documents={outputs.documents}
+            loading={outputs.loading}
+            error={outputs.error}
+            onChanged={async () => {
+              await Promise.all([outputs.refresh?.(), refreshDeliveryReadiness()]);
+            }}
+          />
+        )}
+
+        {tab === "members" && (
+          <div className="pm-tab-layout pm-tab-layout--aside">
+              <Card className="pm-tab-panel pm-tab-panel--padded">
+                <div className="pm-tab-header">
+                  <SectionTitle title="Project members" subtitle="People who can access this project and their delivery role." />
+                  <Badge tone="blue">{detail.members.length} members</Badge>
+                </div>
+                <div className="pm-tab-section">
                   {detail.members.length === 0 ? (
-                    <div style={{ color: "var(--text-3)", fontSize: 13 }}>No assigned members yet.</div>
+                    <div className="pm-tab-empty" style={{ padding: 0 }}>No assigned members yet.</div>
                   ) : detail.members.map((member) => {
                     const isLastManager = managerIds.has(member.userId) && managerIds.size <= 1;
                     return (
-                      <div key={member.id} className="row" style={{ gap: 12, padding: "10px 0", borderBottom: "1px solid var(--border)" }}>
-                        <BackendPersonAvatar profile={member.user} />
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontWeight: 600, fontSize: 13.5 }}>{member.user.fullName || member.user.email || member.user.id}</div>
-                          <div style={{ color: "var(--text-3)", fontSize: 11.5 }}>{member.user.email || "No email"} - {member.role}</div>
-                          {isLastManager && <div style={{ color: "#FBBF24", fontSize: 11.5, marginTop: 3 }}>Last project manager cannot be removed.</div>}
+                      <div key={member.id} className="pm-tab-list-row">
+                        <div className="row gap-3 pm-tab-list-row__content">
+                          <BackendPersonAvatar profile={member.user} />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 600, fontSize: 13.5 }}>{member.user.fullName || member.user.email || member.user.id}</div>
+                            <div style={{ color: "var(--text-3)", fontSize: 11.5 }}>{member.user.email || "No email"} - {member.role}</div>
+                            {isLastManager && <div style={{ color: "#FBBF24", fontSize: 11.5, marginTop: 3 }}>Last project manager cannot be removed.</div>}
+                          </div>
                         </div>
-                        <Button variant="secondary" size="sm" onClick={() => removeMember(member.userId)} disabled={saving || isLastManager}>Remove</Button>
+                        <div className="pm-tab-list-row__actions">
+                          <Button variant="secondary" size="sm" onClick={() => removeMember(member.userId)} disabled={saving || isLastManager}>Remove</Button>
+                        </div>
                       </div>
                     );
                   })}
                 </div>
               </Card>
-              <Card style={{ padding: 22 }}>
+              <Card className="pm-tab-panel pm-tab-panel--padded">
                 <SectionTitle title="Add member" subtitle="Search signed-in developer or client profiles" />
                 <div style={{ display: "grid", gap: 12, marginTop: 14 }}>
                   <Field label="Project role">
@@ -856,21 +962,26 @@ function BackendProjectDetail({ project, onBack }) {
                   <Button variant="primary" size="sm" icon={<IconPlus size={13} />} onClick={addMember} disabled={saving || !selectedProfile}>Add selected member</Button>
                 </div>
               </Card>
-            </div>
-            <DevFlowProjectTimeline
-              timeline={outputs.timeline}
-              loading={outputs.loading}
-              error={outputs.error}
-              emptyText="No timeline events have been recorded for this project yet."
-              compactError={compactBackendError}
-            />
           </div>
         )}
 
+        {tab === "timeline" && (
+          <DevFlowProjectTimeline
+            timeline={outputs.timeline}
+            loading={outputs.loading}
+            error={outputs.error}
+            emptyText="No timeline events have been recorded for this project yet."
+            compactError={compactBackendError}
+          />
+        )}
+
         {tab === "settings" && (
-          <Card style={{ padding: 22, maxWidth: 780 }}>
-            <SectionTitle title="Project settings" subtitle="Update backend project metadata" />
-            <div style={{ display: "grid", gap: 14, marginTop: 16 }}>
+          <Card className="pm-tab-panel pm-tab-panel--padded" style={{ maxWidth: 920 }}>
+            <div className="pm-tab-header">
+              <SectionTitle title="Project settings" subtitle="Update project identity, delivery status, and repository metadata." />
+            </div>
+            <div className="pm-tab-section">
+              <div className="pm-tab-form-grid">
               <Field label="Company">
                 <Input value={form.companyName} onChange={(event) => setForm((current) => ({ ...current, companyName: event.target.value }))} />
               </Field>
@@ -893,14 +1004,20 @@ function BackendProjectDetail({ project, onBack }) {
               <Field label="Repo URL">
                 <Input value={form.repoUrl} onChange={(event) => setForm((current) => ({ ...current, repoUrl: event.target.value }))} placeholder="https://github.com/org/repo" />
               </Field>
-              <Field label="Brief">
-                <Textarea rows={5} value={form.brief} onChange={(event) => setForm((current) => ({ ...current, brief: event.target.value }))} />
-              </Field>
+              <div className="pm-tab-form-span">
+                <Field label="Brief">
+                  <Textarea rows={5} value={form.brief} onChange={(event) => setForm((current) => ({ ...current, brief: event.target.value }))} />
+                </Field>
+              </div>
+              </div>
+              <div className="pm-tab-actions">
               <Button variant="primary" size="sm" icon={<IconCheck size={13} />} onClick={saveProject} disabled={saving}>{saving ? "Saving..." : "Save changes"}</Button>
+              </div>
             </div>
           </Card>
         )}
       </div>
+      </section>
     </div>
   );
 }
