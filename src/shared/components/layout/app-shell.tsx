@@ -41,6 +41,8 @@ export interface AppShellProps {
   hoverExpandSidebar?: boolean;
   /** Places the product logo and wordmark at the start of the full-width topbar. */
   brandInTopbar?: boolean;
+  /** Applies role-specific surface styling without changing other consoles. */
+  shellVariant?: "pm";
   children: ReactNode;
 }
 
@@ -110,6 +112,7 @@ export function AppShell({
   rightSlot,
   hoverExpandSidebar = false,
   brandInTopbar = false,
+  shellVariant,
   children,
 }: AppShellProps) {
   const router = useRouter();
@@ -139,7 +142,10 @@ export function AppShell({
     "cs-shell",
     hoverExpandSidebar && "cs-shell--hover-sidebar",
     brandInTopbar && "cs-shell--topbar-brand",
+    shellVariant && `cs-shell--${shellVariant}`,
   ].filter(Boolean).join(" ");
+
+  const currentCrumbTarget = nav.find(isActive)?.id || defaultRoute;
 
   return (
     <div className={shellClassName}>
@@ -217,6 +223,8 @@ export function AppShell({
           profile={profile}
           onMenu={() => setMobileOpen((open) => !open)}
           onNavigate={navigate}
+          rootTarget={defaultRoute}
+          currentTarget={currentCrumbTarget}
         />
         <main className="cs-page">{children}</main>
       </div>
@@ -236,6 +244,8 @@ function AppTopBar({
   profile,
   onMenu,
   onNavigate,
+  rootTarget,
+  currentTarget,
 }: {
   rootLabel: string;
   title: string;
@@ -248,6 +258,8 @@ function AppTopBar({
   profile: ShellProfile;
   onMenu: () => void;
   onNavigate: (target: string) => void;
+  rootTarget: string;
+  currentTarget: string;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -276,9 +288,13 @@ function AppTopBar({
         </button>
 
         <div className="cs-crumbs">
-          <span className="cs-crumb-root">{rootLabel}</span>
+          <button type="button" className="cs-crumb-link cs-crumb-root" onClick={() => onNavigate(rootTarget)}>
+            {rootLabel}
+          </button>
           <span className="cs-crumb-sep">/</span>
-          <span className="cs-crumb-current">{title}</span>
+          <button type="button" className="cs-crumb-link cs-crumb-current" onClick={() => onNavigate(currentTarget)}>
+            {title}
+          </button>
         </div>
 
         {showSearch && (
