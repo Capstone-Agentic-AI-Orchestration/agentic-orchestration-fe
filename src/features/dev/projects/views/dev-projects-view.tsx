@@ -208,9 +208,11 @@ function BackendDevProjectDetail({ project, onBack }) {
   });
   const outputs = vm.outputs;
   const lifecycleStageId = mapProjectStatusToLifecycleStage(project.status, project.kickoffStatus);
-  const completedStages = LIFECYCLE_STAGES
-    .slice(0, getStageIndex(lifecycleStageId))
-    .map((stage) => stage.id);
+  const completedStages = new Set(
+    LIFECYCLE_STAGES
+      .slice(0, getStageIndex(lifecycleStageId))
+      .map((stage) => stage.id),
+  );
 
   return (
     <div className="pm-project-workspace dev-project-workspace" data-screen-label={`Dev - Backend Project - ${project.id}`}>

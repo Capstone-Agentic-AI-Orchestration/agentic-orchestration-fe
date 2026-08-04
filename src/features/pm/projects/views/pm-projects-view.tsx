@@ -217,20 +217,17 @@ export function PMProjectsView({ cardsOnly = false }: { cardsOnly?: boolean }) {
             <div className="pm-inventory-head">
               <div>
                 <span className="pm-command-kicker">{selectedTeam ? `${selectedTeam.name} workspace` : "Project inventory"}</span>
-                <h2>Active work</h2>
+                <h2>Filter projects</h2>
               </div>
               <div className="pm-inventory-actions">
                 <span className="pm-inventory-meta">
                   {loadingBackend ? "Syncing projects" : `${projects.length} shown`}
                 </span>
-                <button className="btn btn-primary btn-sm" onClick={openNewProject}>
-                  <IconPlus size={14} /> New project
-                </button>
               </div>
             </div>
 
             <div className="hub-toolbar">
-              <div className="pm-filter-row">
+              <div className="pm-filter-row" role="group" aria-label="Filter projects by status">
               {FILTERS.map((item) => {
                 const count =
                   pmProjectFilterCount(workspaceProjects, item.id);

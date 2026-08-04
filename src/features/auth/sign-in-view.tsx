@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { IconGitHub } from "@/shared/components/icons";
+import { IconArrowLeft, IconGitHub } from "@/shared/components/icons";
 import { useAuth } from "@/shared/auth/auth-provider";
 import { loginPathForRole } from "@/shared/auth/role-routing";
+import { Logo } from "@/shared/components/ui";
 
 /**
  * The single sign-in surface for the internal DevFlow console.
@@ -50,67 +52,58 @@ export function SignInView() {
   };
 
   return (
-    <div className="auth-route-state">
-      <div className="auth-route-card" style={{ maxWidth: 440, width: "100%", textAlign: "left" }}>
-        <span
-          style={{
-            display: "inline-block",
-            fontSize: 12,
-            fontWeight: 600,
-            letterSpacing: "0.04em",
-            textTransform: "uppercase",
-            color: ACCENT,
-            border: `1px solid ${ACCENT}55`,
-            borderRadius: 999,
-            padding: "4px 12px",
-          }}
-        >
-          Internal console
-        </span>
+    <div className="auth-access-shell">
+      <header className="auth-access-header">
+        <Link href="/" className="auth-access-logo" aria-label="Back to Alphaexplora landing page">
+          <Logo size={18} />
+        </Link>
+        <Link href="/" className="auth-access-back">
+          <IconArrowLeft size={15} />
+          Back to landing page
+        </Link>
+      </header>
 
-        <h1 style={{ fontSize: 24, fontWeight: 700, letterSpacing: "-0.02em", margin: "18px 0 0" }}>
-          Sign in to DevFlow
-        </h1>
-        <p style={{ fontSize: 14, color: "var(--text-2)", marginTop: 8, lineHeight: 1.55 }}>
-          Your workspace is set by your team in the{" "}
-          <strong style={{ color: "var(--text-1, white)", fontWeight: 600 }}>{GITHUB_ORG_LABEL}</strong>{" "}
-          organisation. Developers and project managers both sign in here.
-        </p>
+      <main className="auth-access-main">
+        <section className="auth-access-intro" aria-labelledby="sign-in-heading">
+          <span className="auth-access-kicker">DevFlow internal console</span>
+          <h1 id="sign-in-heading">Your team&apos;s workspace, ready when you are.</h1>
+          <p>
+            Sign in once and DevFlow takes you to the right workspace — whether you are a project manager or a developer.
+          </p>
+          <div className="auth-access-roles" aria-label="Available workspaces">
+            <span>Project managers</span>
+            <span>Developers</span>
+          </div>
+        </section>
 
-        <div className="auth-form-fields" style={{ marginTop: 24 }}>
+        <section className="auth-access-signin" aria-label="Sign in to DevFlow">
+          <span className="auth-access-kicker">Secure access</span>
+          <h2>Sign in to DevFlow</h2>
+          <p>
+            Your role is verified through the <strong>{GITHUB_ORG_LABEL}</strong> GitHub organisation.
+          </p>
           <button
             type="button"
             onClick={startGithub}
             disabled={submitting}
-            className="pricing-cta-btn"
-            style={{
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-              width: "100%", height: 48, borderRadius: 999,
-              background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)",
-              color: "white", fontWeight: 500, fontSize: 14.5,
-              cursor: submitting ? "not-allowed" : "pointer", opacity: submitting ? 0.6 : 1,
-            }}
+            className="auth-access-submit"
           >
             <IconGitHub size={18} />
             {submitting ? "Opening GitHub..." : "Continue with GitHub"}
           </button>
 
           {error && (
-            <div style={{ color: "var(--danger, #ef4444)", fontSize: 13, marginTop: 12 }}>{error}</div>
+            <div className="auth-access-error">{error}</div>
           )}
 
-          <p style={{ fontSize: 12.5, color: "var(--text-3, var(--text-2))", marginTop: 14, lineHeight: 1.55 }}>
+          <p className="auth-access-note">
             No account to create: your DevFlow role comes from your GitHub team. If sign-in is
             refused, ask a project manager to add you to the developer or project-manager team.
           </p>
-        </div>
-
-        {/* Client sign-in lives in the separate Alphaexplora client app; this console has
-            no client access at all, so there is nothing to link to here. */}
-      </div>
+        </section>
+      </main>
     </div>
   );
 }
 
-const ACCENT = "#818CF8";
 const GITHUB_ORG_LABEL = "Capstone-Agentic-AI-Orchestration";

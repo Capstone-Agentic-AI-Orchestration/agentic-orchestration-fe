@@ -5,6 +5,10 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  reactStrictMode: true,
+  images: {
+    remotePatterns: [],
+  },
   turbopack: {
     root: __dirname,
   },
