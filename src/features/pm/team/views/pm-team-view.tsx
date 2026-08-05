@@ -22,10 +22,12 @@ import {
   type DevFlowRepository,
 } from "@/shared/api/devflow-api";
 import { pmProjectRoute } from "@/features/pm/projects/model/pm-projects-list";
+import { useDevFlowClients } from "@/shared/hooks/use-devflow-clients";
 import { useSelectedTeamWorkspace } from "@/shared/projects/selected-team-workspace-context";
 import { useSelectedDevFlowProject } from "@/shared/projects/selected-project-context";
 
 const EMPTY_FORM = {
+  clientId: "",
   companyName: "",
   brief: "",
   stackKey: "nextjs-nestjs-supabase",
@@ -61,6 +63,10 @@ export function PMTeamView({ groupId }: { groupId: string }) {
   const [invite, setInvite] = useState({ userId: "", role: "MEMBER" as Exclude<DevFlowGroupRole, "LEAD"> });
   const [assignmentUsers, setAssignmentUsers] = useState<Record<string, string>>({});
   const [activeTab, setActiveTab] = useState<"members" | "projects">("members");
+  // A project is created for a client, so this wizard needs the client list even though it is
+  // scoped to a team. Team and client are independent: the team is who builds it, the client is
+  // who it is for.
+  const { clients, loading: clientsLoading } = useDevFlowClients();
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -121,12 +127,19 @@ export function PMTeamView({ groupId }: { groupId: string }) {
   };
 
   const ready =
+    form.clientId.length > 0 &&
     form.companyName.trim().length > 0 &&
     form.brief.trim().length >= 10 &&
     form.stackKey.trim().length > 0 &&
     form.repositoryName.trim().length > 0;
 
   const createProject = async () => {
+    if (!form.clientId) {
+      // Its own message because the fix may be to leave this page and add the client first,
+      // unlike the other required fields which are all filled in right here.
+      setError("Choose the client this project is for. Projects cannot exist without a client.");
+      return;
+    }
     if (!ready) {
       setError("Company, repository name, stack, and a brief of at least 10 characters are required.");
       return;
@@ -136,6 +149,7 @@ export function PMTeamView({ groupId }: { groupId: string }) {
     try {
       const companyName = form.companyName.trim();
       await createDevFlowProject({
+        clientId: form.clientId,
         companyName,
         brief: form.brief.trim(),
         stackKey: form.stackKey.trim(),
@@ -258,7 +272,45 @@ export function PMTeamView({ groupId }: { groupId: string }) {
           <div className="row gap-2" style={{ marginBottom: 14 }}><IconPlus size={16} /><strong>Create project</strong></div>
           <p style={{ color: "var(--text-3)", fontSize: 13, marginBottom: 14 }}>Projects created here belong to <strong>{group?.name ?? "this team"}</strong> and use its GitHub repositories.</p>
           <div style={{ display: "grid", gap: 12 }}>
-            <Field label="Company / project name"><Input value={form.companyName} onChange={(e) => setForm({ ...form, companyName: e.target.value })} placeholder="Acme Inc." /></Field>
+            {/* Client first: it is the only field that can send you somewhere else to fix it,
+                so it leads rather than sitting further down the form. */}
+            <Field
+              label="Client *"
+              helper={
+                clientsLoading
+                  ? "Loading clients…"
+                  : clients.length
+                    ? "Every project belongs to a client."
+                    : "No clients yet — add one before creating a project."
+              }
+            >
+              <Select
+                value={form.clientId}
+                disabled={clientsLoading || !clients.length}
+                onChange={(e) => {
+                  const clientId = e.target.value;
+                  const picked = clients.find((option) => option.id === clientId);
+                  // Prefill the project name from the client so the two cannot silently disagree,
+                  // but leave it editable for a project named differently to the company.
+                  setForm((current) => ({
+                    ...current,
+                    clientId,
+                    companyName: picked && !current.companyName.trim() ? picked.name : current.companyName,
+                  }));
+                }}
+              >
+                <option value="">Select a client…</option>
+                {clients.map((option) => (
+                  <option key={option.id} value={option.id}>{option.name}</option>
+                ))}
+              </Select>
+            </Field>
+            {!clientsLoading && !clients.length && (
+              <Button variant="secondary" size="sm" onClick={() => router.push("/pm/clients")}>
+                Add a client first
+              </Button>
+            )}
+            <Field label="Project name" helper="Defaults to the client name; change it if this project has its own name."><Input value={form.companyName} onChange={(e) => setForm({ ...form, companyName: e.target.value })} placeholder="Acme Inc." /></Field>
             <Field label="Repository base name">
               <Input value={form.repositoryName} onChange={(e) => setForm({ ...form, repositoryName: e.target.value })} placeholder="acme-platform" />
             </Field>

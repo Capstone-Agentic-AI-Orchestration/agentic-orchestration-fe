@@ -340,8 +340,11 @@ export interface DevFlowProjectSummary {
   updatedAt: string;
   groupId: string | null;
   /**
-   * Null for projects created before clients existed, or created without one. The console
-   * surfaces these as "unassigned" rather than hiding them.
+   * Always present: a project belongs to a client for its whole life.
+   *
+   * Kept nullable in the type on purpose — the API guarantees it, but this shape is also what
+   * older cached responses deserialize into, and a hard non-null here would turn a stale payload
+   * into a crash rather than a missing name.
    */
   client: DevFlowProjectClientRef | null;
   lifecycle: DevFlowProjectLifecycle;
@@ -1122,10 +1125,13 @@ export interface CreateDevFlowProjectInput {
   brief: string;
   stackKey: string;
   /**
-   * Client company this project is for. Optional so creation is never blocked, but a project
-   * without one is flagged as unassigned until it is linked.
+   * Client company this project is for. Required — a project only exists for a client.
+   *
+   * Was optional "so creation is never blocked", which allowed projects with nobody to deliver
+   * them to. Required here as well as on the API so the compiler catches a caller that forgot,
+   * rather than a PM discovering it as a 400 after filling in a wizard.
    */
-  clientId?: string;
+  clientId: string;
   designGuidance?: DevFlowDesignGuidance;
   groupId?: string;
   repositoryName?: string;
@@ -2639,8 +2645,6 @@ export interface DevFlowClientListItem {
 
 export interface DevFlowClientListResponse {
   clients: DevFlowClientListItem[];
-  /** Projects with no client, surfaced so they are visible rather than merely absent. */
-  unassignedProjectCount: number;
 }
 
 export interface DevFlowClientProject {
@@ -2758,9 +2762,8 @@ export function startDevFlowProjectDelivery(
   );
 }
 
-export function getDevFlowUnassignedProjects(): Promise<DevFlowClientProject[]> {
-  return request<DevFlowClientProject[]>("/clients/unassigned-projects");
-}
+// getDevFlowUnassignedProjects was here, alongside GET /clients/unassigned-projects. A project
+// cannot exist without a client any more, so the endpoint and its screen are both gone.
 
 export function getDevFlowClientContactCandidates(search?: string): Promise<DevFlowProfile[]> {
   const query = search?.trim() ? `?search=${encodeURIComponent(search.trim())}` : "";

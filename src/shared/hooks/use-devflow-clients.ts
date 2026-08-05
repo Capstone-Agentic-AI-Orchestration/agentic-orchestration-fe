@@ -7,7 +7,6 @@ import {
   getDevFlowClientDocuments,
   getDevFlowClientProjects,
   getDevFlowClients,
-  getDevFlowUnassignedProjects,
   type DevFlowClient,
   type DevFlowClientContact,
   type DevFlowClientDocuments,
@@ -15,7 +14,7 @@ import {
   type DevFlowClientProject,
 } from "@/shared/api/devflow-api";
 
-const EMPTY_LIST: DevFlowClientListResponse = { clients: [], unassignedProjectCount: 0 };
+const EMPTY_LIST: DevFlowClientListResponse = { clients: [] };
 const EMPTY_DOCUMENTS: DevFlowClientDocuments = {
   groups: [],
   totals: { documents: 0, readable: 0, files: 0 },
@@ -56,7 +55,6 @@ export function useDevFlowClients(search?: string) {
 
   return {
     clients: data.clients,
-    unassignedProjectCount: data.unassignedProjectCount,
     loading,
     error,
     refresh: load,
@@ -74,7 +72,6 @@ export function useDevFlowClientWorkspace(clientId?: string | null) {
   const [projects, setProjects] = useState<DevFlowClientProject[]>([]);
   const [documents, setDocuments] = useState<DevFlowClientDocuments>(EMPTY_DOCUMENTS);
   const [contacts, setContacts] = useState<DevFlowClientContact[]>([]);
-  const [unassignedProjects, setUnassignedProjects] = useState<DevFlowClientProject[]>([]);
   const [loading, setLoading] = useState(Boolean(clientId));
   const [error, setError] = useState("");
 
@@ -84,7 +81,6 @@ export function useDevFlowClientWorkspace(clientId?: string | null) {
       setProjects([]);
       setDocuments(EMPTY_DOCUMENTS);
       setContacts([]);
-      setUnassignedProjects([]);
       setLoading(false);
       setError("");
       return;
@@ -93,19 +89,16 @@ export function useDevFlowClientWorkspace(clientId?: string | null) {
     setLoading(true);
     setError("");
     try {
-      const [nextClient, nextProjects, nextDocuments, nextContacts, nextUnassigned] =
-        await Promise.all([
-          getDevFlowClient(clientId),
-          getDevFlowClientProjects(clientId),
-          getDevFlowClientDocuments(clientId),
-          getDevFlowClientContacts(clientId),
-          getDevFlowUnassignedProjects(),
-        ]);
+      const [nextClient, nextProjects, nextDocuments, nextContacts] = await Promise.all([
+        getDevFlowClient(clientId),
+        getDevFlowClientProjects(clientId),
+        getDevFlowClientDocuments(clientId),
+        getDevFlowClientContacts(clientId),
+      ]);
       setClient(nextClient);
       setProjects(nextProjects);
       setDocuments(nextDocuments);
       setContacts(nextContacts);
-      setUnassignedProjects(nextUnassigned);
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : String(nextError));
     } finally {
@@ -117,5 +110,5 @@ export function useDevFlowClientWorkspace(clientId?: string | null) {
     void load();
   }, [load]);
 
-  return { client, projects, documents, contacts, unassignedProjects, loading, error, refresh: load };
+  return { client, projects, documents, contacts, loading, error, refresh: load };
 }

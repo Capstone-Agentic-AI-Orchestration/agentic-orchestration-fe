@@ -20,7 +20,7 @@ const EMPTY_FORM = { name: "", primaryContactName: "", primaryContactEmail: "", 
 export function PMClientsView() {
   const router = useRouter();
   const [search, setSearch] = useState("");
-  const { clients, unassignedProjectCount, loading, error } = useDevFlowClients(search);
+  const { clients, loading, error } = useDevFlowClients(search);
   const [createOpen, setCreateOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
@@ -70,18 +70,8 @@ export function PMClientsView() {
         />
       </div>
 
-      {unassignedProjectCount > 0 && (
-        <button type="button" className="pm-unassigned-banner" onClick={() => router.push("/pm/clients/unassigned")}>
-          <span className="pm-unassigned-icon"><IconAlertTriangle size={15} /></span>
-          <span className="pm-unassigned-copy">
-            <strong>
-              {unassignedProjectCount} project{unassignedProjectCount === 1 ? "" : "s"} without a client
-            </strong>
-            <span>They will not appear on any client page until you link them.</span>
-          </span>
-          <IconChevronRight size={15} />
-        </button>
-      )}
+      {/* The "N projects without a client" banner was here. Projects now require a client at
+          creation, so the count is always zero and the screen it linked to no longer exists. */}
 
       {error && (
         <Card className="pm-tab-panel pm-tab-message pm-tab-message--danger">{compactBackendError(error)}</Card>

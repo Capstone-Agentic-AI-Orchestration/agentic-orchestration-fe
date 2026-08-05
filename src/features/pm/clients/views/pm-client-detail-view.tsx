@@ -11,11 +11,13 @@ import { useDevFlowClientWorkspace } from "@/shared/hooks/use-devflow-clients";
 import {
   addDevFlowClientContact,
   getDevFlowClientContactCandidates,
+  listDevFlowProjects,
   removeDevFlowClientContact,
   setDevFlowProjectClient,
   updateDevFlowClient,
   type DevFlowClientStatus,
   type DevFlowProfile,
+  type DevFlowProjectSummary,
 } from "@/shared/api/devflow-api";
 
 const STATUS_TONE: Record<DevFlowClientStatus, "green" | "blue" | "gray"> = {
@@ -35,8 +37,12 @@ function extractionBadge(document: { fileName: string | null; extraction: { stat
 
 export function PMClientDetailView({ clientId }: Readonly<{ clientId: string }>) {
   const router = useRouter();
-  const { client, projects, documents, contacts, unassignedProjects, loading, error, refresh } =
+  const { client, projects, documents, contacts, loading, error, refresh } =
     useDevFlowClientWorkspace(clientId);
+  // Projects belonging to some OTHER client. There is no "unassigned" pool to draw from any
+  // more, so this modal moves a project that was filed under the wrong client rather than
+  // adopting an orphan.
+  const [movable, setMovable] = useState<DevFlowProjectSummary[]>([]);
   const [tab, setTab] = useState<PMClientSectionId>("overview");
   const [actionError, setActionError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -202,7 +208,13 @@ export function PMClientDetailView({ clientId }: Readonly<{ clientId: string }>)
           <Card className="pm-tab-panel">
             <div className="pm-tab-header" style={{ padding: 16, borderBottom: "1px solid var(--border)" }}>
               <SectionTitle title="Projects" subtitle="Delivery work for this client." />
-              <Button size="sm" icon={<IconPlus size={13} />} onClick={() => setLinkOpen(true)}>
+              <Button size="sm" icon={<IconPlus size={13} />} onClick={async () => {
+                setLinkOpen(true);
+                // Loaded on open rather than with the page: moving a project between clients is
+                // rare, and the full project list is not worth fetching on every visit.
+                const all = await listDevFlowProjects().catch(() => []);
+                setMovable(all.filter((project) => project.client?.id !== clientId));
+              }}>
                 Link a project
               </Button>
             </div>
@@ -351,17 +363,21 @@ export function PMClientDetailView({ clientId }: Readonly<{ clientId: string }>)
 
       <Modal open={linkOpen} onClose={() => setLinkOpen(false)} title="Link a project to this client">
         <div style={{ display: "grid", gap: 12 }}>
-          {unassignedProjects.length === 0 ? (
+          {movable.length === 0 ? (
             <p style={{ color: "var(--text-2)", fontSize: 13, margin: 0 }}>
-              Every project already belongs to a client. To move one, unlink it from its current
-              client first.
+              There are no other projects to move here.
             </p>
           ) : (
-            <Field label="Unassigned project" helper="Only projects without a client are listed.">
+            <Field
+              label="Project to move"
+              helper="Moving a project reassigns it from its current client to this one."
+            >
               <Select value={linkProjectId} onChange={(event) => setLinkProjectId(event.target.value)}>
                 <option value="">Select a project</option>
-                {unassignedProjects.map((project) => (
-                  <option key={project.id} value={project.id}>{project.companyName}</option>
+                {movable.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.companyName}{project.client ? ` — currently ${project.client.name}` : ""}
+                  </option>
                 ))}
               </Select>
             </Field>

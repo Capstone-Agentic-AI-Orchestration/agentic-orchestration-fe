@@ -309,6 +309,9 @@ function NewProjectWizardModal({
   onError: (message: string) => void;
   initialGroupId: string | null;
 }) {
+  // This modal has its own router: the enclosing PMProjectsView's instance is not in scope here,
+  // and the "no clients yet" path has to be able to navigate away to the client list.
+  const router = useRouter();
   const [stepIndex, setStepIndex] = useState(0);
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState({ companyName: "", brief: "", stackKey: "nextjs-nestjs-supabase", groupId: "", repositoryName: "", clientId: "" });
@@ -398,6 +401,12 @@ function NewProjectWizardModal({
     const brief = form.brief.trim();
     const stackKey = form.stackKey.trim();
     const repositoryName = form.repositoryName.trim();
+    if (!form.clientId) {
+      // Called out on its own rather than folded into the list below: "pick a client" is a
+      // different kind of fix from "write a longer brief" — it may mean leaving to add the client.
+      setCreateError("Choose the client this project is for. Projects cannot exist without a client.");
+      return;
+    }
     if (!companyName || brief.length < 10 || !stackKey || !form.groupId || !repositoryName) {
       setCreateError("Company, team, repository name, stack, and a brief of at least 10 characters are required.");
       return;
@@ -408,7 +417,7 @@ function NewProjectWizardModal({
     try {
       const result = await createDevFlowProject({
         companyName,
-        clientId: form.clientId || undefined,
+        clientId: form.clientId,
         brief,
         stackKey,
         groupId: form.groupId,
@@ -499,9 +508,15 @@ function NewProjectWizardModal({
                 <p>Name the client/project and choose the scaffold the OpenCode path should generate against.</p>
               </div>
               <div className="newproj-grid">
+                {/* Required, not "flagged for follow-up". A project exists for a client, so the
+                    client is chosen before anything else about the project is described. */}
                 <Field
-                  label="Client"
-                  helper="Leave unassigned only if you genuinely do not know yet; the project is flagged until it is linked."
+                  label="Client *"
+                  helper={
+                    clientOptions.length
+                      ? "Every project belongs to a client. Not listed? Add the client first."
+                      : "No clients yet — add a client before creating a project."
+                  }
                 >
                   <Select
                     value={form.clientId}
@@ -517,12 +532,17 @@ function NewProjectWizardModal({
                       }));
                     }}
                   >
-                    <option value="">Unassigned (flagged for follow-up)</option>
+                    <option value="">Select a client…</option>
                     {clientOptions.map((option) => (
                       <option key={option.id} value={option.id}>{option.name}</option>
                     ))}
                   </Select>
                 </Field>
+                {!clientOptions.length && (
+                  <Button variant="secondary" size="sm" onClick={() => router.push("/pm/clients")}>
+                    Add a client first
+                  </Button>
+                )}
                 <Field label="Project name" helper="Defaults to the client name; change it if this project has its own name.">
                   <Input
                     value={form.companyName}
