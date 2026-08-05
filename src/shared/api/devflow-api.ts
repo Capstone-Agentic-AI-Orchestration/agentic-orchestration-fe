@@ -967,11 +967,61 @@ export interface DevFlowProjectIntake {
   comments: DevFlowIntakeComment[];
 }
 
+/** The eight worksheet steps, in the order a client works through them. */
+export type DevFlowIntakeSectionId =
+  | "overview"
+  | "roles"
+  | "features"
+  | "workflows"
+  | "data"
+  | "delivery"
+  | "documents"
+  | "review";
+
+/** Per-step completion, computed by the API so every surface agrees on what is done. */
+export interface DevFlowIntakeSectionStatus {
+  section: DevFlowIntakeSectionId;
+  complete: boolean;
+  missing: string[];
+}
+
 export interface DevFlowIntakeReadiness {
   blockers: string[];
+  /** Absent on older responses; treat as "no per-step detail available". */
+  sections?: DevFlowIntakeSectionStatus[];
   readyForSubmission: boolean;
   readyForLock: boolean;
   counts: { uploaded: number; extracting: number; failed: number; ready: number };
+}
+
+/**
+ * The question wording, served by the API from the requirements worksheet.
+ *
+ * This is the single source of the intake copy. Labels and helper text must be read from here
+ * rather than hardcoded in a form: the worksheet a client downloads and the form they fill are
+ * the same questions, and when each surface owned its own strings they drifted into different
+ * registers — plain English in the download, analyst jargon in the portal.
+ */
+export interface DevFlowIntakeTemplateField {
+  /** The payload property this question fills; absent on the review checklist. */
+  key?: string;
+  label: string;
+  helper: string;
+  example?: string;
+  list?: boolean;
+}
+
+export interface DevFlowIntakeTemplateSection {
+  id: DevFlowIntakeSectionId;
+  title: string;
+  purpose: string;
+  repeatFor?: string;
+  fields: DevFlowIntakeTemplateField[];
+}
+
+export interface DevFlowIntakeTemplate {
+  intro: string[];
+  sections: DevFlowIntakeTemplateSection[];
 }
 
 export interface DevFlowProjectIntakeResponse {
@@ -979,6 +1029,8 @@ export interface DevFlowProjectIntakeResponse {
   documents?: DevFlowIntakeDocument[];
   readiness: DevFlowIntakeReadiness;
   templateMarkdown?: string;
+  /** Absent on older responses; fall back to built-in copy when missing. */
+  template?: DevFlowIntakeTemplate;
 }
 
 export interface DevFlowEventLog {

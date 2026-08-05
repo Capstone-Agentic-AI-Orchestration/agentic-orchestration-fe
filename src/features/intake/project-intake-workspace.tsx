@@ -18,6 +18,7 @@ import {
 } from "@/shared/api/devflow-api";
 import { useSelectedDevFlowProject } from "@/shared/projects/selected-project-context";
 import { PMProjectSubnav } from "@/features/pm/projects/components/pm-project-subnav";
+import { intakeCopy } from "./intake-copy";
 
 type IntakeRole = "client" | "pm";
 type IntakeStep = "overview" | "roles" | "features" | "workflows" | "data" | "delivery" | "documents" | "review";
@@ -74,11 +75,62 @@ function extractionLabel(status: ExtractionStatus) {
   return "Queued";
 }
 
-function SectionGuide({ step }: { step: (typeof STEPS)[number] }) {
+/**
+ * The guidance block above each step.
+ *
+ * Split by role because the two readers need opposite things. The client is answering, so they
+ * get the prompt and a worked example. The PM is *reviewing someone else's answers* — showing
+ * them "Why we need this" and "Good answer: reduce phone bookings by 40%" made the whole page
+ * read as a questionnaire aimed at the PM, which is the single biggest reason this screen was
+ * confusing. The PM version reports what the client was asked and what is still missing.
+ */
+function SectionGuide({
+  step,
+  role,
+  purpose,
+  status,
+}: {
+  step: (typeof STEPS)[number];
+  role: IntakeRole;
+  purpose: string;
+  status?: { complete: boolean; missing: string[] };
+}) {
+  if (role === "pm") {
+    const missing = status?.missing ?? [];
+    return (
+      <Card
+        glass
+        style={{
+          padding: 16,
+          borderLeft: `3px solid ${missing.length ? "rgba(245,158,11,.8)" : "rgba(16,185,129,.8)"}`,
+          marginBottom: 18,
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
+          <div style={{ fontWeight: 700 }}>The client was asked: {purpose || step.why}</div>
+          <Badge tone={missing.length ? "amber" : "green"}>
+            {missing.length ? "Incomplete" : "Complete"}
+          </Badge>
+        </div>
+        {missing.length > 0 && (
+          <ul style={{ color: "#FCD34D", fontSize: 13, margin: "10px 0 0", paddingLeft: 18, lineHeight: 1.55 }}>
+            {missing.map((item) => <li key={item}>{item}</li>)}
+          </ul>
+        )}
+        {missing.length === 0 && (
+          <div style={{ color: "var(--text-2)", fontSize: 13, marginTop: 8, lineHeight: 1.55 }}>
+            Nothing outstanding in this section. Use &ldquo;Request a focused change&rdquo; if an
+            answer is present but not usable.
+          </div>
+        )}
+      </Card>
+    );
+  }
+
   return (
     <Card glass style={{ padding: 18, borderLeft: "3px solid var(--blue, #6EA8FF)", marginBottom: 18 }}>
       <div style={{ fontWeight: 700, marginBottom: 5 }}>Why we need this</div>
-      <div style={{ color: "var(--text-2)", fontSize: 13, lineHeight: 1.55 }}>{step.why}</div>
+      <div style={{ color: "var(--text-2)", fontSize: 13, lineHeight: 1.55 }}>{purpose || step.why}</div>
       <div style={{ marginTop: 10, color: "var(--text-3)", fontSize: 12.5 }}><strong style={{ color: "var(--text-2)" }}>Good answer:</strong> {step.example}</div>
     </Card>
   );
@@ -255,6 +307,23 @@ export function ProjectIntakeWorkspace({ projectId, role }: { projectId: string;
   };
 
   const progress = useMemo(() => `${STEPS.findIndex((step) => step.id === stepId) + 1} of ${STEPS.length}`, [stepId]);
+
+  // Question wording and per-step completion both come from the API response: the worksheet is
+  // the single source of the copy, and readiness.sections is the single source of "is this step
+  // done". Neither is re-derived here, so the client form, this page and the submit gate cannot
+  // disagree about what is missing.
+  const copy = useMemo(() => intakeCopy(response?.template), [response?.template]);
+  const stepStatus = useMemo(() => {
+    const map = new Map<IntakeStep, { complete: boolean; missing: string[] }>();
+    for (const item of response?.readiness.sections ?? []) {
+      map.set(item.section as IntakeStep, { complete: item.complete, missing: item.missing });
+    }
+    return map;
+  }, [response?.readiness.sections]);
+  const completeSectionCount = useMemo(
+    () => (response?.readiness.sections ?? []).filter((item) => item.complete).length,
+    [response?.readiness.sections],
+  );
   if (loading && !response) return <Card style={{ padding: 28, color: "var(--text-2)" }}>Loading project intake…</Card>;
   if (!response) return <Card style={{ padding: 28 }}><div className="field-error">{error || "The project intake is unavailable."}</div><Button style={{ marginTop: 14 }} onClick={() => void refresh()}>Try again</Button></Card>;
 
@@ -433,10 +502,32 @@ export function ProjectIntakeWorkspace({ projectId, role }: { projectId: string;
   </>;
 
   const intakeContent = <div className="pm-intake-workspace" style={{ display: "grid", gap: 18 }}>
-    <Card glass style={{ padding: 20 }}><div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "start", flexWrap: "wrap" }}><div><div style={{ fontSize: 12, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: ".08em" }}>Client requirements intake · {progress}</div><h1 style={{ fontSize: 24, margin: "5px 0 4px" }}>{payload.overview.projectName || "Project intake"}</h1><div style={{ color: "var(--text-2)", fontSize: 13 }}>Autosaves while you work. Locked versions are read-only and used as agent evidence.</div></div><div style={{ display: "flex", gap: 8, alignItems: "center" }}><Badge tone={statusTone(response.intake.status)}>{response.intake.status.replaceAll("_", " ")}</Badge>{dirty && <span style={{ color: "var(--text-3)", fontSize: 12 }}>Saving…</span>}</div></div></Card>
+    <Card glass style={{ padding: 20 }}><div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "start", flexWrap: "wrap" }}><div><div style={{ fontSize: 12, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: ".08em" }}>{role === "pm" ? "Client's requirements · for your review" : `Client requirements intake · ${progress}`}</div><h1 style={{ fontSize: 24, margin: "5px 0 4px" }}>{payload.overview.projectName || "Project intake"}</h1><div style={{ color: "var(--text-2)", fontSize: 13 }}>{
+        // Two readers, two jobs. The PM is not filling this in — telling them it "autosaves
+        // while you work" is what made the page look like their questionnaire.
+        role === "pm"
+          ? `${completeSectionCount} of ${STEPS.length} sections complete. These are the client's own answers — you review them, request changes, then lock the version the agents build from.`
+          : "Autosaves while you work. Locked versions are read-only and used as agent evidence."
+      }</div></div><div style={{ display: "flex", gap: 8, alignItems: "center" }}><Badge tone={statusTone(response.intake.status)}>{response.intake.status.replaceAll("_", " ")}</Badge>{dirty && <span style={{ color: "var(--text-3)", fontSize: 12 }}>Saving…</span>}</div></div></Card>
     <div style={{ display: "grid", gridTemplateColumns: role === "pm" ? "minmax(0, 1fr) 330px" : "minmax(190px, 240px) minmax(0, 1fr)", gap: 18, alignItems: "start" }} className="intake-workspace-grid">
       {role === "client" && <Card glass style={{ padding: 10, position: "sticky", top: 16 }}>{STEPS.map((step) => <button type="button" key={step.id} onClick={() => setStepId(step.id)} style={{ display: "block", width: "100%", textAlign: "left", border: 0, borderRadius: 8, padding: "10px 11px", marginBottom: 3, background: step.id === stepId ? "rgba(74, 112, 255, .18)" : "transparent", color: step.id === stepId ? "white" : "var(--text-2)", cursor: "pointer", fontWeight: step.id === stepId ? 650 : 500 }}>{STEPS.findIndex((item) => item.id === step.id) + 1}. {step.label}</button>)}</Card>}
-      <Card style={{ padding: 22 }}><div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", marginBottom: 14 }}><div><h2 style={{ fontSize: 18, margin: 0 }}>{current.label}</h2><div style={{ fontSize: 12, color: "var(--text-3)", marginTop: 4 }}>Clear answers reduce rework and make the scope easier to approve.</div></div>{role === "client" && <Button variant="ghost" size="sm" disabled={!editable || saving} onClick={() => void save()}>Save now</Button>}</div>{role === "pm" && <div className="pm-intake-step-tabs">{STEPS.map((step) => <Button key={step.id} size="sm" variant={step.id === stepId ? "primary" : "ghost"} onClick={() => setStepId(step.id)}>{step.label}</Button>)}</div>}<SectionGuide step={current} /><CommentList comments={response.intake.comments} section={stepId} />{body}{error && <div className="field-error" style={{ marginTop: 14 }}>{error}</div>}<div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap", marginTop: 22, paddingTop: 16, borderTop: "1px solid var(--border, rgba(255,255,255,.12))" }}><div style={{ display: "flex", gap: 8 }}>{STEPS.findIndex((step) => step.id === stepId) > 0 && <Button variant="ghost" onClick={() => setStepId(STEPS[STEPS.findIndex((step) => step.id === stepId) - 1].id)}>Back</Button>}{role === "client" && response.intake.status === "LOCKED" && <Button onClick={() => void save()}>Start a new intake version</Button>}</div>{stepId !== "review" ? <Button onClick={() => setStepId(STEPS[Math.min(STEPS.length - 1, STEPS.findIndex((step) => step.id === stepId) + 1)].id)}>Continue</Button> : role === "client" && <Button disabled={!editable || saving || !response.readiness.readyForSubmission || !confirmedAccurate} onClick={() => void submit()}>Confirm accuracy and submit to PM</Button>}</div>{stepId === "documents" && (
+      <Card style={{ padding: 22 }}><div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", marginBottom: 14 }}><div><h2 style={{ fontSize: 18, margin: 0 }}>{role === "pm" ? copy.sectionTitle(stepId, current.label) : current.label}</h2><div style={{ fontSize: 12, color: "var(--text-3)", marginTop: 4 }}>{role === "pm" ? "Read-only unless the client has changes outstanding." : "Clear answers reduce rework and make the scope easier to approve."}</div></div>{role === "client" && <Button variant="ghost" size="sm" disabled={!editable || saving} onClick={() => void save()}>Save now</Button>}</div>{role === "pm" && <div className="pm-intake-step-tabs">{STEPS.map((step) => {
+        // A dot beside each tab so the PM can see which parts of the brief are thin without
+        // opening all eight. Amber = something outstanding, green = nothing outstanding.
+        const complete = stepStatus.get(step.id)?.complete ?? false;
+        return (
+          <Button key={step.id} size="sm" variant={step.id === stepId ? "primary" : "ghost"} onClick={() => setStepId(step.id)}>
+            <span
+              aria-hidden="true"
+              style={{
+                display: "inline-block", width: 7, height: 7, borderRadius: 999, marginRight: 7,
+                background: complete ? "#34D399" : "#FBBF24",
+              }}
+            />
+            {step.label}
+          </Button>
+        );
+      })}</div>}<SectionGuide step={current} role={role} purpose={copy.sectionPurpose(stepId, current.why)} status={stepStatus.get(stepId)} /><CommentList comments={response.intake.comments} section={stepId} />{body}{error && <div className="field-error" style={{ marginTop: 14 }}>{error}</div>}<div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap", marginTop: 22, paddingTop: 16, borderTop: "1px solid var(--border, rgba(255,255,255,.12))" }}><div style={{ display: "flex", gap: 8 }}>{STEPS.findIndex((step) => step.id === stepId) > 0 && <Button variant="ghost" onClick={() => setStepId(STEPS[STEPS.findIndex((step) => step.id === stepId) - 1].id)}>Back</Button>}{role === "client" && response.intake.status === "LOCKED" && <Button onClick={() => void save()}>Start a new intake version</Button>}</div>{stepId !== "review" ? <Button onClick={() => setStepId(STEPS[Math.min(STEPS.length - 1, STEPS.findIndex((step) => step.id === stepId) + 1)].id)}>Continue</Button> : role === "client" && <Button disabled={!editable || saving || !response.readiness.readyForSubmission || !confirmedAccurate} onClick={() => void submit()}>Confirm accuracy and submit to PM</Button>}</div>{stepId === "documents" && (
         <div className="intake-worksheet-downloads">
           <div className="intake-worksheet-copy">
             <strong>Prefer to draft this offline?</strong>
