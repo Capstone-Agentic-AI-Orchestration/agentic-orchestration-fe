@@ -9,7 +9,7 @@ export default function LegacyOrchestratorStepRedirectPage() {
   const projectId = params.projectId as string;
 
   useEffect(() => {
-    router.replace(`/pm/orchestrate/${projectId}`);
+    router.replace(`/dev/orchestrate/${projectId}`);
   }, [projectId, router]);
 
   return (

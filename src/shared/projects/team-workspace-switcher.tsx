@@ -42,8 +42,15 @@ export function TeamWorkspaceSwitcher({ compact = false }: { compact?: boolean }
       return;
     }
 
-    if (pathname.startsWith("/pm/project/") || pathname.startsWith("/pm/orchestrate/")) {
+    // Switching workspace leaves any project-scoped page, because the project belongs to the
+    // team you just switched away from. /pm/orchestrate no longer exists — the wizard is
+    // /dev/orchestrate now — so only the project workspace needs escaping here.
+    if (pathname.startsWith("/pm/project/")) {
       router.push("/pm/projects");
+    }
+
+    if (pathname.startsWith("/dev/project/") || pathname.startsWith("/dev/orchestrate/")) {
+      router.push("/dev/projects");
     }
   };
 

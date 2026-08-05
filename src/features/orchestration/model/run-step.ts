@@ -114,5 +114,5 @@ export function runStepDestinationPath(
   destination: RunStepDestination | null,
 ): string | null {
   if (!destination) return null;
-  return `/pm/orchestrate/${projectId}`;
+  return `/dev/orchestrate/${projectId}`;
 }

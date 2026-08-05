@@ -47,12 +47,14 @@ interface NextActionHeroProps {
   lastActivity?: string;
   isStarting?: boolean;
   isRefreshing?: boolean;
-  onStart: () => void;
-  onApproveGate1: () => void;
+  /** False on the PM console: report state, offer no build action. Defaults to true. */
+  canBuild?: boolean;
+  onStart?: () => void;
+  onApproveGate1?: () => void;
   onRejectGate1?: () => void;
-  onApproveGate2: () => void;
+  onApproveGate2?: () => void;
   onRejectGate2?: () => void;
-  onCreateRepo: () => void;
+  onCreateRepo?: () => void;
   onRefresh?: () => void;
 }
 
@@ -93,18 +95,21 @@ export function ProjectNextActionHero(props: NextActionHeroProps) {
     providerReason: props.providerReason,
     lastActivity: props.lastActivity,
     isStarting: props.isStarting,
+    canBuild: props.canBuild,
     canRejectGate1: Boolean(props.onRejectGate1),
     canRejectGate2: Boolean(props.onRejectGate2),
   });
   const bg = KIND_TO_HERO_BG[state.kind] || KIND_TO_HERO_BG.idle;
   const border = KIND_TO_BORDER[state.kind] || KIND_TO_BORDER.idle;
   const handleAction = (actionId: ProjectNextActionHeroActionId) => {
-    if (actionId === "openRepository" && props.repoUrl) window.open(props.repoUrl, "_blank");
-    if (actionId === "reviewContract") props.onApproveGate1();
+    if (actionId === "openRepository" && props.repoUrl) {
+      window.open(props.repoUrl, "_blank", "noopener,noreferrer");
+    }
+    if (actionId === "reviewContract") props.onApproveGate1?.();
     if (actionId === "rejectContract") props.onRejectGate1?.();
-    if (actionId === "reviewArtifacts") props.onApproveGate2();
+    if (actionId === "reviewArtifacts") props.onApproveGate2?.();
     if (actionId === "requestChanges") props.onRejectGate2?.();
-    if (actionId === "retry" || actionId === "start") props.onStart();
+    if (actionId === "retry" || actionId === "start") props.onStart?.();
   };
   const renderAction = (action: ProjectNextActionHeroActionModel) => (
     <Button

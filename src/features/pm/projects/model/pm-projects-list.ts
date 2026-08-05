@@ -66,8 +66,18 @@ export function pmProjectNeedsAttention(project: Pick<DevFlowProjectSummary, "st
   return ATTENTION_STATUSES.has(project.status);
 }
 
-export function pmProjectOrchestrateRoute(project: Pick<DevFlowProjectSummary, "id" | "status">): string {
-  return `/pm/orchestrate/${project.id}`;
+/**
+ * Where a PM goes when they open a project from a list.
+ *
+ * This used to be the orchestrate wizard, which is now the developer's (`/dev/orchestrate`)
+ * and would 403 for a PM at the first write. The project workspace is the right destination:
+ * it is where their own work — client, artifacts, delivery review, repository — lives.
+ *
+ * Kept as a function rather than inlining the template so the PM's project entry point is
+ * defined in exactly one place; every caller that used to reach the wizard now follows it.
+ */
+export function pmProjectRoute(project: Pick<DevFlowProjectSummary, "id" | "status">): string {
+  return `/pm/project/${project.id}`;
 }
 
 export function pmProjectAttentionMeta(

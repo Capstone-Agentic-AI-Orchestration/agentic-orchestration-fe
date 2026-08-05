@@ -18,6 +18,11 @@ export const PROJECT_TASK_STATUS_OPTIONS: Array<{
   { value: "DONE", label: "Done" },
 ];
 
+/** The same wording the editable dropdown shows, for read-only renderings of a status. */
+export function projectTaskStatusLabel(status: DevFlowProjectTaskStatus | string): string {
+  return PROJECT_TASK_STATUS_OPTIONS.find((option) => option.value === status)?.label ?? String(status);
+}
+
 export interface BackendTaskForm {
   title: string;
   description: string;

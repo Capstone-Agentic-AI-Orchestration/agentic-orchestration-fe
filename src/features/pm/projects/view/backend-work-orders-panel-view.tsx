@@ -30,7 +30,7 @@ export function BackendWorkOrdersPanelView({ vm }: { vm: BackendWorkOrdersPanelV
   }
 
   return (
-    <div className="pm-tab-layout pm-tab-layout--aside">
+    <div className={vm.readOnly ? "pm-tab-layout" : "pm-tab-layout pm-tab-layout--aside"}>
       <Card className="pm-tab-panel">
         <div style={{ padding: 16, borderBottom: "1px solid var(--border)" }}>
           <SectionTitle title="Orchestration handoff" subtitle={vm.workOrderSubtitle} />
@@ -38,12 +38,17 @@ export function BackendWorkOrdersPanelView({ vm }: { vm: BackendWorkOrdersPanelV
         </div>
 
         {!vm.hasWorkOrders ? (
-          <div className="pm-tab-empty">No work orders created yet. Package a task into a specialist handoff when it is ready for execution.</div>
+          <div className="pm-tab-empty">
+            {vm.readOnly
+              ? "No work orders yet. They appear here once a developer packages the delivery work for the agents."
+              : "No work orders created yet. Package a task into a specialist handoff when it is ready for execution."}
+          </div>
         ) : <div className="pm-tab-list">{vm.workOrderRows.map((row) => (
           <BackendWorkOrderRowView key={row.id} row={row} vm={vm} />
         ))}</div>}
       </Card>
 
+      {!vm.readOnly && (
       <Card className="pm-tab-panel pm-tab-panel--padded">
         <SectionTitle title="New work order" subtitle="Package a task or artifact for a specialist persona" />
         <div style={{ display: "grid", gap: 12, marginTop: 14 }}>
@@ -119,6 +124,7 @@ export function BackendWorkOrdersPanelView({ vm }: { vm: BackendWorkOrdersPanelV
           </Button>
         </div>
       </Card>
+      )}
     </div>
   );
 }
@@ -156,6 +162,10 @@ function BackendWorkOrderRowView({
             </div>
           )}
         </div>
+        {/* Status and Dispatch are the developer's controls. The PM already sees the state
+            in the badges above this row, so read-only mode renders no action column at all
+            rather than a disabled one that suggests the action exists. */}
+        {!vm.readOnly && (
         <div className="pm-tab-list-row__actions">
           <Select
             value={row.status}
@@ -178,6 +188,7 @@ function BackendWorkOrderRowView({
           </Button>
           {row.dispatchBlocker && <div style={{ color: "var(--text-3)", fontSize: 11, maxWidth: 152, textAlign: "right" }}>{row.dispatchBlocker}</div>}
         </div>
+        )}
     </div>
   );
 }

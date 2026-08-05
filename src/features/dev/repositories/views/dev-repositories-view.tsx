@@ -75,7 +75,7 @@ export function DevRepositoriesView() {
             </Card>
           );
         })}
-        {!loading && repositories.length === 0 && <Card style={{ padding: 24 }}><strong>No repository assignments</strong><p style={{ color: "var(--text-3)", marginTop: 6 }}>Your PM can grant access from the group workspace.</p></Card>}
+        {!loading && repositories.length === 0 && <Card style={{ padding: 24 }}><strong>No repository assignments</strong><p style={{ color: "var(--text-3)", marginTop: 6 }}>Repositories are provisioned by a project manager. Ask yours to create one for the project and grant you access from PM &rsaquo; Repositories.</p></Card>}
       </div>
     </div>
   );

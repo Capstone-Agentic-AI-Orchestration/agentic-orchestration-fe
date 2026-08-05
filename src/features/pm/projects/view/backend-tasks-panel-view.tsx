@@ -6,6 +6,7 @@ import { SectionTitle, ProjectTaskStatusDot } from "../components/pm-project-ui"
 import { compactBackendError } from "../utils/pm-project-detail.utils";
 import {
   PROJECT_TASK_STATUS_OPTIONS,
+  projectTaskStatusLabel,
   type BackendTaskRow,
 } from "../model/tasks-panel";
 import type { BackendTasksPanelViewModel } from "../view-model/use-tasks-panel-view-model";
@@ -25,17 +26,22 @@ export function BackendTasksPanelView({ vm }: { vm: BackendTasksPanelViewModel }
   }
 
   return (
-    <div className="pm-tab-layout pm-tab-layout--aside">
+    <div className={vm.readOnly ? "pm-tab-layout" : "pm-tab-layout pm-tab-layout--aside"}>
       <Card className="pm-tab-panel">
         <div style={{ padding: 16, borderBottom: "1px solid var(--border)" }}>
           <SectionTitle title="Project work queue" subtitle={vm.taskSubtitle} />
           {vm.taskError && <div className="pm-tab-message pm-tab-message--danger" style={{ marginTop: 12 }}>{compactBackendError(vm.taskError)}</div>}
         </div>
         {!vm.hasTasks ? (
-          <div className="pm-tab-empty">No tasks created yet. Use the task form to define the first piece of delivery work.</div>
+          <div className="pm-tab-empty">
+            {vm.readOnly
+              ? "No tasks yet. Tasks appear here once a developer plans the delivery work."
+              : "No tasks created yet. Use the task form to define the first piece of delivery work."}
+          </div>
         ) : <div className="pm-tab-list">{vm.taskRows.map((row) => <BackendTaskListRow key={row.id} row={row} vm={vm} />)}</div>}
       </Card>
 
+      {!vm.readOnly && (
       <Card className="pm-tab-panel pm-tab-panel--padded">
         <SectionTitle title="New task" subtitle="Assign work to a project developer" />
         <div style={{ display: "grid", gap: 12, marginTop: 14 }}>
@@ -72,6 +78,7 @@ export function BackendTasksPanelView({ vm }: { vm: BackendTasksPanelViewModel }
           </Button>
         </div>
       </Card>
+      )}
 
       <Modal
         open={vm.activityOpen}
@@ -147,15 +154,21 @@ function BackendTaskListRow({
         </div>
       </div>
       <div className="pm-tab-list-row__actions">
-        <Select
-          value={row.status}
-          onChange={(event) => vm.actions.updateTaskStatus(row.task, event.target.value as DevFlowProjectTaskStatus)}
-          style={{ width: 150 }}
-        >
-          {PROJECT_TASK_STATUS_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>{option.label}</option>
-          ))}
-        </Select>
+        {/* Status is a developer's to change. The PM sees it as a badge and can still open
+            Activity, which is where they comment to ask about it. */}
+        {vm.readOnly ? (
+          <Badge tone="gray">{projectTaskStatusLabel(row.status)}</Badge>
+        ) : (
+          <Select
+            value={row.status}
+            onChange={(event) => vm.actions.updateTaskStatus(row.task, event.target.value as DevFlowProjectTaskStatus)}
+            style={{ width: 150 }}
+          >
+            {PROJECT_TASK_STATUS_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </Select>
+        )}
         <Button variant="secondary" size="sm" icon={<IconMessageCircle size={13} />} onClick={() => vm.actions.openTaskActivity(row.task)}>
           Activity
         </Button>

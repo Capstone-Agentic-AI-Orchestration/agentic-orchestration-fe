@@ -51,7 +51,7 @@ import {
   pmProjectFilterCount,
   pmProjectNeedsAttention,
   pmProjectNextAction,
-  pmProjectOrchestrateRoute,
+  pmProjectRoute,
 } from "../model/pm-projects-list";
 
 const FILTERS = [
@@ -82,7 +82,7 @@ function isAttention(project) {
 
 /** Deep-link straight to the right wizard step (the index route auto-resolves the rest). */
 function orchestrateRoute(project): string {
-  return pmProjectOrchestrateRoute(project);
+  return pmProjectRoute(project);
 }
 
 function attentionMeta(project) {
@@ -135,7 +135,7 @@ export function PMProjectsView({ cardsOnly = false }: { cardsOnly?: boolean }) {
     await Promise.all([refreshBackendProjects(), refreshWorkspaceProjects()]);
     if (projectId) {
       setSelectedProjectId(projectId);
-      router.push(`/pm/orchestrate/${projectId}`);
+      router.push(`/pm/project/${projectId}`);
     }
   };
 

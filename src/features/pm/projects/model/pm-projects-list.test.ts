@@ -6,7 +6,7 @@ import {
   pmProjectFilterCount,
   pmProjectLifecycleStage,
   pmProjectNextAction,
-  pmProjectOrchestrateRoute,
+  pmProjectRoute,
 } from "./pm-projects-list";
 
 const project = (overrides: Record<string, unknown>) => ({
@@ -26,8 +26,8 @@ describe("pm projects list model", () => {
     expect(pmProjectLifecycleStage("DELIVERED")).toBe("delivered");
     expect(pmProjectNextAction("build", { status: "AWAITING_GATE_2" } as never)).toBe("Review the build");
     expect(pmProjectNextAction("build", { status: "GENERATING_CODE" } as never)).toBe("Monitor build");
-    expect(pmProjectOrchestrateRoute({ id: "abc", status: "AWAITING_GATE_1" } as never)).toBe("/pm/orchestrate/abc");
-    expect(pmProjectOrchestrateRoute({ id: "abc", status: "DELIVERED" } as never)).toBe("/pm/orchestrate/abc");
+    expect(pmProjectRoute({ id: "abc", status: "AWAITING_GATE_1" } as never)).toBe("/pm/project/abc");
+    expect(pmProjectRoute({ id: "abc", status: "DELIVERED" } as never)).toBe("/pm/project/abc");
   });
 
   it("builds attention metadata without JSX", () => {

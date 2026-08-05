@@ -21,7 +21,7 @@ import {
   type DevFlowProjectSummary,
   type DevFlowRepository,
 } from "@/shared/api/devflow-api";
-import { pmProjectOrchestrateRoute } from "@/features/pm/projects/model/pm-projects-list";
+import { pmProjectRoute } from "@/features/pm/projects/model/pm-projects-list";
 import { useSelectedTeamWorkspace } from "@/shared/projects/selected-team-workspace-context";
 import { useSelectedDevFlowProject } from "@/shared/projects/selected-project-context";
 
@@ -316,7 +316,7 @@ export function PMTeamView({ groupId }: { groupId: string }) {
                 <div className="row gap-2">
                   <Badge tone={project.lifecycle.tone}>{project.status.replaceAll("_", " ")}</Badge>
                   <Button variant="secondary" size="sm" onClick={() => router.push(`/pm/project/${project.id}`)}>Open</Button>
-                  <Button variant="primary" size="sm" onClick={() => router.push(pmProjectOrchestrateRoute(project))}>Orchestrate</Button>
+                  <Button variant="primary" size="sm" onClick={() => router.push(pmProjectRoute(project))}>Open project</Button>
                 </div>
               </div>
             ))}

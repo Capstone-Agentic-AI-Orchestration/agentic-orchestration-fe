@@ -27,11 +27,19 @@ export interface BackendTasksPanelInput {
   members: DevFlowProjectMember[];
   loading?: boolean;
   error?: string | null;
+  /**
+   * Progress-only rendering for the PM console: the queue and each task's state stay
+   * visible, the create form and the status control do not. POST/PATCH on project tasks
+   * are @Roles(DEV, ADMIN), so those controls could only ever produce a 403 here.
+   * Commenting stays available — it is how a PM asks a developer about a task.
+   */
+  readOnly?: boolean;
   onChanged?: () => void | Promise<void>;
 }
 
 export interface BackendTasksPanelViewModel extends BackendTasksPanelModel {
   projectId: string;
+  readOnly: boolean;
   loading: boolean;
   error: string;
   taskError: string;
@@ -149,6 +157,7 @@ export function useBackendTasksPanelViewModel(
   return {
     ...model,
     projectId: input.projectId,
+    readOnly: Boolean(input.readOnly),
     loading: Boolean(input.loading),
     error: input.error ?? "",
     taskError,

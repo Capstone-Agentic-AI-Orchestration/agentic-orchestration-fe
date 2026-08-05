@@ -637,9 +637,9 @@ describe("run step model", () => {
 
   it("builds run-step destination paths", () => {
     expect(runStepDestinationPath("project-1", null)).toBeNull();
-    expect(runStepDestinationPath("project-1", "gate-1")).toBe("/pm/orchestrate/project-1");
-    expect(runStepDestinationPath("project-1", "gate-2")).toBe("/pm/orchestrate/project-1");
-    expect(runStepDestinationPath("project-1", "delivery")).toBe("/pm/orchestrate/project-1");
+    expect(runStepDestinationPath("project-1", "gate-1")).toBe("/dev/orchestrate/project-1");
+    expect(runStepDestinationPath("project-1", "gate-2")).toBe("/dev/orchestrate/project-1");
+    expect(runStepDestinationPath("project-1", "delivery")).toBe("/dev/orchestrate/project-1");
   });
 });
 

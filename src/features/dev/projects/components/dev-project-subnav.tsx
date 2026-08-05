@@ -5,16 +5,30 @@ import { useRouter } from "next/navigation";
 import {
   IconActivity,
   IconCheckCircle,
+  IconCode,
   IconCpu,
   IconFileText,
+  IconRocket,
+  IconShield,
   IconUsers,
   IconWorkflow,
 } from "@/shared/components/icons";
 
+/**
+ * Sections of a project a developer can open.
+ *
+ * Setup, Work orders, Orchestration and Gates arrived here from the PM console: prompting,
+ * kickoff, run control and both approval gates are the developer's, and the backend enforces
+ * it with @Roles(DEV, ADMIN). "handoffs" was the old read-only view of work orders and is
+ * replaced by the writable "work-orders" section.
+ */
 export type DevProjectSectionId =
   | "overview"
+  | "setup"
   | "tasks"
-  | "handoffs"
+  | "work-orders"
+  | "orchestration"
+  | "gates"
   | "orchestrator"
   | "artifacts"
   | "members"
@@ -36,14 +50,17 @@ const DEV_PROJECT_SECTIONS: Array<{ label: string; items: DevProjectSectionItem[
   {
     label: "Delivery workflow",
     items: [
+      { value: "setup", label: "Setup", icon: <IconRocket size={15} /> },
       { value: "tasks", label: "Tasks", icon: <IconCheckCircle size={15} /> },
-      { value: "handoffs", label: "Handoffs", icon: <IconWorkflow size={15} /> },
-      { value: "orchestrator", label: "Orchestrator", icon: <IconCpu size={15} /> },
+      { value: "work-orders", label: "Work orders", icon: <IconWorkflow size={15} /> },
+      { value: "orchestration", label: "Orchestration", icon: <IconCpu size={15} /> },
+      { value: "orchestrator", label: "Orchestrator", icon: <IconCode size={15} /> },
     ],
   },
   {
     label: "Review and delivery",
     items: [
+      { value: "gates", label: "Gate decisions", icon: <IconShield size={15} /> },
       { value: "artifacts", label: "Artifacts", icon: <IconFileText size={15} /> },
     ],
   },

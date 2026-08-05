@@ -130,7 +130,7 @@ export function OrchestrationRunCockpit({
           <button
             type="button"
             className="btn btn-primary"
-            onClick={() => router.push(`/pm/orchestrate/${projectId}`)}
+            onClick={() => router.push(`/dev/orchestrate/${projectId}`)}
           >
             {execution.actionLabel}
             <IconArrowRight size={14} />

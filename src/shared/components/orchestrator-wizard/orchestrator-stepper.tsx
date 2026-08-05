@@ -195,7 +195,7 @@ export function OrchestratorStepNav({
           } else if (adaptiveNavigation) {
             adaptiveNavigation.navigateToStep(prevStep);
           } else {
-            router.push(`/pm/orchestrate/${projectId}`);
+            router.push(`/dev/orchestrate/${projectId}`);
           }
         }}
       >
@@ -214,7 +214,7 @@ export function OrchestratorStepNav({
           if (shouldContinue !== false && adaptiveNavigation) {
             adaptiveNavigation.resumeRecommended();
           } else if (shouldContinue !== false && !isLastStep && nextStep) {
-            router.push(`/pm/orchestrate/${projectId}`);
+            router.push(`/dev/orchestrate/${projectId}`);
           }
         }}
       >

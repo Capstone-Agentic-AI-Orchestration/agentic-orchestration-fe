@@ -38,7 +38,7 @@ export function useGate1StepViewModel(ctx: OrchestratorWizardContextValue): Gate
       await approveDevFlowGate1(projectId, approved, notes.trim() || undefined);
       await refresh();
       if (approved) {
-        router.push(`/pm/orchestrate/${projectId}`);
+        router.push(`/dev/orchestrate/${projectId}`);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));

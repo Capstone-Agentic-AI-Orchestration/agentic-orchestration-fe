@@ -261,11 +261,11 @@ export function LifecycleOverviewBanner({
   };
 
   const actions: Record<LifecycleStageId, { label: string; route: string }> = {
-    draft: { label: "Describe outcome", route: `/pm/orchestrate/${projectId}` },
-    kickoff: { label: "Review and start", route: `/pm/orchestrate/${projectId}` },
-    build: { label: "Open project build", route: `/pm/orchestrate/${projectId}` },
-    review: { label: "Review decision", route: `/pm/orchestrate/${projectId}` },
-    delivered: { label: "Review delivery", route: `/pm/orchestrate/${projectId}` },
+    draft: { label: "Describe outcome", route: `/dev/orchestrate/${projectId}` },
+    kickoff: { label: "Review and start", route: `/dev/orchestrate/${projectId}` },
+    build: { label: "Open project build", route: `/dev/orchestrate/${projectId}` },
+    review: { label: "Review decision", route: `/dev/orchestrate/${projectId}` },
+    delivered: { label: "Review delivery", route: `/dev/orchestrate/${projectId}` },
   };
 
   return (

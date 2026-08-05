@@ -8,25 +8,29 @@ import {
   IconCheck,
   IconCheckCircle,
   IconClipboard,
-  IconCpu,
   IconFileText,
   IconFolder,
   IconMessageCircle,
-  IconRocket,
   IconSettings,
-  IconShield,
   IconUsers,
   IconWorkflow,
 } from "@/shared/components/icons";
 
+/**
+ * Sections of a project a PM can open.
+ *
+ * The build sections — Setup, Orchestration and Gate decisions — deliberately are NOT here.
+ * Prompting, kickoff and gate approval belong to the developer console; the backend enforces
+ * that with @Roles(DEV, ADMIN), so listing them would only render buttons that 403.
+ *
+ * Tasks and Work orders survive as read-only progress: the PM still has to report on
+ * delivery, and the GET routes are still open to them.
+ */
 export type PMProjectSectionId =
   | "overview"
   | "intake"
-  | "setup"
   | "tasks"
   | "work-orders"
-  | "orchestration"
-  | "gates"
   | "artifacts"
   | "delivery-review"
   | "messages"
@@ -50,18 +54,16 @@ const PROJECT_SECTIONS: Array<{ label: string; items: ProjectSectionItem[] }> = 
     ],
   },
   {
-    label: "Delivery workflow",
+    // Named "progress", not "workflow": the PM watches these, the developer drives them.
+    label: "Delivery progress",
     items: [
-      { value: "setup", label: "Setup", icon: <IconRocket size={15} /> },
       { value: "tasks", label: "Tasks", icon: <IconCheckCircle size={15} /> },
       { value: "work-orders", label: "Work orders", icon: <IconWorkflow size={15} /> },
-      { value: "orchestration", label: "Orchestration", icon: <IconCpu size={15} /> },
     ],
   },
   {
     label: "Review and delivery",
     items: [
-      { value: "gates", label: "Gate decisions", icon: <IconShield size={15} /> },
       { value: "artifacts", label: "Artifacts", icon: <IconFileText size={15} /> },
       { value: "delivery-review", label: "Delivery review", icon: <IconCheck size={15} /> },
     ],

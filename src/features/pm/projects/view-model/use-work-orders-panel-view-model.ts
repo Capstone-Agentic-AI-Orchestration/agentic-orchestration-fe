@@ -29,11 +29,18 @@ export interface BackendWorkOrdersPanelInput {
   artifacts: DevFlowArtifact[];
   loading?: boolean;
   error?: string | null;
+  /**
+   * Progress-only rendering for the PM console. Creating, editing, dispatching and retrying
+   * work orders are all @Roles(DEV, ADMIN) — the PM keeps the list and the statuses, which
+   * is what they need to report delivery progress, and none of the controls.
+   */
+  readOnly?: boolean;
   onChanged?: () => void | Promise<void>;
 }
 
 export interface BackendWorkOrdersPanelViewModel extends BackendWorkOrdersPanelModel {
   projectId: string;
+  readOnly: boolean;
   form: BackendWorkOrderForm;
   loading: boolean;
   error: string;
@@ -136,6 +143,7 @@ export function useBackendWorkOrdersPanelViewModel(
   return {
     ...model,
     projectId: input.projectId,
+    readOnly: Boolean(input.readOnly),
     form,
     loading: Boolean(input.loading),
     error: input.error ?? "",

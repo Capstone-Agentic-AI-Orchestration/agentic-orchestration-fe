@@ -463,100 +463,10 @@ function BackendProjectDetail({ project, onBack }) {
     }
   };
 
-  const startRun = async (runControls) => {
-    const blockers = orchestrationReadinessBlockers(detail, outputs.workOrders, outputs.loading);
-    const providerBlocker = provider.error || (provider.status && !provider.status.available ? provider.status.reason : "");
-    if (provider.loading) {
-      setError("Wait for the agent provider check to finish before starting orchestration.");
-      return;
-    }
-    if (providerBlocker) {
-      setError(providerBlocker);
-      return;
-    }
-    if (modelSelection.loading) {
-      setError("Wait for the Vercel model list to finish loading before starting the run.");
-      return;
-    }
-    if (!modelSelection.selection) {
-      setError(modelSelection.error || "Choose an AI Gateway model before starting the run.");
-      return;
-    }
-    if (blockers.length && !detail.runId) {
-      setError(blockers[0]);
-      setTab(blockers[0].includes("work order") ? "work-orders" : "setup");
-      return;
-    }
+  // startRun / approveGate / rerunReadyWorkOrders / retryFailedWorkOrder lived here.
+  // All four call routes that are now @Roles(DEV, ADMIN), so keeping them would only give
+  // the PM console four ways to trigger a 403. They moved to the developer workspace.
 
-    setStarting(true);
-    setError("");
-    try {
-      await startDevFlowOrchestration(detail.id, {
-        designGuidance: loadDesignGuidance(detail.id),
-        modelSelection: modelSelection.selection,
-        runControls,
-      });
-      await new Promise((resolve) => window.setTimeout(resolve, 1200));
-      setDetail(await getDevFlowProject(detail.id));
-      await Promise.all([outputs.refresh?.(), orchestration.refresh?.(), provider.refresh?.(), refreshOrchestrationRuns(), refreshDeliveryReadiness()]);
-      setPreflightOpen(false);
-      setTab("orchestration");
-    } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : String(nextError));
-    } finally {
-      setStarting(false);
-    }
-  };
-
-  const [gateAction, setGateAction] = useState("");
-
-  const approveGate = async (gate: "architecture" | "code", approved: boolean) => {
-    setGateAction(`${gate}-${approved}`);
-    setError("");
-    try {
-      const fn = gate === "architecture" ? approveDevFlowGate1 : approveDevFlowGate2;
-      await fn(detail.id, approved);
-      setDetail(await getDevFlowProject(detail.id));
-    } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : String(nextError));
-    } finally {
-      setGateAction("");
-    }
-  };
-
-  const rerunReadyWorkOrders = async () => {
-    const blockers = orchestrationReadinessBlockers(detail, outputs.workOrders, outputs.loading, true);
-    if (blockers.length) {
-      setError(blockers[0]);
-      return;
-    }
-
-    setOrchestrationAction("rerun-ready");
-    setError("");
-    try {
-      await rerunReadyDevFlowWorkOrders(detail.id);
-      await new Promise((resolve) => window.setTimeout(resolve, 1200));
-      setDetail(await getDevFlowProject(detail.id));
-      await Promise.all([outputs.refresh?.(), orchestration.refresh?.(), provider.refresh?.(), refreshOrchestrationRuns(), refreshDeliveryReadiness()]);
-    } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : String(nextError));
-    } finally {
-      setOrchestrationAction("");
-    }
-  };
-
-  const retryFailedWorkOrder = async (workOrderId) => {
-    setOrchestrationAction(workOrderId);
-    setError("");
-    try {
-      await retryDevFlowWorkOrder(detail.id, workOrderId);
-      await Promise.all([outputs.refresh?.(), orchestration.refresh?.(), refreshOrchestrationRuns(), refreshDeliveryReadiness()]);
-    } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : String(nextError));
-    } finally {
-      setOrchestrationAction("");
-    }
-  };
   const projectJourney = makeProjectJourneyContext({
     role: "pm",
     project: detail,
@@ -565,12 +475,27 @@ function BackendProjectDetail({ project, onBack }) {
     loading: outputs.loading || provider.loading,
     pendingActions: outputs.tasks.filter((task) => task.status !== "DONE").length + outputs.workOrders.filter((workOrder) => ["READY", "RUNNING", "FAILED"].includes(workOrder.status)).length,
     blockers: orchestrationBlockers,
-    primaryAction: {
-      label: canStartOrchestration ? "Start build run" : detail.runId ? "Open build run" : "Resolve blockers",
-      onClick: canStartOrchestration ? () => setPreflightOpen(true) : () => setTab("setup"),
-      disabled: starting,
+    // The PM's next action is never "start the build" any more — they cannot, the route is
+    // DEV-only. What is theirs is provisioning the repository the developer will build in,
+    // so that leads until it exists; after that the PM's job is reviewing what came out.
+    primaryAction: detail.repoUrl
+      ? {
+          label: "Review artifacts",
+          onClick: () => setTab("artifacts"),
+          icon: <IconFolder size={13} />,
+        }
+      : {
+          label: creatingRepo ? "Creating repository..." : "Create repository",
+          onClick: handleCreateRepo,
+          disabled: creatingRepo,
+          icon: <IconGitBranch size={13} />,
+        },
+    secondaryAction: {
+      label: "Delivery progress",
+      onClick: () => setTab("work-orders"),
+      variant: "secondary",
+      icon: <IconWorkflow size={13} />,
     },
-    secondaryAction: { label: "Open project build", href: `/pm/orchestrate/${detail.id}`, variant: "secondary", icon: <IconWorkflow size={13} /> },
   });
 
   return (
@@ -593,9 +518,16 @@ function BackendProjectDetail({ project, onBack }) {
         actions={
           <div className="row gap-2">
             <Button variant="secondary" size="sm" icon={<IconArrowLeft size={14} />} onClick={onBack}>All projects</Button>
-            <Button variant="secondary" size="sm" icon={<IconWorkflow size={13} />} onClick={() => router.push(`/pm/orchestrate/${detail.id}`)}>
-              Open project build
-            </Button>
+            {detail.repoUrl && (
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={<IconGitHub size={13} />}
+                onClick={() => window.open(detail.repoUrl, "_blank", "noopener,noreferrer")}
+              >
+                Open repository
+              </Button>
+            )}
           </div>
         }
       />
@@ -659,7 +591,6 @@ function BackendProjectDetail({ project, onBack }) {
               currentStage={lifecycleStageId}
               maxReachedStage={lifecycleStageId}
               completedStages={completedStagesFromProject}
-              onClickStage={() => router.push(`/pm/orchestrate/${detail.id}`)}
             />
           </div>
 
@@ -678,12 +609,10 @@ function BackendProjectDetail({ project, onBack }) {
             orchestrationBlockers={orchestrationBlockers}
             providerAvailable={provider.status?.available}
             providerReason={provider.status?.reason || provider.error}
-            isStarting={starting}
-            onStart={() => setPreflightOpen(true)}
-            onApproveGate1={() => approveGate("architecture", true)}
-            onRejectGate1={() => approveGate("architecture", false)}
-            onApproveGate2={() => approveGate("code", true)}
-            onRejectGate2={() => approveGate("code", false)}
+            // The PM observes the build; starting it and deciding the gates are the
+            // developer's, so no start/approve handlers are passed at all. Repository
+            // creation stays because provisioning the repo IS the PM's job here.
+            canBuild={false}
             onCreateRepo={handleCreateRepo}
           />
 
@@ -699,23 +628,13 @@ function BackendProjectDetail({ project, onBack }) {
       )}
 
       <div className="pm-project-section-stack">
-        {tab === "setup" && (
-            <BackendKickoffPanel
-              detail={detail}
-              tasks={outputs.tasks}
-              workOrders={outputs.workOrders}
-              documents={outputs.documents}
-              loading={outputs.loading}
-              error={outputs.error}
-              onChanged={async () => {
-                setDetail(await getDevFlowProject(detail.id));
-                await Promise.all([outputs.refresh?.(), refreshDeliveryReadiness()]);
-              }}
-            />
-        )}
+        {/* Setup (kickoff) and Orchestration used to render here. Both are the developer's
+            now — the backend answers 403 to a PM on every write behind them, so the panels
+            were removed rather than left to fail on click. See pm-project-subnav.tsx. */}
 
         {tab === "tasks" && (
             <BackendTasksPanel
+              readOnly
               projectId={detail.id}
               tasks={outputs.tasks}
               artifacts={outputs.artifacts}
@@ -730,6 +649,7 @@ function BackendProjectDetail({ project, onBack }) {
 
         {tab === "work-orders" && (
             <BackendWorkOrdersPanel
+              readOnly
               projectId={detail.id}
               workOrders={outputs.workOrders}
               tasks={outputs.tasks}
@@ -742,89 +662,9 @@ function BackendProjectDetail({ project, onBack }) {
             />
         )}
 
-        {tab === "orchestration" && (
-          <>
-            <OrchestrationPreflight
-              open={preflightOpen}
-              projectName={detail.companyName}
-              controller={modelSelection}
-              blockers={orchestrationBlockers}
-              activeRunId={detail.runId}
-              providerReason={
-                provider.loading
-                  ? "Wait for the agent provider check to finish."
-                  : provider.error || (provider.status && !provider.status.available ? provider.status.reason : "")
-              }
-              starting={starting}
-              initialTokenBudget={detail.runBudget?.tokenBudget}
-              initialMaxRetries={detail.runBudget?.maxRetries}
-              showEntry={false}
-              onOpen={() => setPreflightOpen(true)}
-              onClose={() => setPreflightOpen(false)}
-              onLaunch={startRun}
-            />
-            <BackendOrchestrationPanel
-              detail={detail}
-              status={orchestration.status}
-              statusLoading={orchestration.loading}
-              statusError={orchestration.error}
-              providerStatus={provider.status}
-              providerLoading={provider.loading}
-              providerError={provider.error}
-              githubVerification={githubVerification}
-              githubVerificationLoading={githubVerificationLoading}
-              githubVerificationError={githubVerificationError}
-              llmVerification={llmVerification}
-              llmVerificationLoading={llmVerificationLoading}
-              llmVerificationError={llmVerificationError}
-              workOrders={outputs.workOrders}
-              artifacts={outputs.artifacts}
-              events={outputs.events}
-              runs={orchestrationRuns}
-              runsLoading={orchestrationRunsLoading}
-              runsError={orchestrationRunsError}
-              blockers={orchestrationBlockers}
-              starting={starting}
-              actionId={orchestrationAction}
-              creatingRepo={creatingRepo}
-              onCreateRepo={handleCreateRepo}
-              onStart={() => setPreflightOpen(true)}
-              onRerunReady={rerunReadyWorkOrders}
-              onRetryFailedWorkOrder={retryFailedWorkOrder}
-              onVerifyGithubDelivery={verifyGithubDelivery}
-              onVerifyLlmProvider={verifyLlmProvider}
-              onRefresh={async () => {
-                setDetail(await getDevFlowProject(detail.id));
-                await Promise.all([outputs.refresh?.(), orchestration.refresh?.(), provider.refresh?.(), refreshOrchestrationRuns(), refreshDeliveryReadiness()]);
-              }}
-            />
-          </>
-        )}
-
-        {tab === "gates" && (
-          <Card className="pm-tab-panel pm-tab-panel--padded">
-            <div className="pm-tab-header">
-              <SectionTitle title="Gate decisions" subtitle="Review the approval history for architecture and delivery gates." />
-              <Badge tone={detail.gates.length > 0 ? "blue" : "gray"}>{detail.gates.length} decisions</Badge>
-            </div>
-            <div className="pm-tab-section">
-              {detail.gates.length === 0 ? (
-                <div className="pm-tab-empty" style={{ padding: 0 }}>No gate decisions have been recorded yet.</div>
-              ) : <div className="pm-tab-list">{detail.gates.map((gate) => (
-                <div key={gate.id} className="pm-tab-list-row">
-                  <div className="pm-tab-list-row__content">
-                  <div className="row" style={{ justifyContent: "space-between", gap: 12 }}>
-                    <div style={{ fontWeight: 600, fontSize: 13 }}>{gate.gateType}</div>
-                    <Badge tone={gate.decision === "APPROVED" ? "green" : "red"}>{gate.decision}</Badge>
-                  </div>
-                  <div style={{ color: "var(--text-3)", fontSize: 12, marginTop: 4 }}>{formatBackendDate(gate.decidedAt)}</div>
-                  {gate.notes && <div style={{ color: "var(--text-2)", fontSize: 13, marginTop: 6 }}>{gate.notes}</div>}
-                  </div>
-                </div>
-              ))}</div>}
-            </div>
-          </Card>
-        )}
+        {/* Orchestration and Gate decisions moved to the developer console:
+            prompting, run control and both gate approvals are @Roles(DEV, ADMIN) now.
+            The gate history lives with the person who decides it. */}
 
         {tab === "artifacts" && (
           <BackendArtifactsPanel

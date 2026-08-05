@@ -27,6 +27,11 @@ export function useDevProjectDetailViewModel(input: {
     includeTasks: true,
     includeTimeline: true,
     includeWorkOrders: true,
+    // The Setup (kickoff) section checks document readiness before it will let a run start,
+    // so the developer console now needs documents too. Without this the kickoff panel reads
+    // an always-empty list and reports the project as missing evidence it actually has.
+    includeDocuments: true,
+    includeEvents: true,
   });
   return {
     ...buildDevProjectDetailModel(input.project),

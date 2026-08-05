@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Card } from "@/shared/components/ui";
+import { Badge, Button, Card } from "@/shared/components/ui";
 import { useSelectedDevFlowProject } from "@/shared/projects/selected-project-context";
 import {
   IconArrowLeft,
@@ -30,12 +30,13 @@ import {
 import { DevProjectDetailContentView, DevProjectMembersView } from "../view/dev-project-detail-view";
 import { DevArtifactsPanelView } from "../view/dev-artifacts-panel-view";
 import { DevTasksPanelView } from "../view/dev-tasks-panel-view";
-import { DevWorkOrdersPanelView } from "../view/dev-work-orders-panel-view";
 import { useDevProjectDetailViewModel } from "../view-model/use-dev-project-detail-view-model";
 import { useDevArtifactsPanelViewModel } from "../view-model/use-dev-artifacts-panel-view-model";
 import { useDevTasksPanelViewModel } from "../view-model/use-dev-tasks-panel-view-model";
-import { useDevWorkOrdersPanelViewModel } from "../view-model/use-dev-work-orders-panel-view-model";
 import { DevProjectSubnav } from "../components/dev-project-subnav";
+import { BackendKickoffPanel, BackendWorkOrdersPanel } from "@/features/delivery/panels";
+import { formatBackendDate } from "@/features/pm/projects/utils/pm-project-detail.utils";
+import { SectionTitle } from "@/features/pm/projects/components/pm-project-ui";
 
 export function DevProjectsView() {
   const router = useRouter();
@@ -257,12 +258,51 @@ function BackendDevProjectDetail({ project, onBack }) {
               onChanged={outputs.refresh}
             />
           )}
-          {tab === "handoffs" && (
-            <DevBackendWorkOrders
+          {/* The build sections. These arrived from the PM console with the role split:
+              prompting, kickoff, work-order dispatch and gate approval are the developer's,
+              and the backend now enforces that with @Roles(DEV, ADMIN). They render the same
+              panels the PM used to own, writable here and `readOnly` over there. */}
+          {tab === "setup" && (
+            <BackendKickoffPanel
+              detail={project}
+              tasks={outputs.tasks}
               workOrders={outputs.workOrders}
+              documents={outputs.documents}
               loading={outputs.loading}
               error={outputs.error}
+              onChanged={outputs.refresh}
             />
+          )}
+          {tab === "work-orders" && (
+            <BackendWorkOrdersPanel
+              projectId={project.id}
+              workOrders={outputs.workOrders}
+              tasks={outputs.tasks}
+              artifacts={outputs.artifacts}
+              loading={outputs.loading}
+              error={outputs.error}
+              onChanged={outputs.refresh}
+            />
+          )}
+          {tab === "orchestration" && (
+            <Card className="pm-tab-panel pm-tab-panel--padded">
+              <p style={{ color: "var(--text-2)", fontSize: 13, lineHeight: 1.6, margin: 0 }}>
+                Start and steer this project&apos;s run from the build workspace, where the
+                prompt, the model selection and the live run controls are together.
+              </p>
+              <Button
+                variant="primary"
+                size="sm"
+                icon={<IconCpu size={13} />}
+                style={{ marginTop: 14 }}
+                onClick={() => router.push(`/dev/orchestrate/${project.id}`)}
+              >
+                Open build workspace
+              </Button>
+            </Card>
+          )}
+          {tab === "gates" && (
+            <DevGateDecisions gates={project.gates ?? []} />
           )}
           {tab === "artifacts" && (
             <DevBackendArtifacts
@@ -306,16 +346,54 @@ function DevBackendTasks({
   return <DevTasksPanelView vm={vm} />;
 }
 
-function DevBackendWorkOrders({ workOrders, loading, error }) {
-  const vm = useDevWorkOrdersPanelViewModel({
-    workOrders,
-    loading,
-    error,
-  });
-  return <DevWorkOrdersPanelView vm={vm} />;
-}
-
 function DevBackendArtifacts({ artifacts, loading, error }) {
   const vm = useDevArtifactsPanelViewModel({ artifacts, loading, error });
   return <DevArtifactsPanelView vm={vm} />;
+}
+
+/**
+ * Gate history for the developer, who now records these decisions.
+ *
+ * Approving or rejecting still happens in the build workspace (/dev/orchestrate), where the
+ * gate step shows the artifact under review next to the decision — a decision list is the
+ * wrong place to approve from. This is the record of what was decided and when.
+ */
+function DevGateDecisions({ gates }) {
+  return (
+    <Card className="pm-tab-panel pm-tab-panel--padded">
+      <div className="pm-tab-header">
+        <SectionTitle
+          title="Gate decisions"
+          subtitle="Architecture and delivery approvals recorded for this project."
+        />
+        <Badge tone={gates.length > 0 ? "blue" : "gray"}>{gates.length} decisions</Badge>
+      </div>
+      <div className="pm-tab-section">
+        {gates.length === 0 ? (
+          <div className="pm-tab-empty" style={{ padding: 0 }}>
+            No gate decisions recorded yet. Gate 1 opens once the contract is generated.
+          </div>
+        ) : (
+          <div className="pm-tab-list">
+            {gates.map((gate) => (
+              <div key={gate.id} className="pm-tab-list-row">
+                <div className="pm-tab-list-row__content">
+                  <div className="row" style={{ justifyContent: "space-between", gap: 12 }}>
+                    <div style={{ fontWeight: 600, fontSize: 13 }}>{gate.gateType}</div>
+                    <Badge tone={gate.decision === "APPROVED" ? "green" : "red"}>{gate.decision}</Badge>
+                  </div>
+                  <div style={{ color: "var(--text-3)", fontSize: 12, marginTop: 4 }}>
+                    {formatBackendDate(gate.decidedAt)}
+                  </div>
+                  {gate.notes && (
+                    <div style={{ color: "var(--text-2)", fontSize: 13, marginTop: 6 }}>{gate.notes}</div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </Card>
+  );
 }

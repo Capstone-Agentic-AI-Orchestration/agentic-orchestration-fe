@@ -84,3 +84,63 @@ describe("project next action hero model", () => {
     });
   });
 });
+
+// The PM keeps this card for status but no longer builds: prompting, run control and both
+// gates are @Roles(DEV, ADMIN). Every state that offers the builder an action must offer the
+// observer none, or the PM gets a button whose request the backend refuses.
+describe("buildProjectNextActionHeroModel with canBuild: false", () => {
+  const observer = { canBuild: false, artifactCount: 3, orchestrationBlockers: [] as string[] };
+
+  it("reports gate 1 as waiting on the developer, with no approve action", () => {
+    expect(buildProjectNextActionHeroModel({ ...observer, status: "AWAITING_GATE_1" })).toMatchObject({
+      kind: "waiting",
+      headline: "The contract is with the developer for review.",
+      cta: null,
+      secondary: null,
+    });
+  });
+
+  it("reports gate 2 as waiting on the developer, with no approve action", () => {
+    expect(buildProjectNextActionHeroModel({ ...observer, status: "AWAITING_GATE_2" })).toMatchObject({
+      kind: "waiting",
+      headline: "The build is with the developer for review.",
+      cta: null,
+      secondary: null,
+    });
+  });
+
+  it("offers no retry on a failed run", () => {
+    expect(buildProjectNextActionHeroModel({ ...observer, status: "FAILED" })).toMatchObject({
+      kind: "blocked",
+      cta: null,
+    });
+  });
+
+  it("offers no start action when idle, and points at the missing repository", () => {
+    expect(buildProjectNextActionHeroModel({ ...observer, status: "PENDING" })).toMatchObject({
+      kind: "idle",
+      headline: "Ready for the developer to start the build.",
+      detail: "Create the project repository so a developer can start the run.",
+      cta: null,
+    });
+  });
+
+  it("still links the repository once delivered — the one action that is the PM's", () => {
+    expect(buildProjectNextActionHeroModel({
+      ...observer,
+      status: "DELIVERED",
+      repoUrl: "https://github.com/acme/app",
+    })).toMatchObject({
+      kind: "done",
+      cta: { id: "openRepository" },
+    });
+  });
+
+  it("leaves the builder's actions untouched when canBuild is omitted", () => {
+    expect(buildProjectNextActionHeroModel({
+      status: "AWAITING_GATE_1",
+      artifactCount: 3,
+      orchestrationBlockers: [],
+    })).toMatchObject({ cta: { id: "reviewContract" } });
+  });
+});
