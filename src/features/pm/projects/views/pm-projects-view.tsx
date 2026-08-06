@@ -53,6 +53,7 @@ import {
   pmProjectNextAction,
   pmProjectRoute,
 } from "../model/pm-projects-list";
+import { teamBlockedReason, teamHasDeveloper } from "../model/team-readiness";
 
 const FILTERS = [
   { id: "all", label: "All" },
@@ -411,6 +412,11 @@ function NewProjectWizardModal({
       setCreateError("Company, team, repository name, stack, and a brief of at least 10 characters are required.");
       return;
     }
+    const teamProblem = teamBlockedReason(groups.find((group) => group.id === form.groupId));
+    if (teamProblem) {
+      setCreateError(teamProblem);
+      return;
+    }
     setCreating(true);
     setCreateError("");
     onError("");
@@ -560,16 +566,33 @@ function NewProjectWizardModal({
                     <option value="nextjs-only">Next.js only</option>
                   </Select>
                 </Field>
-                <Field label="Team workspace">
+                <Field
+                  label="Team workspace"
+                  helper="The team that will build this. A team needs a developer in it."
+                >
                   <Select
                     value={form.groupId}
                     disabled={Boolean(initialGroupId && groups.some((group) => group.id === initialGroupId))}
                     onChange={(event) => setForm((current) => ({ ...current, groupId: event.target.value }))}
                   >
                     <option value="">Select a team</option>
-                    {groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}
+                    {/* Developer-less teams stay listed but are marked and unselectable: hiding
+                        them would leave a PM hunting for a team they know exists. */}
+                    {groups.map((group) => {
+                      const usable = teamHasDeveloper(group.members);
+                      return (
+                        <option key={group.id} value={group.id} disabled={!usable}>
+                          {group.name}{usable ? "" : " — no developer yet"}
+                        </option>
+                      );
+                    })}
                   </Select>
                 </Field>
+                {teamBlockedReason(groups.find((group) => group.id === form.groupId)) && (
+                  <div className="field-error">
+                    {teamBlockedReason(groups.find((group) => group.id === form.groupId))}
+                  </div>
+                )}
                 <Field label="GitHub repository" helper="A private repository with folders only. CI/CD is not added.">
                   <Input
                     value={form.repositoryName}

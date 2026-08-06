@@ -23,6 +23,7 @@ import {
 } from "@/shared/api/devflow-api";
 import { pmProjectRoute } from "@/features/pm/projects/model/pm-projects-list";
 import { useDevFlowClients } from "@/shared/hooks/use-devflow-clients";
+import { teamHasDeveloper } from "@/features/pm/projects/model/team-readiness";
 import { useSelectedTeamWorkspace } from "@/shared/projects/selected-team-workspace-context";
 import { useSelectedDevFlowProject } from "@/shared/projects/selected-project-context";
 
@@ -126,7 +127,12 @@ export function PMTeamView({ groupId }: { groupId: string }) {
     }
   };
 
+  // This page creates into one fixed team, so the developer requirement is a property of the
+  // page rather than a choice: with nobody to build, creation is refused outright.
+  const hasDeveloper = teamHasDeveloper(group?.members);
+
   const ready =
+    hasDeveloper &&
     form.clientId.length > 0 &&
     form.companyName.trim().length > 0 &&
     form.brief.trim().length >= 10 &&
@@ -134,6 +140,13 @@ export function PMTeamView({ groupId }: { groupId: string }) {
     form.repositoryName.trim().length > 0;
 
   const createProject = async () => {
+    if (!hasDeveloper) {
+      setError(
+        `${group?.name ?? "This team"} has no developer, so nobody could build this project. ` +
+          "Add a developer on the Members tab first — project managers cannot run the build themselves.",
+      );
+      return;
+    }
     if (!form.clientId) {
       // Its own message because the fix may be to leave this page and add the client first,
       // unlike the other required fields which are all filled in right here.
@@ -271,6 +284,12 @@ export function PMTeamView({ groupId }: { groupId: string }) {
         <Card style={{ padding: 20 }}>
           <div className="row gap-2" style={{ marginBottom: 14 }}><IconPlus size={16} /><strong>Create project</strong></div>
           <p style={{ color: "var(--text-3)", fontSize: 13, marginBottom: 14 }}>Projects created here belong to <strong>{group?.name ?? "this team"}</strong> and use its GitHub repositories.</p>
+          {!hasDeveloper && (
+            <div className="field-error" style={{ marginBottom: 14 }}>
+              This team has no developer yet, so nobody could build a project created here. Add
+              one on the Members tab first.
+            </div>
+          )}
           <div style={{ display: "grid", gap: 12 }}>
             {/* Client first: it is the only field that can send you somewhere else to fix it,
                 so it leads rather than sitting further down the form. */}
