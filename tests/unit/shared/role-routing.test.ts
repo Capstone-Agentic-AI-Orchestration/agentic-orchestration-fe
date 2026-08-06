@@ -1,8 +1,13 @@
 import { homePathForRole } from '@/shared/auth/role-routing';
 
 describe('homePathForRole', () => {
-  it('maps CLIENT to /client/dashboard', () => {
-    expect(homePathForRole('CLIENT')).toBe('/client/dashboard');
+  // This console became staff-only: there are no /client routes in it at all, and the backend
+  // refuses a CLIENT sign-in outright with 403 NOT_A_TEAM_MEMBER. The mapping is kept as a
+  // defensive dead-end rather than removed, because routing a CLIENT to /sign-in would loop —
+  // sign-in re-routes an authenticated user by role. Client accounts live in the separate
+  // Alphaexplora client app.
+  it('maps CLIENT to the terminal /no-access screen', () => {
+    expect(homePathForRole('CLIENT')).toBe('/no-access');
   });
 
   it('maps PM to /pm/projects', () => {

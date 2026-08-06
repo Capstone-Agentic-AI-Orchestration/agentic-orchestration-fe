@@ -1,7 +1,6 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useRouter } from "next/navigation";
 import {
   IconActivity,
   IconCheckCircle,
@@ -21,6 +20,10 @@ import {
  * kickoff, run control and both approval gates are the developer's, and the backend enforces
  * it with @Roles(DEV, ADMIN). "handoffs" was the old read-only view of work orders and is
  * replaced by the writable "work-orders" section.
+ *
+ * There is no "orchestrator" entry any more. It used to jump out to a console-level workbench
+ * that asked which project to run against — from inside a project, which had already answered
+ * that. Agents only ever run against one project, so the run stays here under "Orchestration".
  */
 export type DevProjectSectionId =
   | "overview"
@@ -29,8 +32,8 @@ export type DevProjectSectionId =
   | "work-orders"
   | "orchestration"
   | "gates"
-  | "orchestrator"
   | "artifacts"
+  | "output"
   | "members"
   | "activity";
 
@@ -54,7 +57,6 @@ const DEV_PROJECT_SECTIONS: Array<{ label: string; items: DevProjectSectionItem[
       { value: "tasks", label: "Tasks", icon: <IconCheckCircle size={15} /> },
       { value: "work-orders", label: "Work orders", icon: <IconWorkflow size={15} /> },
       { value: "orchestration", label: "Orchestration", icon: <IconCpu size={15} /> },
-      { value: "orchestrator", label: "Orchestrator", icon: <IconCode size={15} /> },
     ],
   },
   {
@@ -62,6 +64,9 @@ const DEV_PROJECT_SECTIONS: Array<{ label: string; items: DevProjectSectionItem[
     items: [
       { value: "gates", label: "Gate decisions", icon: <IconShield size={15} /> },
       { value: "artifacts", label: "Artifacts", icon: <IconFileText size={15} /> },
+      // Was the standalone /dev/orchestrator/output/[projectId] route, orphaned when the
+      // console-level orchestrator that linked to it was removed.
+      { value: "output", label: "Run output", icon: <IconCode size={15} /> },
     ],
   },
   {
@@ -79,18 +84,12 @@ export function DevProjectSubnav({
   onSelect,
 }: {
   projectName: string;
-  activeItem: Exclude<DevProjectSectionId, "orchestrator">;
-  onSelect: (item: Exclude<DevProjectSectionId, "orchestrator">) => void;
+  activeItem: DevProjectSectionId;
+  onSelect: (item: DevProjectSectionId) => void;
 }) {
-  const router = useRouter();
-
-  const selectItem = (item: DevProjectSectionId) => {
-    if (item === "orchestrator") {
-      router.push("/dev/orchestrator");
-      return;
-    }
-    onSelect(item);
-  };
+  // Every section is now in-project, so selecting one is plain state — no entry needs to
+  // navigate out of the project any more.
+  const selectItem = onSelect;
 
   return (
     <aside className="pm-project-subnav" aria-label="Project contents">
@@ -104,7 +103,7 @@ export function DevProjectSubnav({
           <div key={group.label} className="pm-project-subnav-group">
             <span className="pm-project-subnav-label">{group.label}</span>
             {group.items.map((item) => {
-              const active = item.value !== "orchestrator" && activeItem === item.value;
+              const active = activeItem === item.value;
               return (
                 <button
                   key={item.value}

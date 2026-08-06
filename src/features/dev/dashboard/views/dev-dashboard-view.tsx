@@ -108,7 +108,9 @@ export function DevDashboardView() {
     }
     setSelectedProjectId(focusProject.id);
     if (focusProject.lifecycle?.signals?.orchestrationStarted) {
-      router.push("/dev/orchestrator");
+      // Straight to this project's build workspace. This used to go to the console-level
+      // orchestrator, which then had to ask which project — after we had just decided.
+      router.push(`/dev/orchestrate/${focusProject.id}`);
       return;
     }
     router.push(`/dev/project/${focusProject.id}`);

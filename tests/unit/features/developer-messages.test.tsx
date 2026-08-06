@@ -56,17 +56,25 @@ describe("developer navigation and messages", () => {
     mockSelectedProjectState = selectedProjectState();
   });
 
-  it("uses the five approved developer navigation items in order", () => {
+  // Two changes since this was written: "Dashboard" was relabelled "Home" and Settings became a
+  // nav item in the console shell refresh, and "Orchestrator" was removed because agents only
+  // ever run against one project — the run lives inside the project, not behind a console-level
+  // entry point with its own project picker.
+  it("uses the approved developer navigation items in order", () => {
     expect(DEV_NAV.map((item) => ({ id: item.id, label: item.label }))).toEqual([
-      { id: "dashboard", label: "Dashboard" },
+      { id: "dashboard", label: "Home" },
       { id: "projects", label: "Projects" },
-      { id: "orchestrator", label: "Orchestrator" },
       { id: "messages", label: "Messages" },
       { id: "groups", label: "Teams" },
+      { id: "settings", label: "Settings" },
     ]);
     expect(DEV_TITLES.messages).toBe("Messages");
     expect(DEV_TITLES.groups).toBe("Teams");
     expect(DEV_TITLES.settings).toBe("Settings");
+  });
+
+  it("offers no console-level orchestrator destination", () => {
+    expect(DEV_NAV.some((item) => item.id === "orchestrator")).toBe(false);
   });
 
   it("binds team conversations to the selected assigned project", () => {

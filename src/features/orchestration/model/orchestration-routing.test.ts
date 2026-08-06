@@ -1,15 +1,5 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import {
-  buildOrchestrationGuidance,
-  buildOrchestrationMetrics,
-  hasActiveWorkOrder,
-  isLiveOrchestrationRun,
-  orchestrationRefreshIntervalMs,
-  shouldPollLiveSnapshot,
-  visibleOrchestrationEvents,
-  visibleWorkOrders,
-} from "./orchestration-workbench";
 import {
   buildBriefAnalyzeInput,
   buildBriefStepState,
@@ -76,74 +66,24 @@ import {
   resolveAgentState,
 } from "./agent-stream";
 
-describe("orchestration workbench model", () => {
-  it("derives live-run and polling state from project and socket status", () => {
-    expect(isLiveOrchestrationRun({ runId: "run-1", status: "GENERATING_CODE" })).toBe(true);
-    expect(isLiveOrchestrationRun({ runId: "run-1", status: "DELIVERED" })).toBe(false);
-    expect(hasActiveWorkOrder([{ status: "READY" }, { status: "DISPATCHED" }] as never)).toBe(true);
-    expect(orchestrationRefreshIntervalMs("connected")).toBe(10000);
-    expect(orchestrationRefreshIntervalMs("disconnected")).toBe(4000);
-    expect(shouldPollLiveSnapshot({
-      selectedProjectId: "project-1",
-      liveRun: false,
-      workOrders: [{ status: "DISPATCHED" }] as never,
-    })).toBe(true);
-  });
-
-  it("builds provider, run, work-order, and artifact metrics", () => {
-    const metrics = buildOrchestrationMetrics({
-      providerLoading: false,
-      providerStatus: { activeMode: "llm", available: true, reason: "" } as never,
-      providerError: "",
-      orchestrationLoading: false,
-      orchestrationStatus: { status: "RUNNING", currentNode: "frontend_agent" } as never,
-      selectedRunId: "run-1",
-      outputsLoading: false,
-      workOrders: [{ status: "DISPATCHED" }, { status: "READY" }] as never,
-      artifacts: [{ clientVisible: true }, { clientVisible: false }] as never,
-    });
-
-    expect(metrics.map((metric) => metric.label)).toEqual(["Provider", "Run status", "Work orders", "Artifacts"]);
-    expect(metrics[0]).toMatchObject({ value: "LLM", sub: "Ready" });
-    expect(metrics[1]).toMatchObject({ value: "RUNNING", sub: "frontend_agent" });
-    expect(metrics[2]).toMatchObject({ value: "2", sub: "1 dispatched" });
-    expect(metrics[3]).toMatchObject({ value: "2", sub: "1 client-visible" });
-  });
-
-  it("limits event and handoff lists for the workbench", () => {
-    const events = Array.from({ length: 10 }, (_, index) => ({ id: `event-${index}` }));
-    const workOrders = Array.from({ length: 7 }, (_, index) => ({ id: `work-${index}` }));
-
-    expect(visibleOrchestrationEvents(events as never)).toHaveLength(8);
-    expect(visibleWorkOrders(workOrders as never)).toHaveLength(5);
-  });
-
-  it("turns orchestration status into one role-aware next-action message", () => {
-    expect(buildOrchestrationGuidance({ status: "GENERATING_CODE", currentNode: "frontend_agent" })).toMatchObject({
-      title: "Frontend Agent",
-      waitingOn: "Waiting on: AI orchestrator",
-      tone: "blue",
-    });
-    expect(buildOrchestrationGuidance({ status: "AWAITING_GATE_1" })).toMatchObject({
-      eyebrow: "Action required",
-      waitingOn: "Waiting on: project manager",
-      tone: "amber",
-    });
-    expect(buildOrchestrationGuidance({ status: "FAILED", error: "Provider unavailable" })).toMatchObject({
-      description: "Provider unavailable",
-      tone: "red",
-    });
-  });
-
-  it("keeps the dev orchestrator route as a thin feature shell", () => {
+describe("in-project orchestration routing", () => {
+  // Was "keeps the dev orchestrator route as a thin feature shell", asserting the existence of
+  // src/app/(dev)/dev/orchestrator/page.tsx. That console-level route is gone: agents only ever
+  // run against one project, so the run lives inside the project rather than behind a global
+  // entry point with its own project picker. The same shell rule now applies to the in-project
+  // build route that replaced it.
+  it("keeps the dev build route as a thin feature shell", () => {
     const route = readFileSync(
-      join(process.cwd(), "src/app/(dev)/dev/orchestrator/page.tsx"),
+      join(process.cwd(), "src/app/(dev)/dev/orchestrate/[projectId]/page.tsx"),
       "utf8",
     );
 
-    expect(route).toContain("@/features/orchestration");
     expect(route).not.toContain("useDevFlowProjectOutputs");
     expect(route).not.toContain("useSocketSubscription");
+  });
+
+  it("no longer exposes a console-level orchestrator route", () => {
+    expect(existsSync(join(process.cwd(), "src/app/(dev)/dev/orchestrator/page.tsx"))).toBe(false);
   });
 });
 

@@ -34,6 +34,7 @@ import { useDevProjectDetailViewModel } from "../view-model/use-dev-project-deta
 import { useDevArtifactsPanelViewModel } from "../view-model/use-dev-artifacts-panel-view-model";
 import { useDevTasksPanelViewModel } from "../view-model/use-dev-tasks-panel-view-model";
 import { DevProjectSubnav } from "../components/dev-project-subnav";
+import { DevOutputView } from "./dev-output-view";
 import { BackendKickoffPanel, BackendWorkOrdersPanel } from "@/features/delivery/panels";
 import { formatBackendDate } from "@/features/pm/projects/utils/pm-project-detail.utils";
 import { SectionTitle } from "@/features/pm/projects/components/pm-project-ui";
@@ -198,9 +199,11 @@ function BackendDevProjectDetail({ project, onBack }) {
     setSelectedProjectId(project.id);
   }, [project.id, setSelectedProjectId]);
 
+  // This project's build workspace. It used to open the console-level orchestrator, which then
+  // asked which project to run — from inside a project, which had already answered that.
   const openOrchestrator = () => {
     setSelectedProjectId(project.id);
-    router.push("/dev/orchestrator");
+    router.push(`/dev/orchestrate/${project.id}`);
   };
   const vm = useDevProjectDetailViewModel({
     project,
@@ -229,7 +232,7 @@ function BackendDevProjectDetail({ project, onBack }) {
                 All projects
               </Button>
               <Button variant="secondary" size="sm" icon={<IconCpu size={13} />} onClick={openOrchestrator}>
-                Open Orchestrator
+                Open build workspace
               </Button>
             </>
           }
@@ -304,6 +307,7 @@ function BackendDevProjectDetail({ project, onBack }) {
           {tab === "gates" && (
             <DevGateDecisions gates={project.gates ?? []} />
           )}
+          {tab === "output" && <DevOutputView project={project} outputs={outputs} />}
           {tab === "artifacts" && (
             <DevBackendArtifacts
               artifacts={outputs.artifacts}

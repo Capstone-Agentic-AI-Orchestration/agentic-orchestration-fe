@@ -1,6 +1,7 @@
-export { DevOrchestratorWorkbench } from "./view/dev-orchestrator-workbench";
-export { DevOrchestratorWorkbenchView } from "./view/dev-orchestrator-workbench-view";
-export { useDevOrchestratorViewModel } from "./view-model/use-dev-orchestrator-view-model";
+// DevOrchestratorWorkbench, its view and its view-model were exported here. They implemented the
+// console-level /dev/orchestrator page — a project picker followed by a run surface — which is
+// gone: agents only ever run against one project, so the run lives inside that project. The
+// wizard exports below (brief → review → run → gates → delivery) are the in-project replacement.
 export { useAgentStreamGridViewModel, useAgentStreamSnapshots, useNow } from "./view-model/use-agent-stream-view-model";
 export { useBriefStepViewModel } from "./view-model/use-brief-step-view-model";
 export { useDeliveryStepViewModel } from "./view-model/use-delivery-step-view-model";
@@ -28,4 +29,3 @@ export * from "./model/readiness-step";
 export * from "./model/run-step";
 export * from "./model/team-step";
 export * from "./model/run-cockpit";
-export * from "./model/orchestration-workbench";

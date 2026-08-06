@@ -2,7 +2,15 @@ import type {
   NodeRuntime,
   OrchestrationState,
 } from "@/shared/store/orchestration-store";
-import type { OrchestrationConnectionStatus } from "./orchestration-workbench";
+
+/**
+ * Live-connection state for a run.
+ *
+ * Moved here from model/orchestration-workbench when that module was deleted along with the
+ * console-level orchestrator. It was the one export of that module with consumers outside it,
+ * and they are all in this file.
+ */
+export type OrchestrationConnectionStatus = "disconnected" | "connecting" | "connected";
 
 export const RUN_TOKEN_BUDGET = 200_000;
 

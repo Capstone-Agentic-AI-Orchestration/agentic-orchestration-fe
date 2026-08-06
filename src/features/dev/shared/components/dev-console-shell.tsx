@@ -9,8 +9,10 @@ import { IconCpu, IconFolder, IconHome, IconMessageCircle, IconSettings, IconUse
 
 export const DEV_NAV: ShellNavItem[] = [
   { id: "dashboard", label: "Home", icon: <IconHome size={17} /> },
-  { id: "projects", label: "Projects", icon: <IconFolder size={17} />, aliases: ["project"] },
-  { id: "orchestrator", label: "Orchestrator", icon: <IconCpu size={17} /> },
+  // Orchestrator used to sit here as a console-level destination with its own project picker.
+  // Agents only ever run against one project, so the run belongs inside that project rather
+  // than behind a global entry point that asks which project you meant.
+  { id: "projects", label: "Projects", icon: <IconFolder size={17} />, aliases: ["project", "orchestrate"] },
   { id: "messages", label: "Messages", icon: <IconMessageCircle size={17} /> },
   { id: "groups", label: "Teams", icon: <IconUsers size={17} />, aliases: ["team", "repositories"] },
   { id: "settings", label: "Settings", icon: <IconSettings size={17} /> },
@@ -20,7 +22,9 @@ export const DEV_TITLES: Record<string, string> = {
   dashboard: "Home",
   projects: "Projects",
   project: "Projects",
-  orchestrator: "Orchestrator",
+  // Reached from inside a project, so the crumb keeps saying Projects rather than introducing
+  // a top-level section that no longer exists in the nav.
+  orchestrate: "Projects",
   messages: "Messages",
   groups: "Teams",
   team: "Teams",
