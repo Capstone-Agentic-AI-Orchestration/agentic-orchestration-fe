@@ -54,3 +54,9 @@ export function useDevFlowNotifications() {
 
   return { notifications, unreadCount, loading, error, refresh, markRead, markAllRead };
 }
+
+/**
+ * The hook's return value, so a shell can own the single polling instance and hand the same
+ * state to both the unread badge and whatever surface renders the list.
+ */
+export type DevFlowNotificationsState = ReturnType<typeof useDevFlowNotifications>;
