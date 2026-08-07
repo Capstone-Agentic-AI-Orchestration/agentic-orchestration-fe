@@ -18,6 +18,9 @@ describe("backend work orders panel model", () => {
       title: "  Handoff  ",
       instructions: "  Build it  ",
       agentType: "FRONTEND",
+      // Unassigned: the role comes from agentType, which is how work orders behaved before
+      // agents became assignable. The payload omits the key entirely rather than sending "".
+      workspaceAgentId: "",
       priority: "HIGH",
       taskId: "task-1",
       artifactId: "",

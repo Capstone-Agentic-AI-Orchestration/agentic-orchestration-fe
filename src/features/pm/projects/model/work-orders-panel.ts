@@ -35,6 +35,8 @@ export interface BackendWorkOrderForm {
   title: string;
   instructions: string;
   agentType: DevFlowWorkOrderAgentType;
+  /** The configured agent to run this. Empty means the role comes from agentType alone. */
+  workspaceAgentId: string;
   priority: DevFlowWorkOrderPriority;
   taskId: string;
   artifactId: string;
@@ -87,6 +89,7 @@ export const EMPTY_BACKEND_WORK_ORDER_FORM: BackendWorkOrderForm = {
   title: "",
   instructions: "",
   agentType: "FRONTEND",
+  workspaceAgentId: "",
   priority: "NORMAL",
   taskId: "",
   artifactId: "",
@@ -106,6 +109,7 @@ export function workOrderCreatePayload(
     title: form.title.trim(),
     instructions: form.instructions.trim() || undefined,
     agentType: form.agentType,
+    workspaceAgentId: form.workspaceAgentId || undefined,
     priority: form.priority,
     taskId: form.taskId || undefined,
     artifactId: form.artifactId || undefined,

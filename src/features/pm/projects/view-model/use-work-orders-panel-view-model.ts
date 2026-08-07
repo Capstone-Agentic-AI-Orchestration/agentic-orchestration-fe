@@ -53,6 +53,7 @@ export interface BackendWorkOrdersPanelViewModel extends BackendWorkOrdersPanelM
     onTitleChange: (event: ChangeEvent<HTMLInputElement>) => void;
     onInstructionsChange: (event: ChangeEvent<HTMLTextAreaElement>) => void;
     onAgentTypeChange: (event: ChangeEvent<HTMLSelectElement>) => void;
+    onWorkspaceAgentChange: (event: ChangeEvent<HTMLSelectElement>) => void;
     onPriorityChange: (event: ChangeEvent<HTMLSelectElement>) => void;
     onArtifactChange: (event: ChangeEvent<HTMLSelectElement>) => void;
     createFromTask: (task: DevFlowProjectTask) => void;
@@ -164,6 +165,7 @@ export function useBackendWorkOrdersPanelViewModel(
       onTitleChange: (event) => setFormValue("title", event.target.value),
       onInstructionsChange: (event) => setFormValue("instructions", event.target.value),
       onAgentTypeChange: (event) => setFormValue("agentType", event.target.value as DevFlowWorkOrderAgentType),
+      onWorkspaceAgentChange: (event) => setFormValue("workspaceAgentId", event.target.value),
       onPriorityChange: (event) => setFormValue("priority", event.target.value as DevFlowWorkOrderPriority),
       onArtifactChange: (event) => setFormValue("artifactId", event.target.value),
       createFromTask: (task) => setForm((current) => applyTaskToWorkOrderForm(current, task)),

@@ -1424,7 +1424,15 @@ export interface AddDevFlowProjectTaskCommentInput {
 export interface CreateDevFlowWorkOrderInput {
   title: string;
   instructions?: string;
+  /** The OUTPUT contract: which extensions, language and signals the validator requires. */
   agentType: DevFlowWorkOrderAgentType;
+  /**
+   * The configured agent that should do the work.
+   *
+   * Omitted, the role is derived from agentType as before. Supplied, the agent's instructions
+   * and attached skills shape the prompt.
+   */
+  workspaceAgentId?: string;
   priority?: DevFlowWorkOrderPriority;
   taskId?: string;
   artifactId?: string;
@@ -1432,6 +1440,8 @@ export interface CreateDevFlowWorkOrderInput {
 
 export interface UpdateDevFlowWorkOrderInput {
   title?: string;
+  /** Empty string clears the assignment. */
+  workspaceAgentId?: string;
   instructions?: string;
   agentType?: DevFlowWorkOrderAgentType;
   priority?: DevFlowWorkOrderPriority;
@@ -2812,4 +2822,224 @@ export function getDevFlowInquiryClientSuggestions(
   inquiryId: string,
 ): Promise<DevFlowInquiryClientSuggestions> {
   return request<DevFlowInquiryClientSuggestions>(`/inquiries/${inquiryId}/client-suggestions`);
+}
+
+/* ---------------------------------------------------------------------------
+   Workspace agents
+
+   The roster used to be a hand-maintained constant in the console. These are the
+   real records behind it: an agent's instructions override the compiled-in system
+   prompt at dispatch, and every activity number is read from the invocations the
+   runs themselves wrote.
+   --------------------------------------------------------------------------- */
+
+export type DevFlowAgentAccessScope = "WORKSPACE" | "PERSONAL";
+export type DevFlowAgentStatus = "ACTIVE" | "ARCHIVED";
+export type DevFlowAgentListScope = "mine" | "all" | "archived";
+
+export interface DevFlowAgentOwner {
+  id: string;
+  fullName: string | null;
+  email: string | null;
+  avatarUrl: string | null;
+}
+
+export interface DevFlowAgentListItem {
+  id: string;
+  key: string;
+  name: string;
+  description: string | null;
+  avatarEmoji: string | null;
+  status: DevFlowAgentStatus;
+  accessScope: DevFlowAgentAccessScope;
+  isBuiltIn: boolean;
+  /**
+   * The deployed Eve subagent that executes this agent.
+   *
+   * Identity (`key`) and capability (`runtimeKey`) are separate: built-ins coincide, custom
+   * agents borrow a role-neutral runtime because tools are code and cannot be authored here.
+   */
+  runtimeKey: string;
+  model: string | null;
+  concurrency: number;
+  skillCount: number;
+  owner: DevFlowAgentOwner | null;
+  /** Total dispatches recorded for this agent in the workspace. */
+  runs: number;
+  /** Invocations started and not yet finished — the agent is working right now. */
+  running: number;
+  /**
+   * True when this built-in has no subagent deployed on the Eve service.
+   *
+   * Dispatching it fails with an opaque empty-response error, so the console says so rather than
+   * showing the agent as healthy. False also covers "Eve was unreachable and we do not know",
+   * which is deliberately not rendered as a warning.
+   */
+  runtimeMissing?: boolean;
+  lastActiveAt: string | null;
+  updatedAt: string;
+}
+
+export interface DevFlowAgentListResponse {
+  agents: DevFlowAgentListItem[];
+  counts: { mine: number; all: number; archived: number };
+}
+
+export interface DevFlowAgentSkill {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  /** Markdown, appended to the system prompt of every agent it is attached to. */
+  body: string;
+  agentCount?: number;
+  updatedAt?: string;
+}
+
+export interface DevFlowAgentInvocation {
+  id: string;
+  nodeId: string | null;
+  model: string | null;
+  engine: string;
+  status?: string;
+  startedAt: string;
+  completedAt?: string | null;
+  inputTokens?: number | null;
+  outputTokens?: number | null;
+  project: { id: string; companyName: string } | null;
+}
+
+export interface DevFlowAgentDetail extends DevFlowAgentListItem {
+  groupId: string;
+  instructions: string | null;
+  /** The compiled-in prompt used when `instructions` is null. Read-only. */
+  builtInPrompt: string | null;
+  usesBuiltInPrompt: boolean;
+  builtIn: {
+    stage: "plan" | "build" | "review";
+    node: string | null;
+    dispatchedBy: string | null;
+    plannedAs: string | null;
+    tools: string[];
+    condition: string | null;
+  } | null;
+  skills: DevFlowAgentSkill[];
+  activity: {
+    completedInWindow: number;
+    windowDays: number;
+    active: DevFlowAgentInvocation[];
+    recent: DevFlowAgentInvocation[];
+  };
+  createdAt: string;
+}
+
+/** A capability profile a custom agent can borrow. `deployed` is null when Eve is unreachable. */
+export interface DevFlowAgentRuntime {
+  key: string;
+  label: string;
+  summary: string;
+  tools: string[];
+  deployed: boolean | null;
+}
+
+export interface CreateDevFlowAgentInput {
+  name: string;
+  groupId: string;
+  runtimeKey?: string;
+  description?: string;
+  avatarEmoji?: string;
+  instructions?: string;
+  model?: string;
+  concurrency?: number;
+  accessScope?: DevFlowAgentAccessScope;
+}
+
+export interface UpdateDevFlowAgentInput {
+  name?: string;
+  /** Ignored for built-ins: the pipeline dispatches those by key. */
+  runtimeKey?: string;
+  description?: string;
+  avatarEmoji?: string;
+  /** Empty string clears the override and returns the agent to its built-in prompt. */
+  instructions?: string;
+  model?: string;
+  concurrency?: number;
+  accessScope?: DevFlowAgentAccessScope;
+  status?: DevFlowAgentStatus;
+}
+
+export function listDevFlowAgents(
+  groupId: string,
+  scope: DevFlowAgentListScope = "all",
+  search?: string,
+): Promise<DevFlowAgentListResponse> {
+  const params = new URLSearchParams({ groupId, scope });
+  if (search?.trim()) params.set("search", search.trim());
+  return request<DevFlowAgentListResponse>(`/agents?${params.toString()}`);
+}
+
+export function listDevFlowAgentRuntimes(): Promise<{ runtimes: DevFlowAgentRuntime[] }> {
+  return request("/agents/runtimes");
+}
+
+export function getDevFlowAgent(agentId: string): Promise<DevFlowAgentDetail> {
+  return request<DevFlowAgentDetail>(`/agents/${agentId}`);
+}
+
+export function createDevFlowAgent(input: CreateDevFlowAgentInput): Promise<DevFlowAgentDetail> {
+  return request<DevFlowAgentDetail>("/agents", { method: "POST", body: JSON.stringify(input) });
+}
+
+export function updateDevFlowAgent(
+  agentId: string,
+  input: UpdateDevFlowAgentInput,
+): Promise<DevFlowAgentDetail> {
+  return request<DevFlowAgentDetail>(`/agents/${agentId}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+/** Custom agents are deleted; built-ins archive instead, because runs dispatch them by key. */
+export function deleteDevFlowAgent(
+  agentId: string,
+): Promise<{ id: string; archived: boolean; deleted: boolean }> {
+  return request(`/agents/${agentId}`, { method: "DELETE" });
+}
+
+export function listDevFlowAgentSkills(
+  groupId: string,
+  search?: string,
+): Promise<{ skills: DevFlowAgentSkill[] }> {
+  const params = new URLSearchParams({ groupId });
+  if (search?.trim()) params.set("search", search.trim());
+  return request(`/agents/skills?${params.toString()}`);
+}
+
+export function createDevFlowAgentSkill(input: {
+  groupId: string;
+  name: string;
+  description?: string;
+  body: string;
+}): Promise<DevFlowAgentSkill> {
+  return request("/agents/skills", { method: "POST", body: JSON.stringify(input) });
+}
+
+export function updateDevFlowAgentSkill(
+  skillId: string,
+  input: { name?: string; description?: string; body?: string },
+): Promise<DevFlowAgentSkill> {
+  return request(`/agents/skills/${skillId}`, { method: "PATCH", body: JSON.stringify(input) });
+}
+
+export function deleteDevFlowAgentSkill(skillId: string): Promise<{ id: string; deleted: boolean }> {
+  return request(`/agents/skills/${skillId}`, { method: "DELETE" });
+}
+
+export function attachDevFlowAgentSkill(agentId: string, skillId: string): Promise<DevFlowAgentDetail> {
+  return request(`/agents/${agentId}/skills/${skillId}`, { method: "POST" });
+}
+
+export function detachDevFlowAgentSkill(agentId: string, skillId: string): Promise<DevFlowAgentDetail> {
+  return request(`/agents/${agentId}/skills/${skillId}`, { method: "DELETE" });
 }

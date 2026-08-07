@@ -8,6 +8,8 @@ import {
   WorkOrderStatusBadge,
 } from "../components/pm-project-ui";
 import { compactBackendError } from "../utils/pm-project-detail.utils";
+import { useDevFlowAgents } from "@/shared/hooks/use-devflow-agents";
+import { useSelectedTeamWorkspace } from "@/shared/projects/selected-team-workspace-context";
 import {
   WORK_ORDER_AGENT_OPTIONS,
   WORK_ORDER_PRIORITY_OPTIONS,
@@ -89,13 +91,17 @@ export function BackendWorkOrdersPanelView({ vm }: { vm: BackendWorkOrdersPanelV
             <Textarea rows={5} value={vm.form.instructions} onChange={vm.actions.onInstructionsChange} placeholder="Acceptance notes, scope, constraints, and files to inspect." />
           </Field>
           <div className="pm-tab-form-grid">
-            <Field label="Agent">
+            <Field label="Output type" helper="What kind of file this must produce.">
               <Select value={vm.form.agentType} onChange={vm.actions.onAgentTypeChange}>
                 {WORK_ORDER_AGENT_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>{option.label}</option>
                 ))}
               </Select>
             </Field>
+            <WorkspaceAgentField
+              value={vm.form.workspaceAgentId}
+              onChange={vm.actions.onWorkspaceAgentChange}
+            />
             <Field label="Priority">
               <Select value={vm.form.priority} onChange={vm.actions.onPriorityChange}>
                 {WORK_ORDER_PRIORITY_OPTIONS.map((option) => (
@@ -190,5 +196,37 @@ function BackendWorkOrderRowView({
         </div>
         )}
     </div>
+  );
+}
+
+/**
+ * Which configured agent should do the work.
+ *
+ * Separate from "Output type": that is the contract the validator enforces on the file, this is
+ * who writes it. Unassigned keeps the previous behaviour, where the role is inferred from the
+ * output type alone — so this is additive and never forces a choice.
+ */
+function WorkspaceAgentField({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (event: React.ChangeEvent<HTMLSelectElement>) => void;
+}) {
+  const { selectedTeamId } = useSelectedTeamWorkspace();
+  const { agents } = useDevFlowAgents(selectedTeamId, "all");
+
+  return (
+    <Field label="Assign to agent" helper="Optional. Uses that agent's instructions and skills.">
+      <Select value={value} onChange={onChange}>
+        <option value="">Unassigned — use the output type default</option>
+        {agents.map((agent) => (
+          <option key={agent.id} value={agent.id} disabled={agent.runtimeMissing}>
+            {agent.avatarEmoji ? `${agent.avatarEmoji} ` : ""}{agent.name}
+            {agent.runtimeMissing ? " (no runtime deployed)" : ""}
+          </option>
+        ))}
+      </Select>
+    </Field>
   );
 }
