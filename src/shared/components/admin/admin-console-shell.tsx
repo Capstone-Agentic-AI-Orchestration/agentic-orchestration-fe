@@ -31,6 +31,7 @@ import {
 const ADMIN_NAV = [
   { id: "overview", label: "Overview", icon: <IconHome size={17} /> },
   { id: "orchestration", label: "AI Orchestration", icon: <IconCpu size={17} />, badge: "Live" },
+  { id: "runtimes", label: "Runtimes", icon: <IconCpu size={17} /> },
   { id: "cost", label: "Cost & Billing", icon: <IconCreditCard size={17} /> },
   { id: "providers", label: "AI Providers", icon: <IconDatabase size={17} /> },
   { id: "users", label: "User Management", icon: <IconUsers size={17} /> },
@@ -46,6 +47,7 @@ const ADMIN_NAV = [
 const TITLES = {
   overview: "Overview",
   orchestration: "AI Orchestration",
+  runtimes: "Runtimes",
   cost: "Cost & Billing",
   providers: "AI Providers",
   users: "User Management",

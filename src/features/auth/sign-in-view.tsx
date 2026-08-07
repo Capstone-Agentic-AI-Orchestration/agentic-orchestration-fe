@@ -39,6 +39,12 @@ export function SignInView() {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  useEffect(() => {
+    if (searchParams.get("error") === "oauth_failed") {
+      setError("GitHub sign-in didn't complete. Please try again.");
+    }
+  }, [searchParams]);
+
   // A visitor who already has a session is sent to their real workspace by role, so the URL
   // of this page never grants access on its own.
   useEffect(() => {

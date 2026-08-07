@@ -72,7 +72,7 @@ const ADMIN_ACTIONS = [
   "Review delivery handoffs",
 ];
 
-function useAdminResource(loader, initialValue) {
+export function useAdminResource(loader, initialValue) {
   const [data, setData] = useState(initialValue);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");

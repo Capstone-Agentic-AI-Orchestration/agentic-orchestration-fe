@@ -14,8 +14,9 @@ import { NextResponse, type NextRequest } from "next/server";
 // Reachable without a session. /sign-in is the only real login page; the two
 // per-persona paths are legacy redirect stubs that must stay public, or an
 // unauthenticated visitor following an old bookmark would be bounced by this
-// gate before the stub could forward them to /sign-in.
-const PUBLIC_PATHS = ["/", "/sign-in", "/dev/sign-in", "/pm/sign-in"];
+// gate before the stub could forward them to /sign-in. /auth/callback handles
+// the OAuth code exchange server-side before requiring a session.
+const PUBLIC_PATHS = ["/", "/sign-in", "/dev/sign-in", "/pm/sign-in", "/auth/callback"];
 
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));

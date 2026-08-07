@@ -27,6 +27,7 @@ export function buildPMNav(newInquiryCount = 0, unreadCount = 0): ShellNavItem[]
     { id: "clients", label: "Clients", icon: <IconBriefcase size={17} />, aliases: ["client", "inquiries", "inquiry"], badge: newInquiryCount || undefined },
     { id: "projects", label: "Projects", icon: <IconFolder size={17} />, aliases: ["project", "workspace-projects", "repositories", "repository"] },
     { id: "agents", label: "Agents", icon: <IconCpu size={17} /> },
+    { id: "runtimes", label: "Runtimes", icon: <IconCpu size={17} /> },
     { id: "groups", label: "Teams", icon: <IconUsers size={17} />, aliases: ["team"] },
     { id: "settings", label: "Settings", icon: <IconSettings size={17} /> },
   ];
@@ -45,6 +46,7 @@ const TITLES: Record<string, string> = {
   inquiry: "Clients",
   inbox: "Inbox",
   agents: "Agents",
+  runtimes: "Runtimes",
   groups: "Teams",
   team: "Team workspace",
   settings: "Settings",

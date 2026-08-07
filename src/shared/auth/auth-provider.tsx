@@ -106,8 +106,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [session]);
 
   const signInWithGithub = useCallback(async (nextPath?: string | null) => {
-    // Return to the sign-in page, which routes onward by the role the backend resolves.
-    const redirectUrl = new URL("/sign-in", window.location.origin);
+    // GitHub redirects back to /auth/callback, which exchanges the code for a session
+    // server-side and redirects to /sign-in with the session already in cookies.
+    const redirectUrl = new URL("/auth/callback", window.location.origin);
     if (nextPath) redirectUrl.searchParams.set("next", nextPath);
 
     const { error } = await supabase.auth.signInWithOAuth({

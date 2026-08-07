@@ -14,6 +14,7 @@ export const DEV_NAV: ShellNavItem[] = [
   // than behind a global entry point that asks which project you meant.
   { id: "projects", label: "Projects", icon: <IconFolder size={17} />, aliases: ["project", "orchestrate"] },
   { id: "messages", label: "Messages", icon: <IconMessageCircle size={17} /> },
+  { id: "runtimes", label: "Runtimes", icon: <IconCpu size={17} /> },
   { id: "groups", label: "Teams", icon: <IconUsers size={17} />, aliases: ["team", "repositories"] },
   { id: "settings", label: "Settings", icon: <IconSettings size={17} /> },
 ];
@@ -26,6 +27,7 @@ export const DEV_TITLES: Record<string, string> = {
   // a top-level section that no longer exists in the nav.
   orchestrate: "Projects",
   messages: "Messages",
+  runtimes: "Runtimes",
   groups: "Teams",
   team: "Teams",
   repositories: "Teams",

@@ -3062,3 +3062,127 @@ export function attachDevFlowAgentSkill(agentId: string, skillId: string): Promi
 export function detachDevFlowAgentSkill(agentId: string, skillId: string): Promise<DevFlowAgentDetail> {
   return request(`/agents/${agentId}/skills/${skillId}`, { method: "DELETE" });
 }
+
+// Runtimes API
+
+export type DevFlowAdapterKind =
+  | "CLAUDE_CODE"
+  | "CODEX_CLI"
+  | "COPILOT_CLI"
+  | "OPENCODE_CLI"
+  | "ANTIGRAVITY_CLI"
+  | "HERMES_CLI"
+  | "REASONIX_CLI"
+  | "GEMINI_CLI";
+
+/** One provider CLI installed on a paired machine. `status` is derived server-side. */
+export interface DevFlowRuntimeAdapter {
+  id: string;
+  kind: DevFlowAdapterKind | (string & {});
+  displayCommand: string;
+  version: string | null;
+  authenticated: boolean;
+  status: "AVAILABLE" | "UNAUTHENTICATED" | "MISSING" | string;
+  enabled: boolean;
+  /** Whether DevFlow can hand this tool work, as opposed to merely seeing it. */
+  dispatchable: boolean;
+}
+
+/** A project directory the machine exposed. The real path never leaves that machine. */
+export interface DevFlowRuntimeResource {
+  id: string;
+  opaqueId: string;
+  name: string;
+  access: "READ_ONLY" | "READ_WRITE";
+}
+
+/**
+ * A workstation running the `devflow-runtime` companion daemon.
+ *
+ * `online` is derived from the last heartbeat rather than stored, so a machine that crashes or
+ * sleeps ages out on its own — it never gets the chance to announce that it left.
+ */
+export interface DevFlowRuntimeMachine {
+  id: string;
+  name: string;
+  os: string;
+  arch: string;
+  runtimeVersion: string;
+  online: boolean;
+  lastSeenAt: string | null;
+  createdAt: string;
+  adapters: DevFlowRuntimeAdapter[];
+  resources: DevFlowRuntimeResource[];
+}
+
+/** Returned once, never retrievable again — only its hash is stored. */
+export interface DevFlowPairingCode {
+  code: string;
+  expiresAt: string;
+}
+
+export function listDevFlowRuntimeMachines(): Promise<DevFlowRuntimeMachine[]> {
+  return request("/admin/runtimes/machines");
+}
+
+export function createDevFlowRuntimePairingCode(groupId?: string): Promise<DevFlowPairingCode> {
+  return request("/admin/runtimes/machines/pairing-codes", {
+    method: "POST",
+    body: JSON.stringify(groupId ? { groupId } : {}),
+  });
+}
+
+export function revokeDevFlowRuntimeMachine(id: string): Promise<void> {
+  return request(`/admin/runtimes/machines/${id}`, { method: "DELETE" });
+}
+
+export interface DevFlowRuntimeProvider {
+  id: string;
+  provider: string;
+  label: string;
+  baseUrl?: string;
+  model?: string;
+  status: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export function listDevFlowRuntimeProviders(): Promise<DevFlowRuntimeProvider[]> {
+  return request("/admin/runtimes/providers");
+}
+
+export function createDevFlowRuntimeProvider(input: {
+  provider: string;
+  label: string;
+  apiKey: string;
+  baseUrl?: string;
+  model?: string;
+}): Promise<DevFlowRuntimeProvider> {
+  return request("/admin/runtimes/providers", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateDevFlowRuntimeProvider(
+  id: string,
+  input: {
+    label?: string;
+    apiKey?: string;
+    baseUrl?: string;
+    model?: string;
+  }
+): Promise<DevFlowRuntimeProvider> {
+  return request(`/admin/runtimes/providers/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteDevFlowRuntimeProvider(id: string): Promise<void> {
+  return request(`/admin/runtimes/providers/${id}`, { method: "DELETE" });
+}
+
+export function testDevFlowRuntimeProvider(id: string): Promise<{ ok: boolean; error?: string }> {
+  return request(`/admin/runtimes/providers/${id}/test`, { method: "POST" });
+}
