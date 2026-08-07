@@ -111,7 +111,9 @@ import { BackendTasksPanel } from "../components/backend-tasks-panel";
 import { BackendDeliveryReviewPanel } from "../components/backend-delivery-review-panel";
 import { BackendArtifactsPanel } from "../components/backend-artifacts-panel";
 import { ProjectNextActionHero } from "../components/project-next-action-hero";
-import { PMProjectSubnav, PM_PROJECT_SECTION_IDS } from "../components/pm-project-subnav";
+import { ProjectRepositoryPanel } from "../components/project-repository-panel";
+import { ProjectIssueBoard } from "@/shared/components/issues/project-issue-board";
+import { PMProjectSubnav, PM_PROJECT_DEFAULT_SECTION, PM_PROJECT_SECTION_IDS } from "../components/pm-project-subnav";
 import {
   kickoffFormFromDetail,
   clientInviteSummary,
@@ -157,7 +159,7 @@ export function PMProjectDetailView({ projectId }: { projectId: string }) {
   }, [projectId]);
 
   if (backendProject) {
-    return <BackendProjectDetail project={backendProject} onBack={() => router.push("/pm/workspace-projects")} />;
+    return <BackendProjectDetail project={backendProject} onBack={() => router.push("/pm/projects")} />;
   }
 
   if (backendLoading) {
@@ -166,7 +168,7 @@ export function PMProjectDetailView({ projectId }: { projectId: string }) {
         <PMPageHeader
           title="Loading project"
           subtitle={`Checking backend record for ${projectId}.`}
-          actions={<Button variant="secondary" size="sm" icon={<IconArrowLeft size={14} />} onClick={() => router.push("/pm/workspace-projects")}>Back to projects</Button>}
+          actions={<Button variant="secondary" size="sm" icon={<IconArrowLeft size={14} />} onClick={() => router.push("/pm/projects")}>Back to projects</Button>}
         />
         <Card style={{ padding: 32, color: "var(--text-2)" }}>Loading backend project...</Card>
       </div>
@@ -178,7 +180,7 @@ export function PMProjectDetailView({ projectId }: { projectId: string }) {
       <PMPageHeader
         title="Project not found"
         subtitle={`No backend project exists for ${projectId}.`}
-        actions={<Button variant="secondary" size="sm" icon={<IconArrowLeft size={14} />} onClick={() => router.push("/pm/workspace-projects")}>Back to projects</Button>}
+        actions={<Button variant="secondary" size="sm" icon={<IconArrowLeft size={14} />} onClick={() => router.push("/pm/projects")}>Back to projects</Button>}
       />
       <Card style={{ padding: 32 }}>
         <div className="row gap-3">
@@ -196,7 +198,7 @@ export function PMProjectDetailView({ projectId }: { projectId: string }) {
 function BackendProjectDetail({ project, onBack }) {
   const router = useRouter();
   const [detail, setDetail] = useState(project);
-  const [tab, setTab] = useState("overview");
+  const [tab, setTab] = useState(PM_PROJECT_DEFAULT_SECTION);
   const [startingDelivery, setStartingDelivery] = useState(false);
   const outputs = useDevFlowProjectOutputs(detail.id, { includeDocuments: true, includeEvents: true, includeTasks: true, includeTimeline: true, includeWorkOrders: true });
   const orchestration = useDevFlowOrchestrationStatus(detail.id);
@@ -498,6 +500,16 @@ function BackendProjectDetail({ project, onBack }) {
     },
   });
 
+  /**
+   * Project status belongs on the landing section, not above every section.
+   *
+   * It was promoted out of the old Overview tab to render everywhere, which sounded like
+   * "never lose the context" and read as "scroll past 700px of banners, stepper, hero and
+   * guidance to reach the board you opened". A section you navigated to should start at its
+   * own content; Repository is where you go to ask where the project is up to.
+   */
+  const showProjectStatus = tab === PM_PROJECT_DEFAULT_SECTION;
+
   return (
     <div className="pm-project-workspace" data-screen-label={`PM - Backend Project - ${detail.id}`}>
       <PMProjectSubnav
@@ -506,7 +518,7 @@ function BackendProjectDetail({ project, onBack }) {
         activeItem={tab}
         onSelect={(nextTab) => {
           setTab(nextTab);
-          const query = nextTab === "overview" ? "" : `?tab=${encodeURIComponent(nextTab)}`;
+          const query = nextTab === PM_PROJECT_DEFAULT_SECTION ? "" : `?tab=${encodeURIComponent(nextTab)}`;
           router.replace(`/pm/project/${detail.id}${query}`, { scroll: false });
         }}
       />
@@ -532,7 +544,7 @@ function BackendProjectDetail({ project, onBack }) {
         }
       />
 
-      {detail.status === "DISCOVERY" && (
+      {showProjectStatus && detail.status === "DISCOVERY" && (
         <Card className="pm-discovery-banner">
           <div className="pm-discovery-copy">
             <strong>This project is in discovery</strong>
@@ -558,7 +570,7 @@ function BackendProjectDetail({ project, onBack }) {
         </Card>
       )}
 
-      {detail.client ? (
+      {showProjectStatus && (detail.client ? (
         <button
           type="button"
           className="pm-project-client-chip"
@@ -582,10 +594,10 @@ function BackendProjectDetail({ project, onBack }) {
           </span>
           <span className="pm-unassigned-action">Link a client</span>
         </button>
-      )}
+      ))}
 
-      {tab === "overview" && (
-        <div className="pm-project-section-stack">
+      {showProjectStatus && (
+      <div className="pm-project-section-stack">
           <div className="project-detail-lifecycle">
             <ProjectLifecycleIndicator
               currentStage={lifecycleStageId}
@@ -618,7 +630,7 @@ function BackendProjectDetail({ project, onBack }) {
 
           <GuidedActionPanel context={projectJourney} />
           <BlockingIssuePanel issues={projectJourney.blockers} />
-        </div>
+      </div>
       )}
 
       {error && (
@@ -632,34 +644,22 @@ function BackendProjectDetail({ project, onBack }) {
             now — the backend answers 403 to a PM on every write behind them, so the panels
             were removed rather than left to fail on click. See pm-project-subnav.tsx. */}
 
-        {tab === "tasks" && (
-            <BackendTasksPanel
-              readOnly
-              projectId={detail.id}
-              tasks={outputs.tasks}
-              artifacts={outputs.artifacts}
-              members={detail.members}
-              loading={outputs.loading}
-              error={outputs.error}
-              onChanged={async () => {
-                await Promise.all([outputs.refresh?.(), refreshDeliveryReadiness()]);
-              }}
-            />
-        )}
-
-        {tab === "work-orders" && (
-            <BackendWorkOrdersPanel
-              readOnly
-              projectId={detail.id}
-              workOrders={outputs.workOrders}
-              tasks={outputs.tasks}
-              artifacts={outputs.artifacts}
-              loading={outputs.loading}
-              error={outputs.error}
-              onChanged={async () => {
-                await Promise.all([outputs.refresh?.(), refreshDeliveryReadiness()]);
-              }}
-            />
+        {/* Tasks and Work orders were two panels answering one question. Issues is that board;
+            the human/agent split survives as its Members and Agents filter. The PM writes here
+            — POST/PATCH /tasks accepts PM — but agent work orders stay read-only, because
+            dispatching one is build execution and that is @Roles(DEV, ADMIN). */}
+        {tab === "issues" && (
+          <ProjectIssueBoard
+            projectId={detail.id}
+            tasks={outputs.tasks}
+            workOrders={outputs.workOrders}
+            members={detail.members}
+            loading={outputs.loading}
+            error={outputs.error}
+            onChanged={async () => {
+              await Promise.all([outputs.refresh?.(), refreshDeliveryReadiness()]);
+            }}
+          />
         )}
 
         {/* Orchestration and Gate decisions moved to the developer console:
@@ -805,13 +805,15 @@ function BackendProjectDetail({ project, onBack }) {
           </div>
         )}
 
-        {tab === "timeline" && (
-          <DevFlowProjectTimeline
-            timeline={outputs.timeline}
-            loading={outputs.loading}
-            error={outputs.error}
-            emptyText="No timeline events have been recorded for this project yet."
-            compactError={compactBackendError}
+        {/* Timeline rendered here. It was an audit log dominated by TASK_* and WORK_ORDER_*
+            events, which is each issue's own activity now. The event stream and the shared
+            component both remain — the developer console still lists them. */}
+
+        {tab === "repository" && (
+          <ProjectRepositoryPanel
+            projectId={detail.id}
+            groupId={detail.groupId ?? null}
+            fallbackName={detail.companyName}
           />
         )}
 

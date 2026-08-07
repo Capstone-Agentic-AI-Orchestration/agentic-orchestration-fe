@@ -70,10 +70,13 @@ export interface DevTasksPanelInput {
 
 export function devTaskStatusBadgeView(status?: DevFlowProjectTaskStatus): DevTaskBadgeView {
   const map: Record<DevFlowProjectTaskStatus, DevTaskBadgeView> = {
+    BACKLOG: { tone: "gray", label: "Backlog" },
     TODO: { tone: "gray", label: "To do" },
     IN_PROGRESS: { tone: "blue", label: "In progress" },
     IN_REVIEW: { tone: "amber", label: "In review" },
     DONE: { tone: "green", label: "Done" },
+    BLOCKED: { tone: "red", label: "Blocked" },
+    CANCELLED: { tone: "gray", label: "Cancelled" },
   };
 
   return map[status || "TODO"] || map.TODO;

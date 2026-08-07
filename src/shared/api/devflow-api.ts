@@ -112,9 +112,16 @@ export type DevFlowArtifactValidationStatus = "PENDING" | "PASSED" | "FAILED";
 
 export type DevFlowProjectDeliveryReviewStatus = "PENDING" | "ACCEPTED" | "REVISION_REQUESTED" | "REVISION_RESOLVED";
 
-export type DevFlowProjectTaskStatus = "TODO" | "IN_PROGRESS" | "IN_REVIEW" | "DONE";
+export type DevFlowProjectTaskStatus =
+  | "BACKLOG"
+  | "TODO"
+  | "IN_PROGRESS"
+  | "IN_REVIEW"
+  | "DONE"
+  | "BLOCKED"
+  | "CANCELLED";
 
-export type DevFlowWorkOrderAgentType = "FRONTEND" | "BACKEND" | "DATABASE" | "ARCHITECTURE" | "CONTRACT";
+export type DevFlowWorkOrderAgentType = "FRONTEND" | "BACKEND" | "MOBILE" | "DATABASE" | "ARCHITECTURE" | "CONTRACT";
 
 export type DevFlowWorkOrderStatus = "DRAFT" | "READY" | "DISPATCHED" | "COMPLETED" | "FAILED" | "CANCELLED";
 

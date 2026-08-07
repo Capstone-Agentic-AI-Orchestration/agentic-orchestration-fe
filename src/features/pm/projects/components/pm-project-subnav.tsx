@@ -3,17 +3,15 @@
 import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import {
-  IconActivity,
-  IconCalendar,
   IconCheck,
   IconCheckCircle,
   IconClipboard,
   IconFileText,
   IconFolder,
+  IconGitBranch,
   IconMessageCircle,
   IconSettings,
   IconUsers,
-  IconWorkflow,
 } from "@/shared/components/icons";
 
 /**
@@ -23,20 +21,24 @@ import {
  * Prompting, kickoff and gate approval belong to the developer console; the backend enforces
  * that with @Roles(DEV, ADMIN), so listing them would only render buttons that 403.
  *
- * Tasks and Work orders survive as read-only progress: the PM still has to report on
- * delivery, and the GET routes are still open to them.
+ * Three sections were removed rather than reordered:
+ *  - Overview held the lifecycle stepper and next-action banner. Those are project-level
+ *    context, not one section's content, so they were promoted to a header shown above every
+ *    section. Nothing was lost and one destination stopped existing.
+ *  - Tasks and Work orders were the same board split by who does the work. Issues is that board
+ *    with the split as a filter — Members reads tasks, Agents reads work orders.
+ *  - Timeline was an audit log dominated by TASK_* and WORK_ORDER_* events, which is now each
+ *    issue's own activity. The event stream and its component still exist for the dev console.
  */
 export type PMProjectSectionId =
-  | "overview"
+  | "repository"
+  | "issues"
   | "intake"
-  | "tasks"
-  | "work-orders"
   | "artifacts"
   | "delivery-review"
   | "messages"
   | "documents"
   | "members"
-  | "timeline"
   | "settings";
 
 type ProjectSectionItem = {
@@ -47,18 +49,13 @@ type ProjectSectionItem = {
 
 const PROJECT_SECTIONS: Array<{ label: string; items: ProjectSectionItem[] }> = [
   {
-    label: "Project",
+    label: "Delivery",
     items: [
-      { value: "overview", label: "Overview", icon: <IconActivity size={15} /> },
+      // Repository leads: until it exists nothing else in this project can start, and
+      // provisioning it is the PM's own job rather than something they watch.
+      { value: "repository", label: "Repository", icon: <IconGitBranch size={15} /> },
+      { value: "issues", label: "Issues", icon: <IconCheckCircle size={15} /> },
       { value: "intake", label: "Intake brief", icon: <IconClipboard size={15} /> },
-    ],
-  },
-  {
-    // Named "progress", not "workflow": the PM watches these, the developer drives them.
-    label: "Delivery progress",
-    items: [
-      { value: "tasks", label: "Tasks", icon: <IconCheckCircle size={15} /> },
-      { value: "work-orders", label: "Work orders", icon: <IconWorkflow size={15} /> },
     ],
   },
   {
@@ -74,7 +71,6 @@ const PROJECT_SECTIONS: Array<{ label: string; items: ProjectSectionItem[] }> = 
       { value: "messages", label: "Client messages", icon: <IconMessageCircle size={15} /> },
       { value: "documents", label: "Client documents", icon: <IconFolder size={15} /> },
       { value: "members", label: "Members", icon: <IconUsers size={15} /> },
-      { value: "timeline", label: "Timeline", icon: <IconCalendar size={15} /> },
     ],
   },
   {
@@ -88,6 +84,9 @@ const PROJECT_SECTIONS: Array<{ label: string; items: ProjectSectionItem[] }> = 
 export const PM_PROJECT_SECTION_IDS = new Set<PMProjectSectionId>(
   PROJECT_SECTIONS.flatMap((section) => section.items.map((item) => item.value)),
 );
+
+/** Where a project opens when the URL carries no ?tab=. */
+export const PM_PROJECT_DEFAULT_SECTION: PMProjectSectionId = "repository";
 
 export function PMProjectSubnav({
   projectId,
@@ -113,7 +112,8 @@ export function PMProjectSubnav({
       return;
     }
 
-    const query = item === "overview" ? "" : `?tab=${encodeURIComponent(item)}`;
+    // Repository is the landing section now that Overview is gone, so it owns the bare URL.
+    const query = item === PM_PROJECT_DEFAULT_SECTION ? "" : `?tab=${encodeURIComponent(item)}`;
     router.push(`/pm/project/${projectId}${query}`);
   };
 

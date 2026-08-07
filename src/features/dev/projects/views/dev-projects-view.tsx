@@ -29,6 +29,7 @@ import {
 } from "@/shared/utils/devflow-projects";
 import { DevProjectDetailContentView, DevProjectMembersView } from "../view/dev-project-detail-view";
 import { DevArtifactsPanelView } from "../view/dev-artifacts-panel-view";
+import { ProjectIssueBoard } from "@/shared/components/issues/project-issue-board";
 import { DevTasksPanelView } from "../view/dev-tasks-panel-view";
 import { useDevProjectDetailViewModel } from "../view-model/use-dev-project-detail-view-model";
 import { useDevArtifactsPanelViewModel } from "../view-model/use-dev-artifacts-panel-view-model";
@@ -252,10 +253,12 @@ function BackendDevProjectDetail({ project, onBack }) {
               <DevProjectDetailContentView vm={vm} />
             </>
           )}
-          {tab === "tasks" && (
-            <DevBackendTasks
+          {tab === "issues" && (
+            <ProjectIssueBoard
               projectId={project.id}
               tasks={outputs.tasks}
+              workOrders={outputs.workOrders}
+              members={project.members}
               loading={outputs.loading}
               error={outputs.error}
               onChanged={outputs.refresh}

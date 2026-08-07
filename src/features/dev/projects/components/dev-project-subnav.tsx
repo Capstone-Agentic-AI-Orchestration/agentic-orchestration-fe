@@ -28,7 +28,7 @@ import {
 export type DevProjectSectionId =
   | "overview"
   | "setup"
-  | "tasks"
+  | "issues"
   | "work-orders"
   | "orchestration"
   | "gates"
@@ -54,7 +54,10 @@ const DEV_PROJECT_SECTIONS: Array<{ label: string; items: DevProjectSectionItem[
     label: "Delivery workflow",
     items: [
       { value: "setup", label: "Setup", icon: <IconRocket size={15} /> },
-      { value: "tasks", label: "Tasks", icon: <IconCheckCircle size={15} /> },
+      // The same board the PM console shows, writable in both. Work orders keeps its own
+      // section below because dispatch and retry are the developer's and the board has no
+      // affordance for them.
+      { value: "issues", label: "Issues", icon: <IconCheckCircle size={15} /> },
       { value: "work-orders", label: "Work orders", icon: <IconWorkflow size={15} /> },
       { value: "orchestration", label: "Orchestration", icon: <IconCpu size={15} /> },
     ],
