@@ -7,6 +7,7 @@ import { IconAlertTriangle, IconChevronRight, IconPlus, IconSearch } from "@/sha
 import { SectionTitle } from "@/features/pm/projects/components/pm-project-ui";
 import { compactBackendError, formatBackendDate } from "@/features/pm/projects/utils/pm-project-detail.utils";
 import { useDevFlowClients } from "@/shared/hooks/use-devflow-clients";
+import { useSelectedTeamWorkspace } from "@/shared/projects/selected-team-workspace-context";
 import { createDevFlowClient, type DevFlowClientStatus } from "@/shared/api/devflow-api";
 
 const STATUS_TONE: Record<DevFlowClientStatus, "green" | "blue" | "gray"> = {
@@ -20,19 +21,26 @@ const EMPTY_FORM = { name: "", primaryContactName: "", primaryContactEmail: "", 
 export function PMClientsView() {
   const router = useRouter();
   const [search, setSearch] = useState("");
-  const { clients, loading, error } = useDevFlowClients(search);
+  // Clients belong to the team that delivers for them, so the list follows the workspace
+  // switcher. Every client has one now — the column is NOT NULL — so there is no unassigned
+  // bucket to fold in, and a client is reachable from exactly one workspace.
+  const { selectedTeamId } = useSelectedTeamWorkspace();
+  const { clients, loading, error } = useDevFlowClients(search, selectedTeamId ?? undefined);
   const [createOpen, setCreateOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
 
   const submit = async () => {
-    if (!form.name.trim()) return;
+    // A client belongs to a workspace, so there is nothing to create without one. The New client
+    // button is disabled in that state too; this is the guard that makes the types honest.
+    if (!form.name.trim() || !selectedTeamId) return;
     setSaving(true);
     setFormError("");
     try {
       const client = await createDevFlowClient({
         name: form.name.trim(),
+        groupId: selectedTeamId,
         status: form.status,
         primaryContactName: form.primaryContactName.trim() || undefined,
         primaryContactEmail: form.primaryContactEmail.trim() || undefined,
@@ -55,7 +63,12 @@ export function PMClientsView() {
           title="Clients"
           subtitle="Every company you deliver for. Each client owns its projects, documents, and contacts."
         />
-        <Button icon={<IconPlus size={13} />} onClick={() => setCreateOpen(true)}>
+        <Button
+          icon={<IconPlus size={13} />}
+          onClick={() => setCreateOpen(true)}
+          disabled={!selectedTeamId}
+          title={selectedTeamId ? undefined : "Select a team workspace first"}
+        >
           New client
         </Button>
       </div>
@@ -102,12 +115,24 @@ export function PMClientsView() {
                   <strong>{client.name}</strong>
                   <span>{client.primaryContactEmail || "No primary contact"}</span>
                 </div>
+                {/* Status only. An "unassigned" variant used to replace this badge, which hid
+                    the client's actual status behind an orthogonal fact — and that state is now
+                    impossible: Client.groupId is NOT NULL. */}
                 <Badge tone={STATUS_TONE[client.status]}>{client.status.toLowerCase()}</Badge>
               </div>
               <div className="pm-client-card-stats">
-                <span>
-                  <strong>{client.projectCount}</strong> project{client.projectCount === 1 ? "" : "s"}
-                </span>
+                {/* Delivery work and discovery are different states, so they read differently.
+                    A client you are only talking to used to show "1 project", which is the thing
+                    that made a new client look like work in progress. */}
+                {client.projectCount > 0 ? (
+                  <span>
+                    <strong>{client.projectCount}</strong> project{client.projectCount === 1 ? "" : "s"}
+                  </span>
+                ) : client.discoveryCount > 0 ? (
+                  <span className="pm-client-discovery">In discovery</span>
+                ) : (
+                  <span>No projects yet</span>
+                )}
                 <span>
                   <strong>{client.contactCount}</strong> contact{client.contactCount === 1 ? "" : "s"}
                 </span>

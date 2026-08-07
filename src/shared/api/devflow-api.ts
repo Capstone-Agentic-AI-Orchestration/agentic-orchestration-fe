@@ -2637,6 +2637,8 @@ export interface DevFlowClient {
   id: string;
   name: string;
   status: DevFlowClientStatus;
+  /** The team workspace that delivers for this client. Always set — the column is NOT NULL. */
+  groupId: string;
   primaryContactName: string | null;
   primaryContactEmail: string | null;
   notes: string | null;
@@ -2651,9 +2653,19 @@ export interface DevFlowClientListItem {
   id: string;
   name: string;
   status: DevFlowClientStatus;
+  /** Owning team workspace. Always set: the column is NOT NULL, so a client always has one. */
+  groupId: string;
   primaryContactName: string | null;
   primaryContactEmail: string | null;
+  /** Delivery work only. A discovery space is deliberately not counted here. */
   projectCount: number;
+  /**
+   * Discovery spaces: approved leads waiting on documents and scope.
+   *
+   * Approval creates one so the client has somewhere to be invited and to upload into. It is not
+   * a project until a human starts delivery, and the console must not present it as one.
+   */
+  discoveryCount: number;
   contactCount: number;
   lastProjectActivityAt: string | null;
   createdAt: string;
@@ -2702,6 +2714,8 @@ export interface DevFlowClientContact {
 
 export interface CreateDevFlowClientInput {
   name: string;
+  /** Required. A client with no workspace is invisible to the switcher and cannot own projects. */
+  groupId: string;
   status?: DevFlowClientStatus;
   primaryContactName?: string;
   primaryContactEmail?: string;
@@ -2710,9 +2724,14 @@ export interface CreateDevFlowClientInput {
 
 export interface UpdateDevFlowClientInput extends Partial<CreateDevFlowClientInput> {}
 
-export function getDevFlowClients(search?: string): Promise<DevFlowClientListResponse> {
-  const query = search?.trim() ? `?search=${encodeURIComponent(search.trim())}` : "";
-  return request<DevFlowClientListResponse>(`/clients${query}`);
+export function getDevFlowClients(search?: string, groupId?: string): Promise<DevFlowClientListResponse> {
+  const params = new URLSearchParams();
+  if (search?.trim()) params.set("search", search.trim());
+  // Omitted rather than sent empty: no workspace selected means "do not scope", which is what
+  // the admin views want. An empty string would filter to clients belonging to no team.
+  if (groupId) params.set("groupId", groupId);
+  const query = params.toString();
+  return request<DevFlowClientListResponse>(`/clients${query ? `?${query}` : ""}`);
 }
 
 export function getDevFlowClient(clientId: string): Promise<DevFlowClient> {

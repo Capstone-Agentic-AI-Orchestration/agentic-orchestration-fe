@@ -20,7 +20,10 @@ const EMPTY_DOCUMENTS: DevFlowClientDocuments = {
   totals: { documents: 0, readable: 0, files: 0 },
 };
 
-export function useDevFlowClients(search?: string) {
+/**
+ * @param groupId Active team workspace. Passing it scopes the list; omitting it lists everything.
+ */
+export function useDevFlowClients(search?: string, groupId?: string) {
   const [data, setData] = useState<DevFlowClientListResponse>(EMPTY_LIST);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -29,20 +32,20 @@ export function useDevFlowClients(search?: string) {
     setLoading(true);
     setError("");
     try {
-      setData(await getDevFlowClients(search));
+      setData(await getDevFlowClients(search, groupId));
     } catch (nextError) {
       setData(EMPTY_LIST);
       setError(nextError instanceof Error ? nextError.message : String(nextError));
     } finally {
       setLoading(false);
     }
-  }, [search]);
+  }, [search, groupId]);
 
   useEffect(() => {
     let active = true;
     setLoading(true);
     setError("");
-    getDevFlowClients(search)
+    getDevFlowClients(search, groupId)
       .then((result) => { if (active) setData(result); })
       .catch((nextError) => {
         if (!active) return;
@@ -51,7 +54,7 @@ export function useDevFlowClients(search?: string) {
       })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [search]);
+  }, [search, groupId]);
 
   return {
     clients: data.clients,

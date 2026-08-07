@@ -8,6 +8,7 @@ import { SectionTitle } from "@/features/pm/projects/components/pm-project-ui";
 import { compactBackendError, formatBackendDate } from "@/features/pm/projects/utils/pm-project-detail.utils";
 import { PMClientSubnav, type PMClientSectionId } from "../components/pm-client-subnav";
 import { useDevFlowClientWorkspace } from "@/shared/hooks/use-devflow-clients";
+import { useSelectedTeamWorkspace } from "@/shared/projects/selected-team-workspace-context";
 import {
   addDevFlowClientContact,
   getDevFlowClientContactCandidates,
@@ -58,6 +59,15 @@ export function PMClientDetailView({ clientId }: Readonly<{ clientId: string }>)
     () => ({ projects: projects.length, documents: documents.totals.documents, contacts: contacts.length }),
     [projects.length, documents.totals.documents, contacts.length],
   );
+
+  // A project in DISCOVERY is a container for the documents and conversation that precede a
+  // build, not delivery work. The backend already refuses to orchestrate one; the console should
+  // not present it as a project the team is delivering either.
+  const discoveryCount = useMemo(
+    () => projects.filter((project) => project.status === "DISCOVERY").length,
+    [projects],
+  );
+  const deliveryCount = projects.length - discoveryCount;
 
   const run = async (action: () => Promise<unknown>) => {
     setBusy(true);
@@ -150,7 +160,14 @@ export function PMClientDetailView({ clientId }: Readonly<{ clientId: string }>)
               <div className="pm-tab-stat-grid" style={{ marginTop: 14 }}>
                 <Card className="pm-tab-panel pm-tab-panel--padded">
                   <div style={{ color: "var(--text-3)", fontSize: 11.5 }}>Projects</div>
-                  <div style={{ fontSize: 22, fontWeight: 700 }}>{projects.length}</div>
+                  {/* Discovery spaces are counted apart from delivery work. Folding them in is
+                      what made a client you have only just approved look like work in flight. */}
+                  <div style={{ fontSize: 22, fontWeight: 700 }}>{deliveryCount}</div>
+                  {discoveryCount > 0 && (
+                    <div className="pm-client-discovery" style={{ fontSize: 11.5, marginTop: 2 }}>
+                      +{discoveryCount} in discovery
+                    </div>
+                  )}
                 </Card>
                 <Card className="pm-tab-panel pm-tab-panel--padded">
                   <div style={{ color: "var(--text-3)", fontSize: 11.5 }}>Documents</div>
@@ -196,6 +213,19 @@ export function PMClientDetailView({ clientId }: Readonly<{ clientId: string }>)
                     }
                   />
                 </Field>
+                <Field
+                  label="Workspace"
+                  helper="The team that delivers for this client. Moving it moves the client out of your current list."
+                >
+                  <WorkspaceSelect
+                    value={client.groupId}
+                    disabled={busy}
+                    onSelect={(groupId) =>
+                      groupId !== client.groupId &&
+                      void run(() => updateDevFlowClient(client.id, { groupId }))
+                    }
+                  />
+                </Field>
                 <div style={{ color: "var(--text-3)", fontSize: 11.5 }}>
                   Added {formatBackendDate(client.createdAt)}
                 </div>
@@ -220,7 +250,8 @@ export function PMClientDetailView({ clientId }: Readonly<{ clientId: string }>)
             </div>
             {projects.length === 0 ? (
               <div className="pm-tab-empty">
-                No projects yet. Link an existing project, or approve an inquiry from this client.
+                Nothing yet. Link an existing project, or approve an inquiry from this client to
+                open a discovery space and start collecting documents.
               </div>
             ) : (
               <div className="pm-tab-list">
@@ -233,7 +264,13 @@ export function PMClientDetailView({ clientId }: Readonly<{ clientId: string }>)
                       </div>
                     </div>
                     <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
-                      <Badge tone="gray">{project.status.toLowerCase()}</Badge>
+                      {/* Discovery reads as what it is — waiting on the client — rather than as
+                          another delivery status the PM has to decode. */}
+                      {project.status === "DISCOVERY" ? (
+                        <Badge tone="amber">in discovery</Badge>
+                      ) : (
+                        <Badge tone="gray">{project.status.toLowerCase()}</Badge>
+                      )}
                       <Button size="sm" variant="ghost" onClick={() => router.push(`/pm/project/${project.id}`)}>
                         Open
                       </Button>
@@ -433,5 +470,41 @@ export function PMClientDetailView({ clientId }: Readonly<{ clientId: string }>)
         </div>
       </Modal>
     </div>
+  );
+}
+
+/**
+ * Moves a client to another team workspace.
+ *
+ * Every client has a workspace — the column is NOT NULL — so this is a move, never a clear, and
+ * the control has no empty option. Moving takes the client out of the current workspace's list,
+ * which the helper text says plainly: the alternative is a PM wondering where it went.
+ */
+function WorkspaceSelect({
+  value,
+  disabled,
+  onSelect,
+}: {
+  value: string;
+  disabled?: boolean;
+  onSelect: (groupId: string) => void;
+}) {
+  const { teams, teamsLoading } = useSelectedTeamWorkspace();
+
+  if (teamsLoading) return <Input value="Loading workspaces..." disabled readOnly />;
+
+  return (
+    <Select value={value} disabled={disabled} onChange={(event) => onSelect(event.target.value)}>
+      {/* A client can sit in a workspace this member cannot see; keep it selectable-looking
+          rather than silently snapping the dropdown to the first option. */}
+      {!teams.some((team) => team.id === value) && (
+        <option value={value}>Current workspace</option>
+      )}
+      {teams.map((team) => (
+        <option key={team.id} value={team.id}>
+          {team.name}{team.status === "ARCHIVED" ? " (Archived)" : ""}
+        </option>
+      ))}
+    </Select>
   );
 }
