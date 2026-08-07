@@ -767,10 +767,14 @@ h1, h2, h3, h4 { letter-spacing: -0.025em; margin: 0; font-weight: 700; }
   text-overflow: ellipsis;
 }
 .cs-nav-badge {
+  flex-shrink: 0;
+  min-width: 20px;
   font-size: 10.5px; font-weight: 700;
-  padding: 1px 7px; border-radius: 999px;
+  padding: 1px 6px; border-radius: 999px;
   background: var(--primary);
-  color: white;
+  /* --primary is #FAFAFA, so `white` here was an invisible number on a white pill. */
+  color: var(--primary-ink);
+  text-align: center;
   letter-spacing: .02em;
 }
 .cs-nav-badge--text {
@@ -802,6 +806,58 @@ h1, h2, h3, h4 { letter-spacing: -0.025em; margin: 0; font-weight: 700; }
   border-radius: 12px;
   background: linear-gradient(180deg, rgba(15,23,42,.72), rgba(8,14,32,.62));
   box-shadow: 0 12px 34px rgba(0,0,0,.20);
+}
+.cs-sidebar-account {
+  position: relative;
+  min-width: 0;
+}
+.cs-sidebar-account--top {
+  flex: 0 0 auto;
+  margin-bottom: 12px;
+  padding: 2px 0 12px;
+  border-bottom: 1px solid rgba(255,255,255,.075);
+}
+.cs-user--trigger {
+  position: relative;
+  width: 100%;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .16s ease, background .16s ease, padding .2s ease, gap .2s ease;
+}
+.cs-user--trigger:hover,
+.cs-user--trigger[aria-expanded="true"] {
+  border-color: rgba(79,139,255,.34);
+  background: linear-gradient(180deg, rgba(20,31,59,.86), rgba(10,18,38,.78));
+}
+.cs-user-chevron {
+  flex-shrink: 0;
+  color: var(--text-3);
+  transition: transform .16s ease;
+}
+.cs-user--trigger[aria-expanded="true"] .cs-user-chevron { transform: rotate(180deg); }
+.cs-user--bare {
+  padding: 7px 8px;
+  border-color: transparent;
+  border-radius: 8px;
+  background: transparent;
+  box-shadow: none;
+}
+.cs-user--bare:hover,
+.cs-user--bare[aria-expanded="true"] {
+  border-color: transparent;
+  background: rgba(255,255,255,.045);
+}
+.cs-user-alert {
+  min-width: 20px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: #DC2626;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  text-align: center;
 }
 .cs-pill {
   font-size: 9.5px; font-weight: 700;
@@ -843,6 +899,174 @@ h1, h2, h3, h4 { letter-spacing: -0.025em; margin: 0; font-weight: 700; }
 .cs-topbar-brand .alpha-logo-wordmark {
   font-size: 17px;
   letter-spacing: .055em;
+}
+/* ---------------------------------------------------------------------------
+   Workspace tab bar
+
+   The bar shares the canvas colour instead of sitting on it as a lighter strip.
+   A header only needs to be seen where it says something: the active tab is the
+   one lit surface, everything else — bar, brand gutter, dividers — recedes.
+   --------------------------------------------------------------------------- */
+.cs-workspace-topbar {
+  height: 48px;
+  background: var(--bg-0);
+  border-bottom: 1px solid rgba(255,255,255,.05);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.cs-shell--pm .cs-workspace-topbar {
+  background: var(--bg-0);
+  border-bottom-color: rgba(255,255,255,.05);
+}
+.cs-workspace-topbar-inner {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  height: 48px;
+  min-width: 0;
+  padding-right: 12px;
+}
+.cs-workspace-brand-zone {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  min-width: 0;
+  /* 19px + half of the 18px mark = 28px, the centre line of the 56px icon rail,
+     so the logo sits on the same axis as the sidebar icons below it. */
+  padding: 0 14px 0 19px;
+}
+.cs-workspace-brand-zone .alpha-logo { gap: 9px; }
+.cs-workspace-brand-zone .alpha-logo-wordmark {
+  font-size: 14px;
+  letter-spacing: .06em;
+}
+.cs-workspace-history {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 0 0 auto;
+}
+.cs-workspace-histbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  color: var(--text-3);
+  background: transparent;
+  cursor: pointer;
+  transition: color .15s ease, background .15s ease;
+}
+.cs-workspace-histbtn:hover { color: var(--text); background: rgba(255,255,255,.06); }
+.cs-workspace-histbtn .is-flipped { transform: rotate(180deg); }
+.cs-workspace-tabs-region {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  padding: 0 0 0 8px;
+}
+.cs-workspace-tabs-scroll {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+.cs-workspace-tabs-scroll::-webkit-scrollbar { display: none; }
+.cs-workspace-tabs {
+  display: flex;
+  align-items: center;
+  width: max-content;
+  min-width: 0;
+  gap: 2px;
+  padding: 1px;
+}
+/* Tabs hug their label rather than reserving a fixed slot: one open tab should read as a
+   title, not as an empty 164px box waiting for siblings. */
+.cs-workspace-tab {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  max-width: 220px;
+  height: 32px;
+  padding: 0 2px 0 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--text-3);
+  background: transparent;
+  transition: background .16s ease, border-color .16s ease, color .16s ease;
+}
+.cs-workspace-tab:hover { color: var(--text-2); background: rgba(255,255,255,.04); }
+.cs-workspace-tab.is-active {
+  color: #fff;
+  border-color: rgba(255,255,255,.09);
+  background: rgba(255,255,255,.07);
+}
+.cs-workspace-tab.is-active:hover { background: rgba(255,255,255,.085); }
+.cs-workspace-tab-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  padding: 0 4px 0 10px;
+  border: 0;
+  border-radius: 8px;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+.cs-workspace-tab-main:focus-visible {
+  outline: 2px solid rgba(79,139,255,.45);
+  outline-offset: -2px;
+}
+.cs-workspace-tab-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  color: var(--text-3);
+}
+.cs-workspace-tab-icon svg { width: 14px; height: 14px; }
+.cs-workspace-tab.is-active .cs-workspace-tab-icon { color: #93C5FD; }
+.cs-workspace-tab-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.cs-workspace-tab-close,
+.cs-workspace-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  color: var(--text-3);
+  background: transparent;
+  cursor: pointer;
+  opacity: .75;
+  transition: color .15s ease, background .15s ease, opacity .15s ease;
+}
+.cs-workspace-tab-close:hover,
+.cs-workspace-add:hover { color: #fff; opacity: 1; background: rgba(255,255,255,.1); }
+.cs-workspace-add {
+  width: 26px;
+  height: 26px;
+  margin-left: 2px;
 }
 .cs-shell--topbar-brand .cs-topbar-inner {
   min-height: 68px;
@@ -1003,6 +1227,10 @@ h1, h2, h3, h4 { letter-spacing: -0.025em; margin: 0; font-weight: 700; }
     top: 68px;
     height: calc(100vh - 68px);
   }
+  .cs-shell--hover-sidebar.cs-shell--workspace-tabs .cs-sidebar {
+    top: 48px;
+    height: calc(100vh - 48px);
+  }
   .cs-shell--hover-sidebar .cs-sidebar:is(:hover, :focus-within) {
     width: 280px;
     box-shadow: 18px 0 42px rgba(0,0,0,.48);
@@ -1082,6 +1310,37 @@ h1, h2, h3, h4 { letter-spacing: -0.025em; margin: 0; font-weight: 700; }
     white-space: nowrap;
     pointer-events: none;
   }
+  /* --- Collapsed rail: pills must cost zero width -------------------------
+     `max-width: 0` collapses the text but not the horizontal padding or border,
+     so a hidden badge still contributed ~14px and pushed the icons of the rows
+     that have one (Inquiries, Inbox) off the rail's centre line. A count keeps
+     its signal as a dot pinned to the item — absolutely positioned, so it is out
+     of flow and every icon lands on the same axis. */
+  .cs-shell--hover-sidebar .dev-live-pill {
+    padding-left: 0;
+    padding-right: 0;
+    margin: 0;
+    border-width: 0;
+  }
+  .cs-shell--hover-sidebar .cs-nav-badge {
+    padding-left: 0;
+    padding-right: 0;
+    min-width: 0;
+  }
+  .cs-shell--hover-sidebar .cs-nav-badge--count {
+    position: absolute;
+    top: 6px;
+    right: 7px;
+    min-width: 7px;
+    width: 7px;
+    height: 7px;
+    max-width: none;
+    padding: 0;
+    border-radius: 50%;
+    opacity: 1;
+    font-size: 0;
+    line-height: 0;
+  }
   .cs-shell--hover-sidebar .cs-support {
     justify-content: center;
     gap: 0;
@@ -1124,6 +1383,22 @@ h1, h2, h3, h4 { letter-spacing: -0.025em; margin: 0; font-weight: 700; }
     overflow: visible;
     pointer-events: auto;
   }
+  .cs-shell--hover-sidebar .cs-sidebar:is(:hover, :focus-within) .dev-live-pill {
+    padding: 1px 8px;
+    border-width: 1px;
+  }
+  .cs-shell--hover-sidebar .cs-sidebar:is(:hover, :focus-within) .cs-nav-badge {
+    padding: 1px 6px;
+    min-width: 20px;
+  }
+  .cs-shell--hover-sidebar .cs-sidebar:is(:hover, :focus-within) .cs-nav-badge--count {
+    position: static;
+    width: auto;
+    height: auto;
+    border-radius: 999px;
+    font-size: 10.5px;
+    line-height: normal;
+  }
   .cs-shell--hover-sidebar .cs-sidebar:is(:hover, :focus-within) .cs-support {
     justify-content: flex-start;
     gap: 10px;
@@ -1149,9 +1424,105 @@ h1, h2, h3, h4 { letter-spacing: -0.025em; margin: 0; font-weight: 700; }
     padding: 3px 8px;
     border-width: 1px;
   }
+  /* --- Collapsed rail: the account trigger is just another 40px row ---------
+     A nav item is a 40px-tall box with its glyph centred on the rail's axis. The
+     account trigger has to be the same box, or the avatar and every icon below it
+     sit on two different vertical lines. That means no side padding, no gap, and
+     no chevron — a disclosure arrow with nothing to disclose is what skews it. */
+  .cs-shell--hover-sidebar .cs-user--bare {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0;
+    width: 40px;
+    min-height: 40px;
+    margin: 0 auto;
+    padding: 0;
+    border-color: transparent;
+    border-radius: 10px;
+    background: transparent;
+    box-shadow: none;
+  }
+  .cs-shell--hover-sidebar .cs-user--bare > .mono {
+    width: 30px !important;
+    height: 30px !important;
+    flex-basis: 30px !important;
+    font-size: 11px !important;
+  }
+  .cs-shell--hover-sidebar .cs-user--bare:hover,
+  .cs-shell--hover-sidebar .cs-user--bare[aria-expanded="true"] {
+    background: rgba(255,255,255,.055);
+  }
+  .cs-shell--hover-sidebar .cs-user-chevron {
+    max-width: 0;
+    opacity: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  /* An unread count cannot fit beside a 30px avatar, so it becomes a corner dot. */
+  .cs-shell--hover-sidebar .cs-user--bare .cs-user-alert {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    min-width: 8px;
+    height: 8px;
+    padding: 0;
+    border: 2px solid #070707;
+    font-size: 0;
+    line-height: 0;
+  }
+  .cs-shell--hover-sidebar .cs-sidebar-account--top {
+    margin-bottom: 8px;
+    padding: 0 0 10px;
+  }
+
+  /* --- Expanded: back to a full identity row -------------------------------- */
+  .cs-shell--hover-sidebar .cs-sidebar:is(:hover, :focus-within) .cs-user--bare {
+    justify-content: flex-start;
+    align-self: stretch;
+    gap: 10px;
+    width: 100%;
+    margin: 0;
+    padding: 7px 8px;
+    border-color: transparent;
+    border-radius: 8px;
+    /* Stays flat while the framed .cs-user card is for the non-bare variant. */
+    background: transparent;
+    box-shadow: none;
+  }
+  .cs-shell--hover-sidebar .cs-sidebar:is(:hover, :focus-within) .cs-user--bare:hover,
+  .cs-shell--hover-sidebar .cs-sidebar:is(:hover, :focus-within) .cs-user--bare[aria-expanded="true"] {
+    background: rgba(255,255,255,.045);
+  }
+  .cs-shell--hover-sidebar .cs-sidebar:is(:hover, :focus-within) .cs-user--bare > .mono {
+    width: 34px !important;
+    height: 34px !important;
+    flex-basis: 34px !important;
+    font-size: 12px !important;
+  }
+  .cs-shell--hover-sidebar .cs-sidebar:is(:hover, :focus-within) .cs-user-chevron {
+    max-width: 16px;
+    opacity: 1;
+    overflow: visible;
+    pointer-events: auto;
+  }
+  .cs-shell--hover-sidebar .cs-sidebar:is(:hover, :focus-within) .cs-user--bare .cs-user-alert {
+    position: static;
+    min-width: 20px;
+    height: auto;
+    padding: 2px 6px;
+    border-width: 0;
+    font-size: 10px;
+    line-height: normal;
+  }
+  .cs-shell--hover-sidebar .cs-sidebar:is(:hover, :focus-within) .cs-sidebar-account--top {
+    margin-bottom: 12px;
+    padding: 2px 0 12px;
+  }
 }
 .cs-avatar-wrap { position: relative; flex-shrink: 0; }
 .cs-avatar-trigger {
+  position: relative;
   display: flex; align-items: center; gap: 6px;
   background: rgba(255,255,255,.03);
   border: 1px solid var(--border);
@@ -1173,6 +1544,21 @@ h1, h2, h3, h4 { letter-spacing: -0.025em; margin: 0; font-weight: 700; }
   overflow: hidden;
   animation: fadeUp .2s ease both;
 }
+.cs-menu--sidebar {
+  top: auto;
+  right: auto;
+  bottom: calc(100% + 8px);
+  left: 0;
+  width: 100%;
+  min-width: 0;
+  max-height: min(560px, calc(100vh - 120px));
+  overflow-y: auto;
+}
+.cs-menu--sidebar.cs-menu--account { min-width: 0; }
+.cs-sidebar-account--top .cs-menu--sidebar {
+  top: calc(100% + 8px);
+  bottom: auto;
+}
 .cs-menu-header {
   padding: 14px 16px;
   border-bottom: 1px solid var(--border);
@@ -1192,6 +1578,47 @@ h1, h2, h3, h4 { letter-spacing: -0.025em; margin: 0; font-weight: 700; }
 .cs-menu-item--danger:hover { background: rgba(239,68,68,.08); }
 .cs-menu-sep { height: 1px; background: var(--border); margin: 4px 0; }
 
+/* --- Account menu: workspace switching and profile actions in one dropdown --- */
+.cs-menu--account { min-width: 302px; }
+.cs-menu-section { padding: 6px 0 4px; }
+.cs-menu-label {
+  display: block;
+  padding: 4px 16px 6px;
+  color: var(--text-3);
+  font-size: 10px; font-weight: 800;
+  letter-spacing: .1em; text-transform: uppercase;
+}
+.cs-menu-item-text {
+  flex: 1; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.cs-menu-item--choice { color: var(--text-2); font-size: 13px; padding: 8px 16px; }
+.cs-menu-item--choice.is-selected { color: var(--text); background: rgba(79,139,255,.10); }
+.cs-menu-item--choice svg { color: var(--primary-2); flex-shrink: 0; }
+.cs-menu-count {
+  flex-shrink: 0;
+  min-width: 19px; padding: 1px 6px;
+  border-radius: 999px;
+  background: #DC2626; color: #fff;
+  font-size: 10.5px; font-weight: 800; text-align: center;
+}
+.cs-menu-note { padding: 8px 16px; color: var(--text-3); font-size: 12.5px; }
+.cs-menu-note.is-error { color: #FCA5A5; }
+.cs-menu-pane { display: block; }
+.cs-menu-item--back { color: var(--text-3); font-size: 12.5px; padding: 9px 16px; }
+.cs-menu-item--back:hover { color: var(--text); }
+
+/* Optional account-level alert badge for consoles that still use a topbar menu. */
+.cs-avatar-alert {
+  position: absolute; top: -2px; left: 22px;
+  min-width: 16px; padding: 0 4px;
+  border-radius: 999px;
+  border: 2px solid var(--bg-0);
+  background: #DC2626; color: #fff;
+  font-size: 9.5px; font-weight: 800; line-height: 15px;
+  text-align: center;
+}
+
 @media (max-width: 980px) {
   .cs-shell, .cs-content { min-width: 0; overflow-x: hidden; }
   .cs-shell { grid-template-columns: 1fr; }
@@ -1208,7 +1635,20 @@ h1, h2, h3, h4 { letter-spacing: -0.025em; margin: 0; font-weight: 700; }
     top: 68px;
     height: calc(100vh - 68px);
   }
+  .cs-shell--workspace-tabs .cs-sidebar {
+    top: 48px;
+    height: calc(100vh - 48px);
+  }
   .cs-mobile-menu { display: inline-flex; }
+  .cs-mobile-menu--floating {
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    z-index: 70;
+    background: rgba(10,10,10,.92);
+    box-shadow: 0 10px 30px rgba(0,0,0,.36);
+  }
+  .cs-shell--no-topbar .cs-page { padding-top: 72px; }
   .cs-page { padding: 24px 20px; }
   .cs-topbar-inner { padding: 12px 20px; }
 }
@@ -1219,6 +1659,13 @@ h1, h2, h3, h4 { letter-spacing: -0.025em; margin: 0; font-weight: 700; }
   .team-workspace-switcher,
   .team-workspace-switcher.is-compact { max-width: 150px; }
   .team-workspace-name { max-width: 98px; }
+  .cs-workspace-brand-zone {
+    flex-basis: 54px;
+    padding: 0 11px;
+  }
+  .cs-workspace-brand-zone .alpha-logo-wordmark { display: none; }
+  .cs-workspace-brand-zone .alpha-logo { gap: 0; }
+  .cs-workspace-tab { width: 138px; max-width: 46vw; }
 }
 @media (max-width: 560px) {
   .cs-topbar-brand .alpha-logo-wordmark { display: none; }
@@ -3919,6 +4366,873 @@ h1, h2, h3, h4 { letter-spacing: -0.025em; margin: 0; font-weight: 700; }
   display: grid;
   gap: 14px;
   min-width: 0;
+}
+/* Projects grouped by the company the work is for */
+.pm-projects-client-group {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 22px;
+  min-width: 0;
+}
+.pm-projects-client-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.pm-projects-client-head h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.pm-projects-client-head span { color: var(--text-3); font-size: 11.5px; font-weight: 600; }
+
+/* ---------------------------------------------------------------------------
+   Issue board — one board over ProjectTask (members) and WorkOrder (agents)
+   --------------------------------------------------------------------------- */
+.issue-board-shell {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+.issue-board-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  min-width: 0;
+}
+.issue-board-filters {
+  display: inline-flex;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: rgba(255,255,255,.02);
+}
+.issue-board-filter {
+  padding: 5px 13px;
+  border: 0;
+  border-radius: 7px;
+  color: var(--text-3);
+  background: transparent;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: color .14s ease, background .14s ease;
+}
+.issue-board-filter:hover { color: var(--text-2); }
+.issue-board-filter.is-active { color: #fff; background: rgba(255,255,255,.09); }
+.issue-board-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.issue-board-working {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 11px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-3);
+  font-size: 12px;
+  font-weight: 600;
+}
+.issue-board-working.is-live { border-color: rgba(16,185,129,.3); color: #6EE7B7; }
+.issue-board-working-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #10B981;
+  box-shadow: 0 0 8px #10B981;
+  animation: pulse 1.8s ease-in-out infinite;
+}
+.issue-board-view-toggle {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.issue-board-view-toggle button {
+  display: grid;
+  place-items: center;
+  width: 28px; height: 26px;
+  border: 0;
+  border-radius: 6px;
+  color: var(--text-3);
+  background: transparent;
+  cursor: pointer;
+}
+.issue-board-view-toggle button.is-active { color: #fff; background: rgba(255,255,255,.09); }
+
+/* The board is a viewport-height surface, not a strip that shrinks to its contents.
+   An empty column still has to read as a place cards belong and as a drop target, which a
+   150px stub does not. Columns are fixed to the board's height and scroll internally, so
+   adding fifty issues to one column never changes the shape of the board.
+
+   The offset is the chrome above the board plus the page's bottom padding. Measured against
+   the real stylesheet rather than estimated: board top lands at 214px (48 topbar + 32 page
+   padding + 88 page header + 46 toolbar and its gap), + 32 bottom padding = 246. */
+.issue-board {
+  --issue-board-chrome: 246px;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(272px, 1fr);
+  align-items: stretch;
+  gap: 10px;
+  height: calc(100vh - var(--issue-board-chrome));
+  min-height: 460px;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 4px;
+}
+.issue-board[data-busy] { opacity: .6; pointer-events: none; }
+.issue-board::-webkit-scrollbar { height: 10px; }
+.issue-board::-webkit-scrollbar-track { background: transparent; }
+.issue-board::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: rgba(255,255,255,.14);
+  background-clip: content-box;
+}
+.issue-board::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.24); background-clip: content-box; }
+.issue-column {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 8px;
+  min-width: 0;
+  min-height: 0;
+  padding: 10px;
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  background: rgba(255,255,255,.015);
+  transition: border-color .14s ease, background .14s ease;
+}
+/* A faint wash of the column's own colour, so the board is readable as five distinct places
+   at a glance rather than five identical rectangles distinguished only by their labels. */
+.issue-column[data-tone="amber"] { background: rgba(251,191,36,.035); }
+.issue-column[data-tone="green"] { background: rgba(52,211,153,.035); }
+.issue-column[data-tone="blue"]  { background: rgba(96,165,250,.035); }
+.issue-column[data-tone="red"]   { background: rgba(248,113,113,.035); }
+.issue-column.is-drop-target {
+  border-color: rgba(79,139,255,.45);
+  background: rgba(47,107,255,.07);
+}
+.issue-column-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 2px 3px 8px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.issue-column-head strong {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 650;
+}
+.issue-column-count { color: var(--text-3); font-size: 11.5px; font-weight: 700; }
+.issue-column-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--text-3);
+}
+.issue-column[data-tone="amber"] .issue-column-dot { background: #FBBF24; }
+.issue-column[data-tone="green"] .issue-column-dot { background: #34D399; }
+.issue-column[data-tone="blue"]  .issue-column-dot { background: #60A5FA; }
+.issue-column[data-tone="red"]   .issue-column-dot { background: #F87171; }
+/* Scrolls inside the column rather than growing it, so a busy column and an empty one are
+   still the same shape and the board never grows a second scroll direction. */
+.issue-column-body {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 2px;
+  scrollbar-width: thin;
+}
+.issue-column-body::-webkit-scrollbar { width: 8px; }
+.issue-column-body::-webkit-scrollbar-track { background: transparent; }
+.issue-column-body::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: rgba(255,255,255,.12);
+  background-clip: content-box;
+}
+.issue-column-empty {
+  margin: 0;
+  padding: 28px 0;
+  color: var(--text-3);
+  font-size: 12px;
+  text-align: center;
+}
+
+.issue-card {
+  display: grid;
+  gap: 6px;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-2);
+  transition: border-color .14s ease, transform .14s ease;
+}
+.issue-card[draggable="true"] { cursor: grab; }
+.issue-card[draggable="true"]:active { cursor: grabbing; transform: scale(.99); }
+.issue-card:hover { border-color: rgba(255,255,255,.18); }
+.issue-card-ref {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--text-3);
+  font-size: 10.5px;
+}
+.issue-card-lane {
+  padding: 1px 6px;
+  border: 1px solid rgba(139,92,246,.35);
+  border-radius: 999px;
+  background: rgba(139,92,246,.14);
+  color: #C4B5FD;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.issue-card h4 {
+  margin: 0;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.4;
+}
+.issue-card p {
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  color: var(--text-3);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.issue-card footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 2px;
+  color: var(--text-3);
+  font-size: 11px;
+}
+.issue-card-owner {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-2);
+  font-weight: 600;
+}
+
+.issue-list {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-1);
+  overflow: hidden;
+}
+.issue-list-row {
+  display: grid;
+  grid-template-columns: 8px 76px minmax(0, 1fr) 110px 150px 72px;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  font-size: 12.5px;
+}
+.issue-list-row + .issue-list-row { border-top: 1px solid rgba(255,255,255,.05); }
+.issue-list-row:hover { background: rgba(255,255,255,.03); }
+.issue-list-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-3); }
+.issue-list-row[data-tone="amber"] .issue-list-dot { background: #FBBF24; }
+.issue-list-row[data-tone="green"] .issue-list-dot { background: #34D399; }
+.issue-list-row[data-tone="blue"]  .issue-list-dot { background: #60A5FA; }
+.issue-list-row[data-tone="red"]   .issue-list-dot { background: #F87171; }
+.issue-list-ref { color: var(--text-3); font-size: 10.5px; }
+.issue-list-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+  font-weight: 600;
+}
+.issue-list-status,
+.issue-list-owner,
+.issue-list-row time {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-3);
+  font-size: 11.5px;
+}
+.issue-list-row time { text-align: right; }
+@media (max-width: 860px) {
+  .issue-list-row {
+    grid-template-columns: 8px minmax(0, 1fr) 72px;
+  }
+  .issue-list-ref,
+  .issue-list-status,
+  .issue-list-owner { display: none; }
+}
+
+/* ---------------------------------------------------------------------------
+   Agents — roster table and agent detail
+
+   Replaces the old read-only stage cards. Every row is a record now, so the
+   surface is a table with the columns you actually filter a roster by.
+   --------------------------------------------------------------------------- */
+/* A client in discovery is not a client with a project. Reads as a state, not a count. */
+.pm-client-discovery {
+  color: #FCD34D;
+  font-weight: 600;
+}
+
+.pm-agents-view { display: grid; gap: 16px; min-width: 0; }
+.pm-agents-toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 12px;
+}
+.pm-agents-search {
+  display: flex; align-items: center; gap: 9px;
+  flex: 1 1 260px; max-width: 420px; min-width: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--border); border-radius: 9px;
+  background: var(--bg-sunken); color: var(--text-3);
+}
+.pm-agents-search input {
+  flex: 1; min-width: 0; border: 0; background: transparent;
+  color: var(--text); font: inherit; font-size: 13px; outline: none;
+}
+.pm-agents-scopes { display: inline-flex; gap: 3px; padding: 3px; border: 1px solid var(--border); border-radius: 9px; }
+.pm-agents-scope {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 5px 12px; border: 0; border-radius: 7px;
+  color: var(--text-3); background: transparent;
+  font: inherit; font-size: 12.5px; font-weight: 650; cursor: pointer;
+}
+.pm-agents-scope span { color: var(--text-3); font-size: 11px; font-weight: 700; }
+.pm-agents-scope.is-active { color: #fff; background: rgba(255,255,255,.09); }
+.pm-agents-scope.is-active span { color: var(--text-2); }
+
+.pm-agents-table { border: 1px solid var(--border); border-radius: 12px; background: var(--bg-1); overflow: hidden; }
+.pm-agents-row {
+  display: grid;
+  grid-template-columns: minmax(0, 2.4fr) 130px minmax(0, 1fr) 110px 70px 120px 60px;
+  align-items: center; gap: 12px;
+  width: 100%; padding: 11px 16px;
+  border: 0; background: transparent; color: var(--text-2);
+  font: inherit; text-align: left; cursor: pointer;
+  transition: background .14s ease;
+}
+.pm-agents-row:not(.pm-agents-row--head):hover { background: rgba(255,255,255,.04); }
+.pm-agents-row--head {
+  cursor: default; padding-top: 9px; padding-bottom: 9px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(255,255,255,.015);
+  color: var(--text-3); font-size: 11px; font-weight: 700;
+  letter-spacing: .04em; text-transform: uppercase;
+}
+.pm-agents-row + .pm-agents-row:not(.pm-agents-row--head) { border-top: 1px solid rgba(255,255,255,.05); }
+.pm-agents-cell { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; }
+.pm-agents-muted { color: var(--text-3); }
+.pm-agents-identity { display: flex; align-items: center; gap: 11px; }
+.pm-agents-avatar {
+  display: grid; place-items: center; flex-shrink: 0;
+  width: 32px; height: 32px; border-radius: 9px;
+  border: 1px solid var(--border); background: var(--bg-2); font-size: 15px;
+}
+.pm-agents-identity-text { display: grid; gap: 2px; min-width: 0; }
+.pm-agents-identity-text strong {
+  display: flex; align-items: center; gap: 7px;
+  min-width: 0; color: var(--text); font-size: 13px; font-weight: 650;
+}
+.pm-agents-identity-text strong svg { color: var(--text-3); flex-shrink: 0; }
+.pm-agents-identity-text > span {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--text-3); font-size: 11.5px;
+}
+.pm-agents-builtin {
+  padding: 1px 6px; border-radius: 999px;
+  border: 1px solid var(--border-soft); background: rgba(255,255,255,.04);
+  color: var(--text-3); font-size: 9px; font-weight: 800;
+  letter-spacing: .06em; text-transform: uppercase;
+}
+/* A built-in whose Eve subagent was never deployed. Dispatching it fails, so it must not read
+   as healthy in the roster. */
+.pm-agents-noruntime {
+  padding: 1px 6px; border-radius: 999px;
+  border: 1px solid rgba(239,68,68,.32); background: rgba(239,68,68,.1);
+  color: #FCA5A5; font-size: 9px; font-weight: 800;
+  letter-spacing: .06em; text-transform: uppercase; white-space: nowrap;
+}
+.pm-agent-runtime-warning {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin: 2px 0 0; padding: 8px 11px;
+  border: 1px solid rgba(239,68,68,.28); border-radius: 8px; background: rgba(239,68,68,.06);
+  color: #FCA5A5; font-size: 12px; line-height: 1.5;
+}
+.pm-agent-runtime-warning svg { flex-shrink: 0; }
+.pm-agent-runtime-warning code {
+  padding: 1px 5px; border-radius: 4px; background: rgba(0,0,0,.3); font-size: 11px;
+}
+.pm-agents-status { display: inline-flex; align-items: center; gap: 7px; color: var(--text-3); }
+.pm-agents-status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-3); }
+.pm-agents-status.is-working { color: #6EE7B7; }
+.pm-agents-status.is-working .pm-agents-status-dot { background: #10B981; box-shadow: 0 0 8px #10B981; }
+.pm-agents-hint { display: flex; align-items: center; gap: 7px; margin: 0; color: var(--text-3); font-size: 12px; }
+
+/* --- agent detail ---------------------------------------------------------- */
+.pm-agent-detail { display: grid; gap: 16px; min-width: 0; }
+.pm-agent-crumbs { display: flex; align-items: center; gap: 8px; color: var(--text-3); font-size: 12.5px; }
+.pm-agent-crumbs button {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 0; background: transparent; color: var(--text-3);
+  font: inherit; font-size: 12.5px; cursor: pointer;
+}
+.pm-agent-crumbs button:hover { color: var(--text); }
+.pm-agent-crumbs strong { color: var(--text); font-weight: 600; }
+.pm-agent-head { display: flex; align-items: flex-start; gap: 16px; min-width: 0; }
+.pm-agent-avatar {
+  display: grid; place-items: center; flex-shrink: 0;
+  width: 56px; height: 56px; border-radius: 14px;
+  border: 1px solid var(--border); background: var(--bg-2); font-size: 26px;
+}
+.pm-agent-head-text { display: grid; gap: 5px; min-width: 0; }
+.pm-agent-head-text h1 {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  margin: 0; color: var(--text); font-size: 24px; font-weight: 700; letter-spacing: -0.02em;
+}
+.pm-agent-head-text p { margin: 0; color: var(--text-2); font-size: 13.5px; }
+.pm-agent-live { display: inline-flex; align-items: center; gap: 7px; color: var(--text-3); font-size: 12px; font-weight: 600; }
+.pm-agent-live > span { width: 7px; height: 7px; border-radius: 50%; background: var(--text-3); }
+.pm-agent-live.is-working { color: #6EE7B7; }
+.pm-agent-live.is-working > span { background: #10B981; box-shadow: 0 0 8px #10B981; }
+.pm-agent-meta { display: flex; flex-wrap: wrap; gap: 14px; color: var(--text-3); font-size: 11.5px; }
+
+.pm-agent-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); }
+.pm-agent-tabs button {
+  padding: 9px 14px; border: 0; border-bottom: 2px solid transparent;
+  background: transparent; color: var(--text-3);
+  font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.pm-agent-tabs button:hover { color: var(--text-2); }
+.pm-agent-tabs button.is-active { color: var(--text); border-bottom-color: var(--primary); }
+
+.pm-agent-overview { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 20px; min-width: 0; }
+.pm-agent-overview-main { display: grid; gap: 22px; align-content: start; min-width: 0; }
+.pm-agent-overview-main h3,
+.pm-agent-rail h4 {
+  display: flex; align-items: baseline; gap: 10px; margin: 0 0 10px;
+  color: var(--text); font-size: 14px; font-weight: 650;
+}
+.pm-agent-overview-main h3 span,
+.pm-agent-rail h4 span { color: var(--text-3); font-size: 11.5px; font-weight: 500; }
+.pm-agent-empty { margin: 0; color: var(--text-3); font-size: 12.5px; font-style: italic; }
+.pm-agent-runs { display: grid; gap: 8px; }
+.pm-agent-run {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 12px; align-items: center;
+  padding: 10px 12px; border: 1px solid var(--border-soft); border-radius: 9px;
+  background: var(--bg-1); font-size: 12.5px;
+}
+.pm-agent-run strong { color: var(--text); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pm-agent-run span, .pm-agent-run time { color: var(--text-3); font-size: 11.5px; }
+.pm-agent-rail { display: grid; gap: 12px; align-content: start; }
+.pm-agent-rail dl { display: grid; gap: 9px; margin: 0; }
+.pm-agent-rail dl > div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.pm-agent-rail dt { color: var(--text-3); font-size: 12px; }
+.pm-agent-rail dd { margin: 0; color: var(--text); font-size: 12.5px; font-weight: 600; text-align: right; }
+.pm-agent-rail code { font-size: 11px; color: var(--text-2); }
+.pm-agent-stat { margin: 0; color: var(--text); font-size: 28px; font-weight: 700; letter-spacing: -0.02em; }
+.pm-agent-skill-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.pm-agent-skill-chips li {
+  padding: 3px 9px; border: 1px solid var(--border-soft); border-radius: 999px;
+  background: rgba(255,255,255,.03); color: var(--text-2); font-size: 11.5px;
+}
+
+.pm-agent-work { border: 1px solid var(--border); border-radius: 12px; background: var(--bg-1); overflow: hidden; }
+.pm-agent-work-row {
+  display: grid; grid-template-columns: minmax(0,1.4fr) minmax(0,1.2fr) 90px minmax(0,1fr) 80px 100px;
+  gap: 12px; align-items: center; padding: 10px 14px; font-size: 12.5px; color: var(--text-2);
+}
+.pm-agent-work-row > * { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pm-agent-work-row + .pm-agent-work-row { border-top: 1px solid rgba(255,255,255,.05); }
+.pm-agent-work-row--head {
+  border-bottom: 1px solid var(--border); background: rgba(255,255,255,.015);
+  color: var(--text-3); font-size: 11px; font-weight: 700;
+  letter-spacing: .04em; text-transform: uppercase;
+}
+
+.pm-agent-capabilities { display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 24px; min-width: 0; }
+.pm-agent-subnav { display: grid; gap: 3px; align-content: start; }
+.pm-agent-subnav button {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 8px 12px; border: 0; border-radius: 8px;
+  background: transparent; color: var(--text-2);
+  font: inherit; font-size: 13px; text-align: left; cursor: pointer;
+}
+.pm-agent-subnav button:hover { background: rgba(255,255,255,.04); }
+.pm-agent-subnav button.is-active { background: rgba(255,255,255,.07); color: var(--text); font-weight: 600; }
+.pm-agent-subnav button span { color: var(--text-3); font-size: 11px; }
+.pm-agent-capabilities-body { min-width: 0; }
+.pm-agent-panel { display: grid; gap: 12px; min-width: 0; max-width: 780px; }
+.pm-agent-panel h3 { margin: 0; color: var(--text); font-size: 15px; font-weight: 650; }
+.pm-agent-panel-hint { margin: 0; color: var(--text-3); font-size: 12.5px; line-height: 1.55; }
+.pm-agent-panel-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.pm-agent-builtin-prompt {
+  border: 1px solid var(--border-soft); border-radius: 9px; background: var(--bg-sunken);
+}
+.pm-agent-builtin-prompt > summary {
+  padding: 9px 12px; color: var(--text-3); font-size: 12px; cursor: pointer;
+}
+.pm-agent-builtin-prompt pre {
+  margin: 0; padding: 12px; max-height: 260px; overflow: auto;
+  border-top: 1px solid var(--border-soft);
+  color: var(--text-3); font-size: 11.5px; line-height: 1.5; white-space: pre-wrap;
+}
+.pm-agent-tools-note {
+  display: grid; gap: 6px;
+  padding: 12px 14px; border: 1px solid var(--border-soft); border-radius: 10px;
+  background: rgba(255,255,255,.02);
+}
+.pm-agent-tools-note strong { color: var(--text); font-size: 12.5px; }
+.pm-agent-tools-note > span { color: var(--text-3); font-size: 11.5px; }
+.pm-agent-tool-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.pm-agent-tool-chips code {
+  padding: 2px 7px; border: 1px solid var(--border-soft); border-radius: 6px;
+  color: var(--text-3); font-size: 10.5px;
+}
+.pm-agent-skill-list { display: grid; gap: 8px; }
+.pm-agent-skill {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 11px 13px; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--bg-1); min-width: 0;
+}
+.pm-agent-skill.is-attached { border-color: rgba(79,139,255,.32); background: rgba(47,107,255,.05); }
+.pm-agent-skill-toggle { display: flex; align-items: center; gap: 11px; min-width: 0; cursor: pointer; }
+.pm-agent-skill-toggle input { width: 15px; height: 15px; flex-shrink: 0; cursor: pointer; }
+.pm-agent-skill-text { display: grid; gap: 2px; min-width: 0; }
+.pm-agent-skill-text strong { color: var(--text); font-size: 13px; font-weight: 600; }
+.pm-agent-skill-text > span { color: var(--text-3); font-size: 11.5px; }
+.pm-agent-skill-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.pm-agent-danger {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  margin-top: 26px; padding: 14px 16px;
+  border: 1px solid rgba(239,68,68,.28); border-radius: 10px; background: rgba(239,68,68,.05);
+}
+.pm-agent-danger strong { display: block; color: var(--text); font-size: 13px; }
+.pm-agent-danger span { color: var(--text-3); font-size: 11.5px; line-height: 1.5; }
+@media (max-width: 1100px) {
+  .pm-agent-overview { grid-template-columns: minmax(0, 1fr); }
+  .pm-agent-capabilities { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ---------------------------------------------------------------------------
+   Agents — legacy stage cards, retired with the static catalog
+   --------------------------------------------------------------------------- */
+.pm-agents-view {
+  display: grid;
+  gap: 26px;
+  width: 100%;
+  min-width: 0;
+}
+.pm-agents-stage {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+.pm-agents-stage-head h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.pm-agents-stage-head p {
+  margin: 5px 0 0;
+  max-width: 720px;
+  color: var(--text-3);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.pm-agents-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(288px, 1fr));
+  gap: 12px;
+  min-width: 0;
+}
+.pm-agent-card {
+  display: grid;
+  align-content: start;
+  gap: 9px;
+  min-width: 0;
+  padding: 15px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-1);
+  transition: border-color .16s ease, background .16s ease;
+}
+.pm-agent-card:hover { border-color: rgba(255,255,255,.17); background: var(--bg-2); }
+.pm-agent-card-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+.pm-agent-card-head strong {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+  font-size: 13.5px;
+  font-weight: 650;
+}
+.pm-agent-dot {
+  flex-shrink: 0;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+.pm-agent-flag {
+  flex-shrink: 0;
+  padding: 2px 7px;
+  border: 1px solid rgba(251,191,36,.3);
+  border-radius: 999px;
+  background: rgba(251,191,36,.1);
+  color: #FCD34D;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.pm-agent-flag.is-always {
+  border-color: rgba(16,185,129,.28);
+  background: rgba(16,185,129,.1);
+  color: #6EE7B7;
+}
+.pm-agent-note {
+  color: var(--text-3);
+  font-size: 10.5px;
+  font-style: italic;
+}
+.pm-agent-desc {
+  margin: 0;
+  color: var(--text-2);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+.pm-agent-gate {
+  margin: 0;
+  color: var(--text-3);
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+.pm-agent-gate code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--bg-sunken);
+  color: var(--text-2);
+  font-size: 10.5px;
+}
+.pm-agent-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 1px;
+}
+.pm-agent-node {
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: var(--bg-sunken);
+  color: var(--text-3);
+  font-size: 10.5px;
+}
+.pm-agent-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.pm-agent-tool {
+  padding: 2px 7px;
+  border: 1px solid var(--border-soft);
+  border-radius: 6px;
+  color: var(--text-3);
+  font-size: 10px;
+  font-weight: 600;
+}
+.pm-agents-footnote {
+  margin: 0;
+  color: var(--text-3);
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+.pm-agents-footnote code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--bg-sunken);
+  font-size: 10.5px;
+}
+
+.pm-inbox-view {
+  display: grid;
+  gap: 18px;
+  width: 100%;
+  min-width: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   Inbox — mail-client rows
+
+   One line per item on a four-column grid: unread dot, sender, subject+snippet,
+   time. The subject cell is the only flexible one, so the sender and the time
+   stay on fixed vertical rules down the whole list and the eye can track a
+   single column instead of re-scanning each row.
+   --------------------------------------------------------------------------- */
+.pm-inbox {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-1);
+  overflow: hidden;
+}
+.pm-inbox-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(255,255,255,.015);
+}
+.pm-inbox-status {
+  color: var(--text-3);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.pm-inbox-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pm-inbox-row + .pm-inbox-row { border-top: 1px solid rgba(255,255,255,.05); }
+.pm-inbox-row-main {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 170px) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 9px 16px;
+  border: 0;
+  color: var(--text-3);
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background .14s ease;
+}
+.pm-inbox-row-main:hover { background: rgba(255,255,255,.045); }
+.pm-inbox-row-main:focus-visible {
+  outline: 2px solid rgba(79,139,255,.45);
+  outline-offset: -2px;
+}
+.pm-inbox-unread-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: transparent;
+}
+.pm-inbox-row.is-unread .pm-inbox-unread-dot { background: #60A5FA; }
+.pm-inbox-sender {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+.pm-inbox-subject {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+.pm-inbox-subject strong { font-weight: 600; color: var(--text-2); }
+.pm-inbox-snippet { color: var(--text-3); }
+.pm-inbox-time {
+  flex-shrink: 0;
+  min-width: 62px;
+  color: var(--text-3);
+  font-size: 11.5px;
+  font-weight: 600;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+/* Unread is carried by weight and brightness, the way a mail list does it — no
+   coloured row fill, so a full inbox does not read as a wall of highlight. */
+.pm-inbox-row.is-unread .pm-inbox-sender,
+.pm-inbox-row.is-unread .pm-inbox-subject strong,
+.pm-inbox-row.is-unread .pm-inbox-time {
+  color: var(--text);
+  font-weight: 700;
+}
+.pm-inbox-row.is-unread .pm-inbox-row-main { background: rgba(255,255,255,.022); }
+.pm-inbox-row.is-unread .pm-inbox-row-main:hover { background: rgba(255,255,255,.055); }
+.pm-inbox-message {
+  margin: 0;
+  padding: 26px 16px;
+  color: var(--text-3);
+  font-size: 13px;
+  text-align: center;
+}
+.pm-inbox-message.is-error { color: #FCA5A5; }
+.pm-inbox-skeleton {
+  display: grid;
+  gap: 1px;
+}
+.pm-inbox-skeleton span {
+  height: 38px;
+  background: linear-gradient(90deg, rgba(255,255,255,.03), rgba(255,255,255,.06), rgba(255,255,255,.03));
+  background-size: 220% 100%;
+  animation: pmInboxShimmer 1.3s linear infinite;
+}
+@keyframes pmInboxShimmer {
+  from { background-position: 180% 0; }
+  to { background-position: -40% 0; }
+}
+@media (max-width: 720px) {
+  .pm-inbox-row-main {
+    grid-template-columns: 8px minmax(0, 1fr) auto;
+    padding: 9px 12px;
+    gap: 10px;
+  }
+  /* Sender folds away first: on a narrow screen the subject is what identifies the item. */
+  .pm-inbox-sender { display: none; }
 }
 .pm-clients-search {
   display: flex;

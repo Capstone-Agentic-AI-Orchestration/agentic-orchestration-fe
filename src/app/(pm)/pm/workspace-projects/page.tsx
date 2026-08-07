@@ -1,5 +1,9 @@
-import { PMProjectsView } from "@/features/pm/projects/views/pm-projects-view";
+import { redirect } from "next/navigation";
 
+/**
+ * There used to be two project lists — /pm/projects behind a KPI dashboard called "Home", and
+ * this one. They are one list now, at the obvious URL.
+ */
 export default function PMWorkspaceProjectsPage() {
-  return <PMProjectsView cardsOnly />;
+  redirect("/pm/projects");
 }

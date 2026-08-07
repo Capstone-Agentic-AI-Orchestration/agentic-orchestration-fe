@@ -1,5 +1,6 @@
-import { PMInquiriesView } from "@/features/pm/inquiries/views/pm-inquiries-view";
+import { redirect } from "next/navigation";
 
+/** Inquiries is a section of Clients now. Old links, bookmarks and emails still land right. */
 export default function PMInquiriesPage() {
-  return <PMInquiriesView />;
+  redirect("/pm/clients?tab=inquiries");
 }
