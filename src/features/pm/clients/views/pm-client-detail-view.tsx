@@ -1,11 +1,21 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { Badge, Button, Card, Field, Input, Modal, Select } from "@/shared/components/ui";
-import { IconArrowLeft, IconExternalLink, IconFileText, IconPlus } from "@/shared/components/icons";
+import { Badge, Button, Card, Field, Input, Modal, Select, Textarea } from "@/shared/components/ui";
+import {
+  IconAlertTriangle,
+  IconArrowLeft,
+  IconCheckCircle,
+  IconClock,
+  IconFileText,
+  IconFolder,
+  IconPlus,
+  IconUsers,
+} from "@/shared/components/icons";
 import { SectionTitle } from "@/features/pm/projects/components/pm-project-ui";
 import { compactBackendError, formatBackendDate } from "@/features/pm/projects/utils/pm-project-detail.utils";
+import { devflowStatusView } from "@/shared/utils/devflow-projects";
 import { PMClientSubnav, type PMClientSectionId } from "../components/pm-client-subnav";
 import { useDevFlowClientWorkspace } from "@/shared/hooks/use-devflow-clients";
 import { useSelectedTeamWorkspace } from "@/shared/projects/selected-team-workspace-context";
@@ -18,6 +28,7 @@ import {
   updateDevFlowClient,
   type DevFlowClientStatus,
   type DevFlowProfile,
+  type DevFlowProjectStatus,
   type DevFlowProjectSummary,
 } from "@/shared/api/devflow-api";
 
@@ -26,6 +37,63 @@ const STATUS_TONE: Record<DevFlowClientStatus, "green" | "blue" | "gray"> = {
   PROSPECT: "blue",
   ARCHIVED: "gray",
 };
+
+/** Statuses that mean the work is finished, one way or the other. */
+const SETTLED_STATUSES: ReadonlySet<DevFlowProjectStatus> = new Set(["DELIVERED", "FAILED"]);
+
+/**
+ * Progress-bar fill per status tone, resolved through live tokens.
+ *
+ * Deliberately not `lifecycleProgressColor()`: that helper still hands back the pre-rebrand
+ * #60A5FA / #A78BFA palette, and this theme has no blue and no purple. Neutral carries the
+ * default; color is spent only where it means something.
+ */
+const PIPELINE_FILL: Record<string, string> = {
+  green: "var(--green)",
+  amber: "var(--amber)",
+  red: "var(--red)",
+};
+const pipelineFill = (tone: string) => PIPELINE_FILL[tone] ?? "var(--text-2)";
+
+/**
+ * Discovery is deliberately absent from `devflowStatusView` — it is not a delivery stage. The
+ * pipeline still has to draw it, so name it for what it is instead of printing the raw enum
+ * through the "Unknown" fallback.
+ */
+function pipelineView(status: DevFlowProjectStatus) {
+  if (status === "DISCOVERY") {
+    return { label: "In discovery", tone: "amber", progress: 6, stage: "Waiting on client" };
+  }
+  return devflowStatusView(status);
+}
+
+/**
+ * Coarse relative age. The exact timestamp is one hover away in the fact list; on a rollup the
+ * question is only ever "is this stale?", which a precise date answers slowly.
+ */
+function relativeWhen(value?: string | null) {
+  if (!value) return "Never";
+  const then = new Date(value).getTime();
+  if (Number.isNaN(then)) return "Never";
+  const days = Math.floor((Date.now() - then) / 86_400_000);
+  if (days <= 0) return "Today";
+  if (days === 1) return "Yesterday";
+  if (days < 7) return `${days}d ago`;
+  if (days < 31) return `${Math.floor(days / 7)}w ago`;
+  if (days < 365) return `${Math.floor(days / 30)}mo ago`;
+  return `${Math.floor(days / 365)}y ago`;
+}
+
+type AttentionTone = "warn" | "danger" | "good";
+
+interface AttentionItem {
+  id: string;
+  tone: AttentionTone;
+  icon: ReactNode;
+  title: string;
+  detail: string;
+  action?: { label: string; run: () => void };
+}
 
 function extractionBadge(document: { fileName: string | null; extraction: { status: string } | null }) {
   if (!document.fileName && !document.extraction) return { tone: "gray" as const, label: "Reference only" };
@@ -60,14 +128,173 @@ export function PMClientDetailView({ clientId }: Readonly<{ clientId: string }>)
     [projects.length, documents.totals.documents, contacts.length],
   );
 
+  // Everything the overview reads, derived once from the four payloads the workspace hook
+  // already fetched. No extra requests: this page is a rollup, not a new data source.
+  //
   // A project in DISCOVERY is a container for the documents and conversation that precede a
   // build, not delivery work. The backend already refuses to orchestrate one; the console should
   // not present it as a project the team is delivering either.
-  const discoveryCount = useMemo(
-    () => projects.filter((project) => project.status === "DISCOVERY").length,
-    [projects],
-  );
-  const deliveryCount = projects.length - discoveryCount;
+  const overview = useMemo(() => {
+    const discovery = projects.filter((project) => project.status === "DISCOVERY");
+    const delivery = projects.filter((project) => project.status !== "DISCOVERY");
+    const inFlight = delivery.filter((project) => !SETTLED_STATUSES.has(project.status));
+    const delivered = delivery.filter((project) => project.status === "DELIVERED");
+    const failed = delivery.filter((project) => project.status === "FAILED");
+
+    const allDocuments = documents.groups.flatMap((group) =>
+      group.documents.map((document) => ({ ...document, group })),
+    );
+    const failedExtractions = allDocuments.filter(
+      (document) => document.extraction?.status === "FAILED",
+    );
+    // Only projects that produced a document group with something in it count as documented.
+    const documentedProjectIds = new Set(
+      documents.groups.filter((group) => group.documents.length > 0).map((group) => group.projectId),
+    );
+
+    const contactsWithAccess = contacts.filter((contact) => contact.hasProjectAccess);
+    const stacks = [...new Set(projects.map((project) => project.stackKey).filter(Boolean))];
+
+    // Newest touch anywhere in the relationship — a project moving or a document landing both
+    // count as the client being live.
+    const lastActivityAt = [
+      ...projects.map((project) => project.updatedAt),
+      ...allDocuments.map((document) => document.updatedAt),
+    ].reduce<string | null>(
+      (latest, value) => (value && (!latest || value > latest) ? value : latest),
+      null,
+    );
+
+    // Newest first: a rollup that leads with the oldest thing buries the answer.
+    const timeline = [
+      ...projects.map((project) => ({
+        id: `project-${project.id}`,
+        kind: "project" as const,
+        title: project.companyName,
+        detail: `${pipelineView(project.status).label} · ${project.stackKey}`,
+        at: project.updatedAt,
+        href: `/pm/project/${project.id}`,
+      })),
+      ...allDocuments.map((document) => ({
+        id: `document-${document.id}`,
+        kind: "document" as const,
+        title: document.title,
+        detail: `Document in ${document.group.projectName}`,
+        at: document.updatedAt,
+        href: `/pm/project/${document.group.projectId}?tab=documents`,
+      })),
+    ]
+      .filter((entry) => Boolean(entry.at))
+      .sort((a, b) => (a.at < b.at ? 1 : -1))
+      .slice(0, 6);
+
+    return {
+      discovery,
+      delivery,
+      inFlight,
+      delivered,
+      failed,
+      failedExtractions,
+      documentedCount: projects.filter((project) => documentedProjectIds.has(project.id)).length,
+      // Delivery work only. A discovery space with nothing in it yet is the normal starting
+      // state, and the discovery row already says so — flagging it twice is just noise.
+      undocumentedDelivery: delivery.filter((project) => !documentedProjectIds.has(project.id)),
+      contactsWithAccess,
+      stacks,
+      lastActivityAt,
+      timeline,
+      // Most recently touched first, so the pipeline preview shows live work rather than
+      // whatever happened to be created first.
+      pipeline: [...projects].sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1)),
+    };
+  }, [projects, documents, contacts]);
+
+  const discoveryCount = overview.discovery.length;
+  const deliveryCount = overview.delivery.length;
+
+  // Actionable, not decorative: every row names something a PM can go and fix, and links to the
+  // section where the fix lives.
+  const attention: AttentionItem[] = [];
+  if (projects.length === 0) {
+    attention.push({
+      id: "no-projects",
+      tone: "warn",
+      icon: <IconFolder size={14} />,
+      title: "No projects yet",
+      detail: "Link an existing project, or approve an inquiry to open a discovery space.",
+      action: { label: "Link a project", run: () => setTab("projects") },
+    });
+  }
+  if (overview.failed.length > 0) {
+    attention.push({
+      id: "failed-projects",
+      tone: "danger",
+      icon: <IconAlertTriangle size={14} />,
+      title: `${overview.failed.length} project${overview.failed.length === 1 ? "" : "s"} failed`,
+      detail: overview.failed.map((project) => project.companyName).join(", "),
+      action: { label: "Review", run: () => setTab("projects") },
+    });
+  }
+  if (overview.failedExtractions.length > 0) {
+    attention.push({
+      id: "failed-extractions",
+      tone: "danger",
+      icon: <IconFileText size={14} />,
+      title: `${overview.failedExtractions.length} document${overview.failedExtractions.length === 1 ? "" : "s"} could not be read`,
+      detail: "Agents cannot use these. Re-upload them from the owning project.",
+      action: { label: "Open documents", run: () => setTab("documents") },
+    });
+  }
+  if (discoveryCount > 0) {
+    attention.push({
+      id: "discovery",
+      tone: "warn",
+      icon: <IconClock size={14} />,
+      title: `${discoveryCount} discovery space${discoveryCount === 1 ? "" : "s"} waiting`,
+      detail: "Collect scope and documents, then start delivery to unlock orchestration.",
+      action: { label: "Open projects", run: () => setTab("projects") },
+    });
+  }
+  if (overview.undocumentedDelivery.length > 0) {
+    const count = overview.undocumentedDelivery.length;
+    attention.push({
+      id: "undocumented",
+      tone: "warn",
+      icon: <IconFileText size={14} />,
+      title: `${count} delivery project${count === 1 ? "" : "s"} with no documents`,
+      detail: "Agents have nothing from the client to work from on these.",
+      action: { label: "Open documents", run: () => setTab("documents") },
+    });
+  }
+  if (contacts.length === 0) {
+    attention.push({
+      id: "no-contacts",
+      tone: "warn",
+      icon: <IconUsers size={14} />,
+      title: "No contacts recorded",
+      detail: "Nobody on the client side is on file for this account.",
+      action: { label: "Add contact", run: () => setTab("contacts") },
+    });
+  } else if (overview.contactsWithAccess.length < contacts.length) {
+    const blocked = contacts.length - overview.contactsWithAccess.length;
+    attention.push({
+      id: "contacts-without-access",
+      tone: "warn",
+      icon: <IconUsers size={14} />,
+      title: `${blocked} contact${blocked === 1 ? "" : "s"} cannot open anything`,
+      detail: "Being listed here grants nothing — access comes from project membership.",
+      action: { label: "Review contacts", run: () => setTab("contacts") },
+    });
+  }
+  if (!client?.primaryContactEmail) {
+    attention.push({
+      id: "no-primary-email",
+      tone: "warn",
+      icon: <IconAlertTriangle size={14} />,
+      title: "No primary contact email",
+      detail: "Inbound inquiries cannot be matched to this client without one. Add it in Details.",
+    });
+  }
 
   const run = async (action: () => Promise<unknown>) => {
     setBusy(true);
@@ -117,18 +344,21 @@ export function PMClientDetailView({ clientId }: Readonly<{ clientId: string }>)
         onSelect={setTab}
       />
 
-      <div className="pm-project-workspace-main">
-        <div className="pm-tab-header" style={{ marginBottom: 16 }}>
-          <div>
+      {/* pm-project-workspace-content, not a bespoke class: it carries the 28px gutter that
+          separates this column from the subnav rule, plus the responsive overrides every other
+          workspace page relies on. */}
+      <section className="pm-project-workspace-content">
+        <div className="pm-client-detail-header">
+          <div className="pm-client-detail-heading">
             <Button variant="ghost" size="sm" icon={<IconArrowLeft size={13} />} onClick={() => router.push("/pm/clients")}>
               All clients
             </Button>
-            <h1 style={{ fontSize: 24, margin: "8px 0 4px" }}>{client.name}</h1>
-            <div style={{ color: "var(--text-2)", fontSize: 13 }}>
+            <h1>{client.name}</h1>
+            <p>
               {client.primaryContactName || client.primaryContactEmail || "No primary contact recorded"}
-            </div>
+            </p>
           </div>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <div className="pm-client-detail-status">
             <Badge tone={STATUS_TONE[client.status]}>{client.status.toLowerCase()}</Badge>
             <Select
               value={client.status}
@@ -155,82 +385,279 @@ export function PMClientDetailView({ clientId }: Readonly<{ clientId: string }>)
 
         {tab === "overview" && (
           <div className="pm-tab-layout pm-tab-layout--aside">
-            <Card className="pm-tab-panel pm-tab-panel--padded">
-              <SectionTitle title="At a glance" subtitle="What this client currently has with you." />
-              <div className="pm-tab-stat-grid" style={{ marginTop: 14 }}>
-                <Card className="pm-tab-panel pm-tab-panel--padded">
-                  <div style={{ color: "var(--text-3)", fontSize: 11.5 }}>Projects</div>
+            <div className="pm-client-overview-stack">
+              <Card className="pm-tab-panel pm-tab-panel--padded">
+                <SectionTitle title="At a glance" subtitle="What this client currently has with you." />
+                <div className="pm-tab-stat-grid" style={{ marginTop: 14 }}>
                   {/* Discovery spaces are counted apart from delivery work. Folding them in is
                       what made a client you have only just approved look like work in flight. */}
-                  <div style={{ fontSize: 22, fontWeight: 700 }}>{deliveryCount}</div>
-                  {discoveryCount > 0 && (
-                    <div className="pm-client-discovery" style={{ fontSize: 11.5, marginTop: 2 }}>
-                      +{discoveryCount} in discovery
+                  <div className="pm-client-stat">
+                    <small>Delivery projects</small>
+                    <strong>{deliveryCount}</strong>
+                    {discoveryCount > 0 ? (
+                      <span className="is-warn">+{discoveryCount} in discovery</span>
+                    ) : (
+                      <span>{overview.inFlight.length} in flight</span>
+                    )}
+                  </div>
+                  <div className="pm-client-stat">
+                    <small>Documents</small>
+                    <strong>{documents.totals.documents}</strong>
+                    <span>{documents.totals.files} with a file attached</span>
+                  </div>
+                  <div className="pm-client-stat">
+                    <small>Readable by agents</small>
+                    <strong>{documents.totals.readable}</strong>
+                    {documents.totals.files === 0 ? (
+                      <span>No files uploaded yet</span>
+                    ) : documents.totals.readable === documents.totals.files ? (
+                      <span className="is-good">Every file extracted</span>
+                    ) : (
+                      <span className="is-warn">
+                        {documents.totals.files - documents.totals.readable} still unreadable
+                      </span>
+                    )}
+                  </div>
+                  <div className="pm-client-stat">
+                    <small>Contacts</small>
+                    <strong>{contacts.length}</strong>
+                    {contacts.length === 0 ? (
+                      <span>Nobody on file</span>
+                    ) : (
+                      <span className={overview.contactsWithAccess.length === contacts.length ? "is-good" : "is-warn"}>
+                        {overview.contactsWithAccess.length} can open a project
+                      </span>
+                    )}
+                  </div>
+                  <div className="pm-client-stat">
+                    <small>Delivered</small>
+                    <strong>{overview.delivered.length}</strong>
+                    <span>
+                      {overview.failed.length > 0
+                        ? `${overview.failed.length} failed run${overview.failed.length === 1 ? "" : "s"}`
+                        : "No failed runs"}
+                    </span>
+                  </div>
+                  <div className="pm-client-stat">
+                    <small>Last activity</small>
+                    <strong style={{ fontSize: 17 }}>{relativeWhen(overview.lastActivityAt)}</strong>
+                    <span>Across projects and documents</span>
+                  </div>
+                </div>
+              </Card>
+
+              {/* Leads the column when there is something wrong: the overview exists to tell a PM
+                  what to do next, and a wall of counters never does. */}
+              <Card className="pm-tab-panel pm-tab-panel--padded">
+                <SectionTitle
+                  title="Needs attention"
+                  subtitle="Gaps that stop agents or the client from getting on with it."
+                />
+                <div className="pm-client-attention" style={{ marginTop: 14 }}>
+                  {attention.length === 0 ? (
+                    <div className="pm-client-attention-row" data-tone="good">
+                      <span className="pm-client-attention-icon">
+                        <IconCheckCircle size={14} />
+                      </span>
+                      <div className="pm-client-attention-copy">
+                        <strong>Nothing outstanding</strong>
+                        <span>
+                          Contacts, documents and projects are all in a state agents can work from.
+                        </span>
+                      </div>
+                      <span />
                     </div>
+                  ) : (
+                    attention.map((item) => (
+                      <div key={item.id} className="pm-client-attention-row" data-tone={item.tone}>
+                        <span className="pm-client-attention-icon">{item.icon}</span>
+                        <div className="pm-client-attention-copy">
+                          <strong>{item.title}</strong>
+                          <span>{item.detail}</span>
+                        </div>
+                        {item.action ? (
+                          <Button size="sm" variant="ghost" onClick={item.action.run}>
+                            {item.action.label}
+                          </Button>
+                        ) : (
+                          <span />
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </Card>
+
+              {projects.length > 0 && (
+                <Card className="pm-tab-panel pm-tab-panel--padded">
+                  <SectionTitle
+                    title="Delivery pipeline"
+                    subtitle="How far each piece of work has actually got."
+                  />
+                  <div className="pm-client-pipeline" style={{ marginTop: 16 }}>
+                    {overview.pipeline.slice(0, 5).map((project) => {
+                      const view = pipelineView(project.status);
+                      return (
+                        <div key={project.id} className="pm-client-pipeline-row">
+                          <div className="pm-client-pipeline-head">
+                            <strong>{project.companyName}</strong>
+                            <Badge tone={view.tone}>{view.label}</Badge>
+                            <span className="pm-client-pipeline-stage">{view.stage}</span>
+                          </div>
+                          <div className="pm-client-pipeline-track">
+                            <span
+                              style={{
+                                width: `${view.progress}%`,
+                                background: pipelineFill(view.tone),
+                              }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {projects.length > 5 && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      style={{ marginTop: 14, marginLeft: -12 }}
+                      onClick={() => setTab("projects")}
+                    >
+                      View all {projects.length} projects
+                    </Button>
                   )}
                 </Card>
-                <Card className="pm-tab-panel pm-tab-panel--padded">
-                  <div style={{ color: "var(--text-3)", fontSize: 11.5 }}>Documents</div>
-                  <div style={{ fontSize: 22, fontWeight: 700 }}>{documents.totals.documents}</div>
-                </Card>
-                <Card className="pm-tab-panel pm-tab-panel--padded">
-                  <div style={{ color: "var(--text-3)", fontSize: 11.5 }}>Readable by agents</div>
-                  <div style={{ fontSize: 22, fontWeight: 700 }}>{documents.totals.readable}</div>
-                </Card>
-                <Card className="pm-tab-panel pm-tab-panel--padded">
-                  <div style={{ color: "var(--text-3)", fontSize: 11.5 }}>Contacts</div>
-                  <div style={{ fontSize: 22, fontWeight: 700 }}>{contacts.length}</div>
-                </Card>
-              </div>
-              {client.notes && (
-                <div style={{ marginTop: 18 }}>
-                  <SectionTitle title="Notes" />
-                  <p style={{ color: "var(--text-2)", fontSize: 13, lineHeight: 1.6, marginTop: 8 }}>{client.notes}</p>
-                </div>
               )}
-            </Card>
 
-            <Card className="pm-tab-panel pm-tab-panel--padded">
-              <SectionTitle title="Details" subtitle="Used to match inbound inquiries to this client." />
-              <div style={{ display: "grid", gap: 12, marginTop: 14 }}>
-                <Field label="Primary contact name">
-                  <Input
-                    defaultValue={client.primaryContactName ?? ""}
-                    disabled={busy}
-                    onBlur={(event) =>
-                      event.target.value !== (client.primaryContactName ?? "") &&
-                      void run(() => updateDevFlowClient(client.id, { primaryContactName: event.target.value }))
-                    }
+              {overview.timeline.length > 0 && (
+                <Card className="pm-tab-panel pm-tab-panel--padded">
+                  <SectionTitle
+                    title="Recent activity"
+                    subtitle="The last things to move on this account."
                   />
-                </Field>
-                <Field label="Primary contact email">
-                  <Input
-                    defaultValue={client.primaryContactEmail ?? ""}
-                    disabled={busy}
-                    onBlur={(event) =>
-                      event.target.value !== (client.primaryContactEmail ?? "") &&
-                      void run(() => updateDevFlowClient(client.id, { primaryContactEmail: event.target.value }))
-                    }
-                  />
-                </Field>
-                <Field
-                  label="Workspace"
-                  helper="The team that delivers for this client. Moving it moves the client out of your current list."
-                >
-                  <WorkspaceSelect
-                    value={client.groupId}
-                    disabled={busy}
-                    onSelect={(groupId) =>
-                      groupId !== client.groupId &&
-                      void run(() => updateDevFlowClient(client.id, { groupId }))
-                    }
-                  />
-                </Field>
-                <div style={{ color: "var(--text-3)", fontSize: 11.5 }}>
-                  Added {formatBackendDate(client.createdAt)}
+                  <div className="pm-client-timeline" style={{ marginTop: 10 }}>
+                    {overview.timeline.map((entry) => (
+                      <button
+                        key={entry.id}
+                        type="button"
+                        className="pm-client-timeline-row"
+                        onClick={() => router.push(entry.href)}
+                      >
+                        <span className="pm-client-timeline-icon">
+                          {entry.kind === "project" ? <IconFolder size={14} /> : <IconFileText size={14} />}
+                        </span>
+                        <span className="pm-client-timeline-copy">
+                          <strong>{entry.title}</strong>
+                          <small>{entry.detail}</small>
+                        </span>
+                        <span className="pm-client-timeline-when" title={formatBackendDate(entry.at)}>
+                          {relativeWhen(entry.at)}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </Card>
+              )}
+
+              {/* Notes used to render only when they already existed, which left no way to write
+                  the first one from the console. */}
+              <Card className="pm-tab-panel pm-tab-panel--padded">
+                <SectionTitle
+                  title="Notes"
+                  subtitle="Internal context for your team. The client never sees this."
+                />
+                <Textarea
+                  key={client.notes ?? ""}
+                  defaultValue={client.notes ?? ""}
+                  disabled={busy}
+                  rows={4}
+                  placeholder="How this relationship works, who decides, anything the next PM should know."
+                  style={{ marginTop: 14 }}
+                  onBlur={(event) =>
+                    event.target.value !== (client.notes ?? "") &&
+                    void run(() => updateDevFlowClient(client.id, { notes: event.target.value }))
+                  }
+                />
+              </Card>
+            </div>
+
+            <div className="pm-client-overview-stack">
+              <Card className="pm-tab-panel pm-tab-panel--padded">
+                <SectionTitle title="Details" subtitle="Used to match inbound inquiries to this client." />
+                <div style={{ display: "grid", gap: 12, marginTop: 14 }}>
+                  <Field label="Primary contact name">
+                    <Input
+                      defaultValue={client.primaryContactName ?? ""}
+                      disabled={busy}
+                      onBlur={(event) =>
+                        event.target.value !== (client.primaryContactName ?? "") &&
+                        void run(() => updateDevFlowClient(client.id, { primaryContactName: event.target.value }))
+                      }
+                    />
+                  </Field>
+                  <Field label="Primary contact email">
+                    <Input
+                      type="email"
+                      defaultValue={client.primaryContactEmail ?? ""}
+                      disabled={busy}
+                      onBlur={(event) =>
+                        event.target.value !== (client.primaryContactEmail ?? "") &&
+                        void run(() => updateDevFlowClient(client.id, { primaryContactEmail: event.target.value }))
+                      }
+                    />
+                  </Field>
+                  <Field
+                    label="Workspace"
+                    helper="The team that delivers for this client. Moving it moves the client out of your current list."
+                  >
+                    <WorkspaceSelect
+                      value={client.groupId}
+                      disabled={busy}
+                      onSelect={(groupId) =>
+                        groupId !== client.groupId &&
+                        void run(() => updateDevFlowClient(client.id, { groupId }))
+                      }
+                    />
+                  </Field>
                 </div>
-              </div>
-            </Card>
+              </Card>
+
+              <Card className="pm-tab-panel pm-tab-panel--padded">
+                <SectionTitle title="Relationship" subtitle="Facts about the account itself." />
+                <div className="pm-client-facts" style={{ marginTop: 10 }}>
+                  <div className="pm-client-fact">
+                    <span>Added</span>
+                    <strong>{formatBackendDate(client.createdAt)}</strong>
+                  </div>
+                  <div className="pm-client-fact">
+                    <span>Last activity</span>
+                    <strong>
+                      {overview.lastActivityAt ? formatBackendDate(overview.lastActivityAt) : "No activity yet"}
+                    </strong>
+                  </div>
+                  <div className="pm-client-fact">
+                    <span>Record updated</span>
+                    <strong>{formatBackendDate(client.updatedAt)}</strong>
+                  </div>
+                  {client.createdBy && (
+                    <div className="pm-client-fact">
+                      <span>Added by</span>
+                      <strong>{client.createdBy.fullName || client.createdBy.email}</strong>
+                    </div>
+                  )}
+                  <div className="pm-client-fact">
+                    <span>Stacks in use</span>
+                    <strong>{overview.stacks.length > 0 ? overview.stacks.join(", ") : "None yet"}</strong>
+                  </div>
+                  <div className="pm-client-fact">
+                    <span>Projects with documents</span>
+                    <strong>
+                      {overview.documentedCount}/{projects.length}
+                    </strong>
+                  </div>
+                </div>
+              </Card>
+            </div>
           </div>
         )}
 
@@ -396,7 +823,7 @@ export function PMClientDetailView({ clientId }: Readonly<{ clientId: string }>)
             )}
           </Card>
         )}
-      </div>
+      </section>
 
       <Modal open={linkOpen} onClose={() => setLinkOpen(false)} title="Link a project to this client">
         <div style={{ display: "grid", gap: 12 }}>

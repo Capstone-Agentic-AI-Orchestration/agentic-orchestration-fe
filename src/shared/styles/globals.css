@@ -5413,6 +5413,269 @@ h1, h2, h3, h4 { letter-spacing: -0.025em; margin: 0; font-weight: 700; }
   font-variant-numeric: tabular-nums;
 }
 
+/* ---- Client detail header ----------------------------------------------
+   Back link, client name and the status controls read as one block, closed
+   by a hairline rule. Without the rule the name sat directly on top of the
+   first card and the two blocks fought for the same space. */
+.pm-client-detail-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding-bottom: 18px;
+  margin-bottom: 22px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.pm-client-detail-heading {
+  min-width: 0;
+  display: grid;
+  justify-items: start;
+}
+/* The back link is a ghost button carrying 12px of its own padding. Pull it flush so its label
+   lines up with the client name below instead of sitting indented from it. */
+.pm-client-detail-heading > .btn { margin-left: -12px; }
+.pm-client-detail-heading h1 {
+  margin: 9px 0 0;
+  font-size: 25px;
+  font-weight: 700;
+  letter-spacing: -.025em;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.pm-client-detail-heading > p {
+  margin: 5px 0 0;
+  color: var(--text-2);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.pm-client-detail-status {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-shrink: 0;
+}
+
+/* Both overview columns stack their cards on one rhythm. */
+.pm-client-overview-stack {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+  align-content: start;
+}
+
+/* ---- Stat tile ---------------------------------------------------------
+   A number on its own invites the wrong reading — "1 project" says nothing
+   about whether that project is moving. Every tile carries one supporting
+   line so the figure arrives with its context. */
+.pm-client-stat {
+  min-width: 0;
+  padding: 13px 14px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-md);
+  background: var(--bg-3);
+}
+.pm-client-stat > small {
+  display: block;
+  color: var(--text-3);
+  font-size: 11.5px;
+}
+.pm-client-stat > strong {
+  display: block;
+  margin-top: 5px;
+  font-size: 23px;
+  font-weight: 700;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.pm-client-stat > span {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-3);
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+.pm-client-stat > span.is-warn { color: var(--amber); font-weight: 600; }
+.pm-client-stat > span.is-good { color: var(--green); }
+
+/* ---- Needs attention --------------------------------------------------- */
+.pm-client-attention {
+  display: grid;
+  gap: 9px;
+  min-width: 0;
+}
+.pm-client-attention-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px 13px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-md);
+  background: var(--bg-3);
+}
+.pm-client-attention-row[data-tone="warn"] {
+  border-color: rgba(245,158,11,.28);
+  background: rgba(245,158,11,.06);
+}
+.pm-client-attention-row[data-tone="danger"] {
+  border-color: rgba(239,68,68,.28);
+  background: rgba(239,68,68,.06);
+}
+.pm-client-attention-row[data-tone="good"] {
+  border-color: rgba(16,185,129,.24);
+  background: rgba(16,185,129,.06);
+}
+.pm-client-attention-icon {
+  display: grid;
+  place-items: center;
+  color: var(--text-3);
+}
+.pm-client-attention-row[data-tone="warn"] .pm-client-attention-icon { color: var(--amber); }
+.pm-client-attention-row[data-tone="danger"] .pm-client-attention-icon { color: var(--red); }
+.pm-client-attention-row[data-tone="good"] .pm-client-attention-icon { color: var(--green); }
+/* Scoped to the copy wrapper on purpose: a bare `.pm-client-attention-row span` also matches the
+   icon span and outranks .pm-client-attention-icon, which flattened the icon's grid centring. */
+.pm-client-attention-copy { min-width: 0; }
+.pm-client-attention-copy > strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 650;
+}
+.pm-client-attention-copy > span {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-3);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+/* ---- Delivery pipeline ------------------------------------------------- */
+.pm-client-pipeline {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+.pm-client-pipeline-row {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+.pm-client-pipeline-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.pm-client-pipeline-head > strong {
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 650;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pm-client-pipeline-stage {
+  margin-left: auto;
+  flex-shrink: 0;
+  color: var(--text-3);
+  font-size: 11.5px;
+}
+.pm-client-pipeline-track {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--bg-sunken);
+  overflow: hidden;
+}
+.pm-client-pipeline-track > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  transition: width var(--motion-slow);
+}
+
+/* ---- Recent activity --------------------------------------------------- */
+.pm-client-timeline {
+  display: grid;
+  min-width: 0;
+}
+.pm-client-timeline-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  padding: 11px 6px;
+  text-align: left;
+  border: 0;
+  border-top: 1px solid var(--border-soft);
+  border-radius: var(--r-sm);
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  transition: background var(--motion-fast);
+}
+.pm-client-timeline-row:first-child { border-top: 0; }
+.pm-client-timeline-row:hover { background: var(--bg-3); }
+.pm-client-timeline-icon {
+  display: grid;
+  place-items: center;
+  color: var(--text-3);
+}
+/* A span, not a div: the row is a <button>, which may only contain phrasing content. */
+.pm-client-timeline-copy {
+  display: block;
+  min-width: 0;
+}
+.pm-client-timeline-row strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 620;
+  overflow-wrap: anywhere;
+}
+.pm-client-timeline-row small {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-3);
+  font-size: 11.5px;
+}
+.pm-client-timeline-when {
+  flex-shrink: 0;
+  color: var(--text-3);
+  font-size: 11.5px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Fact list (aside) ------------------------------------------------- */
+.pm-client-facts {
+  display: grid;
+  min-width: 0;
+}
+.pm-client-fact {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border-soft);
+}
+.pm-client-fact:first-child { border-top: 0; }
+.pm-client-fact > span {
+  flex-shrink: 0;
+  color: var(--text-3);
+  font-size: 12px;
+}
+.pm-client-fact > strong {
+  min-width: 0;
+  font-size: 12.5px;
+  font-weight: 620;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
 /* Project documents */
 .pm-document-summary {
   padding: 12px 16px;
