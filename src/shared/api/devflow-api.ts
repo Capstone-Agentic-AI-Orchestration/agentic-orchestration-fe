@@ -842,46 +842,14 @@ export interface DevFlowProjectTimelineEvent {
   actor: DevFlowProfile | null;
 }
 
-/**
- * Which owner's threads to read or write. Mirrors ConversationScope in the backend.
- *
- * A project scope is a delivery thread — developers and the project manager about one build. A
- * client scope is the relationship thread with a company, which is not stored under any project
- * because it outlives all of them.
- */
-export type DevFlowConversationScope =
-  | { kind: "project"; projectId: string }
-  | { kind: "client"; clientId: string };
-
-export const devflowProjectScope = (projectId: string): DevFlowConversationScope => ({
-  kind: "project",
-  projectId,
-});
-
-export const devflowClientScope = (clientId: string): DevFlowConversationScope => ({
-  kind: "client",
-  clientId,
-});
-
-/**
- * Stable string for a scope, for React dependency arrays.
- *
- * A scope is an object literal, so it is a new reference on every render — passing one straight
- * into a useEffect dependency array re-fires the effect forever. Depend on this instead.
- */
-export function devflowScopeKey(scope?: DevFlowConversationScope | null): string {
-  if (!scope) return "";
-  return scope.kind === "project" ? `project:${scope.projectId}` : `client:${scope.clientId}`;
-}
-
-const conversationBasePath = (scope: DevFlowConversationScope) =>
-  scope.kind === "project" ? `/projects/${scope.projectId}` : `/clients/${scope.clientId}`;
-
 export interface DevFlowConversation {
   id: string;
-  /** Null on a client-owned thread. Exactly one of this and clientId is set. */
+  /**
+   * Always null. Threads briefly hung off either a project or a client; both the company
+   * conversation and the developer channel have left the project, so nothing writes this now. Kept
+   * on the type because rows written before that still carry it.
+   */
   projectId: string | null;
-  /** Null on a project-owned thread. */
   clientId: string | null;
   title: string;
   category: DevFlowConversationCategory;
@@ -899,7 +867,7 @@ export interface DevFlowConversation {
 
 export interface DevFlowMessage {
   id: string;
-  /** Mirrors the owning conversation, so null on a client thread. Never key a read on it. */
+  /** Mirrors the owning conversation, so always null now. Never key a read on it. */
   projectId: string | null;
   conversationId: string;
   authorId: string | null;
@@ -2019,51 +1987,51 @@ export function verifyDevFlowLlmProvider(projectId: string): Promise<DevFlowLlmP
   });
 }
 
-export function getDevFlowConversations(
-  scope: DevFlowConversationScope,
-): Promise<DevFlowConversation[]> {
-  return request<DevFlowConversation[]>(`${conversationBasePath(scope)}/conversations`);
+/**
+ * Threads with one client company.
+ *
+ * There is no project equivalent. The company conversation belongs to the client because it
+ * outlives any single build, and the developer-to-project-manager channel that used to sit on a
+ * project was removed rather than moved.
+ */
+export function getDevFlowConversations(clientId: string): Promise<DevFlowConversation[]> {
+  return request<DevFlowConversation[]>(`/clients/${clientId}/conversations`);
 }
 
 export function createDevFlowConversation(
-  scope: DevFlowConversationScope,
+  clientId: string,
   input: CreateDevFlowConversationInput,
 ): Promise<DevFlowConversation> {
-  return request<DevFlowConversation>(`${conversationBasePath(scope)}/conversations`, {
+  return request<DevFlowConversation>(`/clients/${clientId}/conversations`, {
     method: "POST",
     body: JSON.stringify(input),
   });
 }
 
 export function getDevFlowConversationMessages(
-  scope: DevFlowConversationScope,
+  clientId: string,
   conversationId: string,
 ): Promise<DevFlowMessage[]> {
-  return request<DevFlowMessage[]>(
-    `${conversationBasePath(scope)}/conversations/${conversationId}/messages`,
-  );
+  return request<DevFlowMessage[]>(`/clients/${clientId}/conversations/${conversationId}/messages`);
 }
 
 export function createDevFlowMessage(
-  scope: DevFlowConversationScope,
+  clientId: string,
   conversationId: string,
   input: CreateDevFlowMessageInput,
 ): Promise<DevFlowMessage> {
-  return request<DevFlowMessage>(
-    `${conversationBasePath(scope)}/conversations/${conversationId}/messages`,
-    {
-      method: "POST",
-      body: JSON.stringify(input),
-    },
-  );
+  return request<DevFlowMessage>(`/clients/${clientId}/conversations/${conversationId}/messages`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
 }
 
 export function markDevFlowConversationRead(
-  scope: DevFlowConversationScope,
+  clientId: string,
   conversationId: string,
 ): Promise<{ read: true; lastReadAt: string }> {
   return request<{ read: true; lastReadAt: string }>(
-    `${conversationBasePath(scope)}/conversations/${conversationId}/read`,
+    `/clients/${clientId}/conversations/${conversationId}/read`,
     { method: "PATCH" },
   );
 }

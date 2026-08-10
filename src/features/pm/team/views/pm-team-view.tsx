@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { Badge, Button, Card, Field, Input, Select, Tabs, Textarea, useToast } from "@/shared/components/ui";
 import { IconArrowLeft, IconGitHub, IconPlus, IconRefresh, IconUsers } from "@/shared/components/icons";
 import {
-  assignDevFlowRepository,
   createDevFlowProject,
   inviteDevFlowGroupMember,
   listDevFlowGroupEligibleUsers,
@@ -13,7 +12,6 @@ import {
   listDevFlowProjects,
   listDevFlowRepositories,
   removeDevFlowGroupMember,
-  revokeDevFlowRepositoryAssignment,
   updateDevFlowGroupMemberRole,
   type DevFlowGroupPerson,
   type DevFlowGroupRole,
@@ -62,7 +60,6 @@ export function PMTeamView({ groupId }: { groupId: string }) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [eligible, setEligible] = useState<DevFlowGroupPerson[]>([]);
   const [invite, setInvite] = useState({ userId: "", role: "MEMBER" as Exclude<DevFlowGroupRole, "LEAD"> });
-  const [assignmentUsers, setAssignmentUsers] = useState<Record<string, string>>({});
   const [activeTab, setActiveTab] = useState<"members" | "projects">("members");
   // A project is created for a client, so this wizard needs the client list even though it is
   // scoped to a team. Team and client are independent: the team is who builds it, the client is
@@ -112,7 +109,6 @@ export function PMTeamView({ groupId }: { groupId: string }) {
     listDevFlowGroupEligibleUsers(group.id).then(setEligible).catch(() => setEligible([]));
   }, [group?.id, group?.status, group?.updatedAt]);
 
-  const developers = group?.members.filter((member) => member.user.role === "DEV") ?? [];
 
   const run = async (action: () => Promise<unknown>) => {
     setBusy(true);
@@ -404,31 +400,16 @@ export function PMTeamView({ groupId }: { groupId: string }) {
                   <Badge tone={repository.status === "ACTIVE" ? "green" : repository.status === "FAILED" ? "red" : "gray"}>{repository.status}</Badge>
                   {repository.htmlUrl && <a className="btn btn-secondary btn-sm" href={repository.htmlUrl} target="_blank" rel="noreferrer">Open GitHub</a>}
                 </div>
-                {developers.length > 0 && repository.status === "ACTIVE" && (
-                  <div className="row gap-2" style={{ width: "100%", marginTop: 4 }}>
-                    <Select value={assignmentUsers[repository.id] || ""} onChange={(event) => setAssignmentUsers({ ...assignmentUsers, [repository.id]: event.target.value })}>
-                      <option value="">Assign a developer</option>
-                      {developers
-                        .filter((member) => !repository.assignments.some((assignment) => assignment.desiredState === "ASSIGNED" && assignment.userId === member.userId))
-                        .map((member) => <option key={member.userId} value={member.userId}>{member.user.fullName || member.user.email}</option>)}
-                    </Select>
-                    <Button variant="secondary" size="sm" disabled={busy || !assignmentUsers[repository.id]} onClick={() => void run(async () => {
-                      const devName = developers.find((member) => member.userId === assignmentUsers[repository.id])?.user.fullName;
-                      await assignDevFlowRepository(repository.id, assignmentUsers[repository.id]);
-                      setAssignmentUsers((previous) => ({ ...previous, [repository.id]: "" }));
-                      toast.success("Developer granted access", `${devName || "The developer"} can now see ${repository.name} in this team.`);
-                    })}>Grant access</Button>
-                  </div>
-                )}
+                {/* No grant control here. Repository access follows project membership now: add a
+                    developer on the project's Members tab and they can push to all of its
+                    repositories. A second place to grant the same thing is what produced projects
+                    with a team, a repository, and nobody able to push to it. */}
                 {repository.assignments.filter((assignment) => assignment.desiredState === "ASSIGNED").length > 0 && (
                   <div style={{ width: "100%", marginTop: 4, display: "flex", flexWrap: "wrap", gap: 6 }}>
                     {repository.assignments.filter((assignment) => assignment.desiredState === "ASSIGNED").map((assignment) => (
-                      <span key={assignment.id} className="row gap-2">
-                        <Badge tone={assignment.effectiveState === "ACTIVE" ? "green" : assignment.effectiveState === "FAILED" ? "red" : "yellow"}>
-                          {assignment.user.fullName || assignment.user.email} · {assignment.effectiveState}
-                        </Badge>
-                        <Button variant="ghost" size="sm" disabled={busy} onClick={() => void run(() => revokeDevFlowRepositoryAssignment(repository.id, assignment.userId))}>Revoke</Button>
-                      </span>
+                      <Badge key={assignment.id} tone={assignment.effectiveState === "ACTIVE" ? "green" : assignment.effectiveState === "FAILED" ? "red" : "yellow"}>
+                        {assignment.user.fullName || assignment.user.email} · {assignment.effectiveState}
+                      </Badge>
                     ))}
                   </div>
                 )}

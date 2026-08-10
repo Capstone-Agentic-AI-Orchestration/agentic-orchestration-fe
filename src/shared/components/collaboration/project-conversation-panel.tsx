@@ -5,20 +5,17 @@ import { Badge, Button, Card, Field, Input, Modal, Textarea } from "@/shared/com
 import { IconArrowLeft, IconMessageCircle, IconPlus, IconRefresh, IconSend } from "@/shared/components/icons";
 import { useDevFlowConversationMessages, useDevFlowConversations } from "@/shared/hooks/use-devflow-collaboration";
 import { compactDevFlowError, formatDevFlowDate } from "@/shared/utils/devflow-projects";
-import {
-  devflowScopeKey,
-  type DevFlowCollaborationVisibility,
-  type DevFlowConversationCategory,
-  type DevFlowConversationScope,
+import type {
+  DevFlowCollaborationVisibility,
+  DevFlowConversationCategory,
 } from "@/shared/api/devflow-api";
 
 export interface ConversationPanelProps {
   /**
-   * Whose threads these are. A project scope is the developer-and-project-manager delivery
-   * conversation; a client scope is the project manager's conversation with the company, which is
-   * not stored under any project.
+   * The client company whose threads these are. There is no project equivalent: the conversation
+   * belongs to the company, because it outlives any single build.
    */
-  scope?: DevFlowConversationScope | null;
+  clientId?: string | null;
   title?: string;
   subtitle?: string;
   /** Who the active thread is between, shown above the message list. */
@@ -28,12 +25,12 @@ export interface ConversationPanelProps {
   emptyText?: string;
   newThreadTitle?: string;
   newThreadHint?: string;
-  /** Shown in place of the panel when no scope is available. */
-  noScopeText?: string;
+  /** Shown in place of the panel when no client is available. */
+  noClientText?: string;
 }
 
 export function ConversationPanel({
-  scope,
+  clientId,
   title = "Conversations",
   subtitle = "Messages from the collaboration backend.",
   participantsLabel = "Developer and project manager",
@@ -42,15 +39,15 @@ export function ConversationPanel({
   emptyText = "No conversations yet.",
   newThreadTitle = "Start a thread",
   newThreadHint = "Start a conversation with the project manager.",
-  noScopeText = "Nothing is selected.",
+  noClientText = "Nothing is selected.",
 }: Readonly<ConversationPanelProps>) {
-  const { conversations, loading, error, refresh, createConversation } = useDevFlowConversations(scope);
+  const { conversations, loading, error, refresh, createConversation } = useDevFlowConversations(clientId);
   const [activeId, setActiveId] = useState<string | null>(null);
   const active = useMemo(
     () => conversations.find((conversation) => conversation.id === activeId) || conversations[0] || null,
     [activeId, conversations],
   );
-  const messages = useDevFlowConversationMessages(scope, active?.id);
+  const messages = useDevFlowConversationMessages(clientId, active?.id);
   const [draft, setDraft] = useState("");
   const [newTitle, setNewTitle] = useState("");
   const [newMessage, setNewMessage] = useState("");
@@ -59,10 +56,6 @@ export function ConversationPanel({
   const [creating, setCreating] = useState(false);
   const [mobileDetail, setMobileDetail] = useState(false);
   const lastReadRefreshKey = useRef("");
-
-  // A stable identity for the scope: it is an object literal at the call site, so comparing the
-  // object itself would reset the panel on every render.
-  const scopeKey = devflowScopeKey(scope);
 
   useEffect(() => {
     setActiveId(null);
@@ -73,7 +66,7 @@ export function ConversationPanel({
     setCreating(false);
     setMobileDetail(false);
     lastReadRefreshKey.current = "";
-  }, [scopeKey]);
+  }, [clientId]);
 
   useEffect(() => {
     if (!activeId && conversations[0]) setActiveId(conversations[0].id);
@@ -82,11 +75,11 @@ export function ConversationPanel({
   // Opening a thread marks it read on the server, so the unread badges in the list are stale until
   // the list is refetched. Guarded by a key so this fires once per thread, not on every render.
   useEffect(() => {
-    const readRefreshKey = scopeKey && active?.id ? `${scopeKey}:${active.id}` : "";
+    const readRefreshKey = clientId && active?.id ? `${clientId}:${active.id}` : "";
     if (!readRefreshKey || messages.loading || messages.error || lastReadRefreshKey.current === readRefreshKey) return;
     lastReadRefreshKey.current = readRefreshKey;
     void refresh();
-  }, [active?.id, messages.error, messages.loading, scopeKey, refresh]);
+  }, [active?.id, messages.error, messages.loading, clientId, refresh]);
 
   const createThread = async () => {
     if (!newTitle.trim()) return;
@@ -126,8 +119,8 @@ export function ConversationPanel({
     }
   };
 
-  if (!scope) {
-    return <Card style={{ padding: 22, color: "var(--text-3)" }}>{noScopeText}</Card>;
+  if (!clientId) {
+    return <Card style={{ padding: 22, color: "var(--text-3)" }}>{noClientText}</Card>;
   }
 
   return (
@@ -297,10 +290,3 @@ export function ConversationPanel({
   );
 }
 
-/**
- * @deprecated Prefer `ConversationPanel` with an explicit scope. Kept so the developer console's
- * project threads keep working without a second rename in the same change.
- */
-export function ProjectConversationPanel(props: Readonly<ConversationPanelProps>) {
-  return <ConversationPanel {...props} />;
-}

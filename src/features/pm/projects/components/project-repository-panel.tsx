@@ -1,15 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Badge, Button, Card, Field, Input, Select } from "@/shared/components/ui";
-import { IconGitHub, IconPlus, IconRefresh } from "@/shared/components/icons";
-import { SectionTitle } from "@/features/pm/projects/components/pm-project-ui";
+import { Badge, Button, Card, Field, Input } from "@/shared/components/ui";
+import { IconGitHub, IconPlus } from "@/shared/components/icons";
 import {
-  assignDevFlowRepository,
   createDevFlowRepository,
-  listDevFlowGroupEligibleUsers,
   listDevFlowRepositories,
-  revokeDevFlowRepositoryAssignment,
   type DevFlowRepository,
 } from "@/shared/api/devflow-api";
 import { compactDevFlowError } from "@/shared/utils/devflow-projects";
@@ -17,17 +13,20 @@ import { compactDevFlowError } from "@/shared/utils/devflow-projects";
 const POLL_INTERVAL_MS = 20_000;
 
 /**
- * Repository provisioning for one project, which is the PM's half of the delivery split: they
- * decide where a client's code lives and who may push to it, while the developer owns prompting
- * and the build itself. POST /repositories and every assignment route are @Roles(PM, ADMIN);
- * this panel is the surface for them.
+ * This project's repositories. Nothing else.
  *
- * It used to be a console-wide "Repositories" destination listing every repo in the workspace,
- * which meant picking the project from a dropdown to say something that is only ever true of one
- * project. Now it lives inside the project, where "grant this developer access" needs no prefix.
+ * It used to carry a per-repository "grant access to a developer" control, and that is gone rather
+ * than moved. Access to a project's code follows project membership: a developer added on the
+ * Members tab can push to every repository the project has. Two places to grant the same thing meant
+ * projects with a team, a repository, and nobody able to push — because the second step was easy to
+ * forget and nothing pointed out that it had been.
  *
- * Provisioning is asynchronous (GitHub is called out-of-band), so a new repository appears as
- * PENDING and this panel polls until it settles to ACTIVE or FAILED.
+ * One consequence worth knowing: with the per-repository controls gone, a GitHub invite that fails
+ * (no linked GitHub login, an API outage) is no longer visible on this page. It is recorded on the
+ * assignment and reachable through the reconcile route, but the console does not surface it here.
+ *
+ * Provisioning is asynchronous, so a new repository appears as PENDING and this polls until it
+ * settles to ACTIVE or FAILED.
  */
 export function ProjectRepositoryPanel({
   projectId,
@@ -77,24 +76,6 @@ export function ProjectRepositoryPanel({
 
   return (
     <div style={{ display: "grid", gap: 14 }}>
-      <Card className="pm-tab-panel pm-tab-panel--padded">
-        <div className="pm-tab-header">
-          <SectionTitle
-            title="Repository"
-            subtitle="The GitHub repository this project is built in, and which developers may push to it."
-          />
-          <Button
-            variant="secondary"
-            size="sm"
-            icon={<IconRefresh size={14} />}
-            disabled={loading}
-            onClick={() => void refresh()}
-          >
-            {loading ? "Refreshing..." : "Refresh"}
-          </Button>
-        </div>
-      </Card>
-
       {error && (
         <Card className="pm-tab-panel pm-tab-message pm-tab-message--danger">
           {compactDevFlowError(error)}
@@ -102,13 +83,15 @@ export function ProjectRepositoryPanel({
       )}
 
       {loading && repositories.length === 0 && (
-        <Card className="pm-tab-panel pm-tab-empty">Loading repository...</Card>
+        <Card className="pm-tab-panel pm-tab-empty">Loading repositories...</Card>
       )}
 
       {repositories.map((repository) => (
-        <RepositoryCard key={repository.id} repository={repository} onChanged={() => void refresh(true)} />
+        <RepositoryCard key={repository.id} repository={repository} />
       ))}
 
+      {/* The empty state stays: without it a project with no repository has no way to get one, and
+          a developer cannot start a build until it exists. */}
       {!loading && repositories.length === 0 && (
         <CreateRepositoryCard
           groupId={groupId}
@@ -202,70 +185,7 @@ const STATUS_TONE: Record<string, "green" | "red" | "yellow" | "gray"> = {
   ARCHIVED: "gray",
 };
 
-function RepositoryCard({
-  repository,
-  onChanged,
-}: {
-  repository: DevFlowRepository;
-  onChanged: () => void;
-}) {
-  const [candidates, setCandidates] = useState<Array<{ id: string; name: string }>>([]);
-  const [selectedUserId, setSelectedUserId] = useState("");
-  const [busy, setBusy] = useState("");
-  const [error, setError] = useState("");
-
-  const active = repository.assignments.filter((item) => item.desiredState === "ASSIGNED");
-
-  useEffect(() => {
-    let cancelled = false;
-    listDevFlowGroupEligibleUsers(repository.groupId)
-      .then((people) => {
-        if (cancelled) return;
-        setCandidates(
-          people
-            .filter((person) => person.role === "DEV" && person.onSystem)
-            .map((person) => ({ id: person.id ?? "", name: person.fullName || person.githubLogin || person.email || "Unknown" }))
-            .filter((person) => person.id),
-        );
-      })
-      .catch(() => setCandidates([]));
-    return () => {
-      cancelled = true;
-    };
-  }, [repository.groupId]);
-
-  const assign = async () => {
-    if (!selectedUserId) return;
-    setBusy(selectedUserId);
-    setError("");
-    try {
-      await assignDevFlowRepository(repository.id, selectedUserId);
-      setSelectedUserId("");
-      onChanged();
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : String(requestError));
-    } finally {
-      setBusy("");
-    }
-  };
-
-  const revoke = async (userId: string) => {
-    setBusy(userId);
-    setError("");
-    try {
-      await revokeDevFlowRepositoryAssignment(repository.id, userId);
-      onChanged();
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : String(requestError));
-    } finally {
-      setBusy("");
-    }
-  };
-
-  const unassigned = candidates.filter(
-    (person) => !active.some((assignment) => assignment.userId === person.id),
-  );
-
+function RepositoryCard({ repository }: { repository: DevFlowRepository }) {
   return (
     <Card className="pm-tab-panel pm-tab-panel--padded">
       <div className="row" style={{ justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
@@ -278,56 +198,11 @@ function RepositoryCard({
         <Badge tone={STATUS_TONE[repository.status] ?? "gray"}>{repository.status}</Badge>
       </div>
 
+      {/* Provisioning failures stay. This is the repository's own state, not other content — and a
+          PM who cannot see it has no way to know why nothing can be delivered. */}
       {repository.lastError && (
         <p style={{ color: "#FCA5A5", marginTop: 10, fontSize: 13 }}>{repository.lastError}</p>
       )}
-
-      <div style={{ marginTop: 16 }}>
-        <div style={{ color: "var(--text-3)", fontSize: 12, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-          Developer access
-        </div>
-        {active.length === 0 ? (
-          <p style={{ color: "var(--text-3)", fontSize: 13, marginTop: 8 }}>
-            Nobody has access yet. A developer needs access before they can push a build here.
-          </p>
-        ) : (
-          <div className="row gap-2" style={{ marginTop: 8, flexWrap: "wrap" }}>
-            {active.map((assignment) => (
-              <span key={assignment.id} className="row gap-2" style={{ alignItems: "center" }}>
-                <Badge tone={assignment.effectiveState === "ACTIVE" ? "green" : assignment.effectiveState === "FAILED" ? "red" : "yellow"}>
-                  {assignment.user.fullName || assignment.user.githubLogin} · {assignment.effectiveState}
-                </Badge>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  disabled={busy === assignment.userId}
-                  onClick={() => revoke(assignment.userId)}
-                >
-                  {busy === assignment.userId ? "Revoking..." : "Revoke"}
-                </Button>
-              </span>
-            ))}
-          </div>
-        )}
-
-        <div className="row gap-2" style={{ marginTop: 12, alignItems: "center", flexWrap: "wrap" }}>
-          <Select
-            value={selectedUserId}
-            onChange={(event) => setSelectedUserId(event.target.value)}
-            style={{ width: 240 }}
-          >
-            <option value="">Grant access to a developer</option>
-            {unassigned.map((person) => (
-              <option key={person.id} value={person.id}>{person.name}</option>
-            ))}
-          </Select>
-          <Button variant="secondary" size="sm" onClick={assign} disabled={!selectedUserId || Boolean(busy)}>
-            Grant access
-          </Button>
-        </div>
-      </div>
-
-      {error && <div style={{ color: "#FCA5A5", fontSize: 13, marginTop: 12 }}>{compactDevFlowError(error)}</div>}
 
       {repository.htmlUrl && (
         <div className="row gap-2" style={{ marginTop: 16, flexWrap: "wrap" }}>

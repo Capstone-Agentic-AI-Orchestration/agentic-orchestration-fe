@@ -500,15 +500,6 @@ function BackendProjectDetail({ project, onBack }) {
     },
   });
 
-  /**
-   * Project status belongs on the landing section, not above every section.
-   *
-   * It was promoted out of the old Overview tab to render everywhere, which sounded like
-   * "never lose the context" and read as "scroll past 700px of banners, stepper, hero and
-   * guidance to reach the board you opened". A section you navigated to should start at its
-   * own content; Repository is where you go to ask where the project is up to.
-   */
-  const showProjectStatus = tab === PM_PROJECT_DEFAULT_SECTION;
 
   return (
     <div className="pm-project-workspace" data-screen-label={`PM - Backend Project - ${detail.id}`}>
@@ -543,95 +534,6 @@ function BackendProjectDetail({ project, onBack }) {
           </div>
         }
       />
-
-      {showProjectStatus && detail.status === "DISCOVERY" && (
-        <Card className="pm-discovery-banner">
-          <div className="pm-discovery-copy">
-            <strong>This project is in discovery</strong>
-            <span>
-              Talk to the client and collect the documents you need. Nothing is built and
-              orchestration stays locked until you start delivery.
-            </span>
-          </div>
-          <Button
-            disabled={startingDelivery}
-            onClick={async () => {
-              setStartingDelivery(true);
-              try {
-                await startDevFlowProjectDelivery(detail.id);
-                setDetail(await getDevFlowProject(detail.id));
-              } finally {
-                setStartingDelivery(false);
-              }
-            }}
-          >
-            {startingDelivery ? "Starting..." : "Start delivery"}
-          </Button>
-        </Card>
-      )}
-
-      {showProjectStatus && (detail.client ? (
-        <button
-          type="button"
-          className="pm-project-client-chip"
-          onClick={() => router.push(`/pm/clients/${detail.client.id}`)}
-        >
-          <IconBriefcase size={13} />
-          <span>{detail.client.name}</span>
-          <span className="pm-project-client-chip-hint">View client</span>
-        </button>
-      ) : (
-        <button
-          type="button"
-          className="pm-unassigned-banner"
-          style={{ marginBottom: 14 }}
-          onClick={() => router.push("/pm/clients/unassigned")}
-        >
-          <span className="pm-unassigned-icon" aria-hidden="true"><IconAlertTriangle size={15} /></span>
-          <span className="pm-unassigned-copy">
-            <strong>This project has no client</strong>
-            <span>It will not appear on any client page until you link it to a company.</span>
-          </span>
-          <span className="pm-unassigned-action">Link a client</span>
-        </button>
-      ))}
-
-      {showProjectStatus && (
-      <div className="pm-project-section-stack">
-          <div className="project-detail-lifecycle">
-            <ProjectLifecycleIndicator
-              currentStage={lifecycleStageId}
-              maxReachedStage={lifecycleStageId}
-              completedStages={completedStagesFromProject}
-            />
-          </div>
-
-          <ProjectNextActionHero
-            projectName={detail.companyName}
-            stackKey={detail.stackKey}
-            status={detail.status}
-            runId={detail.runId}
-            repoUrl={detail.repoUrl}
-            artifactCount={outputs.artifacts.length}
-            hasRunBudget={Boolean(detail.runBudget)}
-            tokensConsumed={detail.runBudget?.tokensConsumed}
-            tokenBudget={detail.runBudget?.tokenBudget}
-            retryCount={detail.runBudget?.retryCount}
-            maxRetries={detail.runBudget?.maxRetries}
-            orchestrationBlockers={orchestrationBlockers}
-            providerAvailable={provider.status?.available}
-            providerReason={provider.status?.reason || provider.error}
-            // The PM observes the build; starting it and deciding the gates are the
-            // developer's, so no start/approve handlers are passed at all. Repository
-            // creation stays because provisioning the repo IS the PM's job here.
-            canBuild={false}
-            onCreateRepo={handleCreateRepo}
-          />
-
-          <GuidedActionPanel context={projectJourney} />
-          <BlockingIssuePanel issues={projectJourney.blockers} />
-      </div>
-      )}
 
       {error && (
         <Card style={{ padding: 14, marginBottom: 16, color: "#FCA5A5", border: "1px solid rgba(239,68,68,.30)" }}>
@@ -694,14 +596,6 @@ function BackendProjectDetail({ project, onBack }) {
           />
         )}
 
-        {/* Read-only. The conversation with a company is stored on the client, not here — see
-            PMClientConversationRollup for why the composer deliberately is not on this page. */}
-        {tab === "messages" && (
-          <PMClientConversationRollup
-            clientId={detail.client?.id}
-            clientName={detail.client?.name}
-          />
-        )}
 
         {tab === "documents" && (
           <BackendDocumentsPanel

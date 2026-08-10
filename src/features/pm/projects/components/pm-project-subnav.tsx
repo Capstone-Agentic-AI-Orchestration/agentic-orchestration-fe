@@ -9,7 +9,6 @@ import {
   IconFileText,
   IconFolder,
   IconGitBranch,
-  IconMessageCircle,
   IconSettings,
   IconUsers,
 } from "@/shared/components/icons";
@@ -29,6 +28,10 @@ import {
  *    with the split as a filter — Members reads tasks, Agents reads work orders.
  *  - Timeline was an audit log dominated by TASK_* and WORK_ORDER_* events, which is now each
  *    issue's own activity. The event stream and its component still exist for the dev console.
+ *  - Client messages held the conversation with the company. That conversation belongs to the
+ *    company, not to one of its builds, so it lives on the client: PM console > Clients > the
+ *    client > Messages. Nothing replaced it here, not even a read-only view, because a second
+ *    place to read a thread is a second place to think you have replied in.
  */
 export type PMProjectSectionId =
   | "repository"
@@ -36,7 +39,6 @@ export type PMProjectSectionId =
   | "intake"
   | "artifacts"
   | "delivery-review"
-  | "messages"
   | "documents"
   | "members"
   | "settings";
@@ -68,7 +70,6 @@ const PROJECT_SECTIONS: Array<{ label: string; items: ProjectSectionItem[] }> = 
   {
     label: "Collaboration",
     items: [
-      { value: "messages", label: "Client messages", icon: <IconMessageCircle size={15} /> },
       { value: "documents", label: "Client documents", icon: <IconFolder size={15} /> },
       { value: "members", label: "Members", icon: <IconUsers size={15} /> },
     ],

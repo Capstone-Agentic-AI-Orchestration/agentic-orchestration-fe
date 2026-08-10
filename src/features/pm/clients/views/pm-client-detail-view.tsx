@@ -28,7 +28,6 @@ import { useDevFlowConversations } from "@/shared/hooks/use-devflow-collaboratio
 import { useSelectedTeamWorkspace } from "@/shared/projects/selected-team-workspace-context";
 import {
   addDevFlowClientContact,
-  devflowClientScope,
   getDevFlowClientContactCandidates,
   listDevFlowProjects,
   removeDevFlowClientContact,
@@ -120,8 +119,7 @@ export function PMClientDetailView({ clientId }: Readonly<{ clientId: string }>)
 
   // The relationship conversation. Fetched here as well as inside the panel because the subnav
   // badge has to show unread mail on every section, not only while Messages is open.
-  const conversationScope = useMemo(() => devflowClientScope(clientId), [clientId]);
-  const { conversations } = useDevFlowConversations(conversationScope);
+  const { conversations } = useDevFlowConversations(clientId);
   const unreadMessages = useMemo(
     () => conversations.reduce((total, conversation) => total + (conversation.unreadCount ?? 0), 0),
     [conversations],
@@ -709,7 +707,7 @@ export function PMClientDetailView({ clientId }: Readonly<{ clientId: string }>)
             everything ever said sat in the first project's tab. */}
         {tab === "messages" && (
           <ConversationPanel
-            scope={conversationScope}
+            clientId={clientId}
             title="Client conversation"
             subtitle={`Threads with ${client.name}. Not tied to a project — this carries on between builds.`}
             participantsLabel="Project manager and client"
@@ -718,7 +716,7 @@ export function PMClientDetailView({ clientId }: Readonly<{ clientId: string }>)
             emptyText="No threads with this client yet. Start one to ask for what you need, or to send an update."
             newThreadTitle={`Start a thread with ${client.name}`}
             newThreadHint="The client's contacts can read and reply to this. Keep project-specific delivery chatter on the project instead."
-            noScopeText="This client is unavailable."
+            noClientText="This client is unavailable."
           />
         )}
 

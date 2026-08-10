@@ -5,7 +5,6 @@ import {
   createDevFlowCollaborationDocument,
   createDevFlowConversation,
   createDevFlowMessage,
-  devflowScopeKey,
   getDevFlowCollaborationDocuments,
   getDevFlowConversationMessages,
   getDevFlowConversations,
@@ -14,28 +13,20 @@ import {
   type CreateDevFlowConversationInput,
   type DevFlowCollaborationDocument,
   type DevFlowConversation,
-  type DevFlowConversationScope,
   type DevFlowMessage,
   type ReviewDevFlowCollaborationDocumentInput,
 } from "@/shared/api/devflow-api";
 
 const errorText = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
-/**
- * Threads for one owner — a project or a client.
- *
- * Note the dependency on `devflowScopeKey(scope)` rather than `scope`. A scope is an object
- * literal built at the call site, so it is a fresh reference on every render; depending on the
- * object itself re-runs the fetch forever.
- */
-export function useDevFlowConversations(scope?: DevFlowConversationScope | null) {
+/** Threads with one client company. */
+export function useDevFlowConversations(clientId?: string | null) {
   const [conversations, setConversations] = useState<DevFlowConversation[]>([]);
-  const [loading, setLoading] = useState(Boolean(scope));
+  const [loading, setLoading] = useState(Boolean(clientId));
   const [error, setError] = useState("");
-  const scopeKey = devflowScopeKey(scope);
 
   const refresh = useCallback(async () => {
-    if (!scope) {
+    if (!clientId) {
       setConversations([]);
       setLoading(false);
       setError("");
@@ -45,26 +36,23 @@ export function useDevFlowConversations(scope?: DevFlowConversationScope | null)
     setLoading(true);
     setError("");
     try {
-      setConversations(await getDevFlowConversations(scope));
+      setConversations(await getDevFlowConversations(clientId));
     } catch (nextError) {
       setConversations([]);
       setError(errorText(nextError));
     } finally {
       setLoading(false);
     }
-    // scopeKey, not scope — see the note above.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scopeKey]);
+  }, [clientId]);
 
   const createConversation = useCallback(
     async (input: CreateDevFlowConversationInput) => {
-      if (!scope) return null;
-      const conversation = await createDevFlowConversation(scope, input);
+      if (!clientId) return null;
+      const conversation = await createDevFlowConversation(clientId, input);
       await refresh();
       return conversation;
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [scopeKey, refresh],
+    [clientId, refresh],
   );
 
   useEffect(() => {
@@ -75,16 +63,15 @@ export function useDevFlowConversations(scope?: DevFlowConversationScope | null)
 }
 
 export function useDevFlowConversationMessages(
-  scope?: DevFlowConversationScope | null,
+  clientId?: string | null,
   conversationId?: string | null,
 ) {
   const [messages, setMessages] = useState<DevFlowMessage[]>([]);
-  const [loading, setLoading] = useState(Boolean(scope && conversationId));
+  const [loading, setLoading] = useState(Boolean(clientId && conversationId));
   const [error, setError] = useState("");
-  const scopeKey = devflowScopeKey(scope);
 
   const refresh = useCallback(async () => {
-    if (!scope || !conversationId) {
+    if (!clientId || !conversationId) {
       setMessages([]);
       setLoading(false);
       setError("");
@@ -94,25 +81,23 @@ export function useDevFlowConversationMessages(
     setLoading(true);
     setError("");
     try {
-      setMessages(await getDevFlowConversationMessages(scope, conversationId));
+      setMessages(await getDevFlowConversationMessages(clientId, conversationId));
     } catch (nextError) {
       setMessages([]);
       setError(errorText(nextError));
     } finally {
       setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scopeKey, conversationId]);
+  }, [clientId, conversationId]);
 
   const sendMessage = useCallback(
     async (body: string) => {
-      if (!scope || !conversationId) return null;
-      const message = await createDevFlowMessage(scope, conversationId, { body });
+      if (!clientId || !conversationId) return null;
+      const message = await createDevFlowMessage(clientId, conversationId, { body });
       await refresh();
       return message;
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [scopeKey, conversationId, refresh],
+    [clientId, conversationId, refresh],
   );
 
   useEffect(() => {
