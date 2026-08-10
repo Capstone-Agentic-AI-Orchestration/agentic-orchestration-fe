@@ -16,14 +16,17 @@ jest.mock("@/shared/projects/selected-project-context", () => ({
 }));
 
 jest.mock("@/shared/components/collaboration/project-conversation-panel", () => ({
-  ProjectConversationPanel: (props: {
-    projectId: string;
+  // Asserts the scope kind as well as the id: the developer console must open the project's TEAM
+  // thread, never a client relationship thread, and a bare id could no longer tell them apart.
+  ConversationPanel: (props: {
+    scope?: { kind: string; projectId?: string; clientId?: string } | null;
     defaultVisibility: string;
     title: string;
   }) => (
     <div
       data-testid="conversation-panel"
-      data-project-id={props.projectId}
+      data-scope-kind={props.scope?.kind}
+      data-project-id={props.scope?.projectId}
       data-visibility={props.defaultVisibility}
     >
       {props.title}
@@ -83,6 +86,7 @@ describe("developer navigation and messages", () => {
     expect(screen.getByText("Messages")).toBeInTheDocument();
     expect(screen.getByText("Acme")).toBeInTheDocument();
     expect(screen.getByText(/communication between developers and the project manager/i)).toBeInTheDocument();
+    expect(screen.getByTestId("conversation-panel")).toHaveAttribute("data-scope-kind", "project");
     expect(screen.getByTestId("conversation-panel")).toHaveAttribute("data-project-id", "project-1");
     expect(screen.getByTestId("conversation-panel")).toHaveAttribute("data-visibility", "TEAM");
   });

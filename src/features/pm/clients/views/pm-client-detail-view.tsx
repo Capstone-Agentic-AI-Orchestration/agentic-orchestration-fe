@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Badge, Button, Card, Field, Input, Modal, Select, Textarea } from "@/shared/components/ui";
 import {
   IconAlertTriangle,
@@ -10,17 +10,25 @@ import {
   IconClock,
   IconFileText,
   IconFolder,
+  IconMessageCircle,
   IconPlus,
   IconUsers,
 } from "@/shared/components/icons";
 import { SectionTitle } from "@/features/pm/projects/components/pm-project-ui";
 import { compactBackendError, formatBackendDate } from "@/features/pm/projects/utils/pm-project-detail.utils";
 import { devflowStatusView } from "@/shared/utils/devflow-projects";
-import { PMClientSubnav, type PMClientSectionId } from "../components/pm-client-subnav";
+import { ConversationPanel } from "@/shared/components/collaboration/project-conversation-panel";
+import {
+  PMClientSubnav,
+  PM_CLIENT_SECTION_IDS,
+  type PMClientSectionId,
+} from "../components/pm-client-subnav";
 import { useDevFlowClientWorkspace } from "@/shared/hooks/use-devflow-clients";
+import { useDevFlowConversations } from "@/shared/hooks/use-devflow-collaboration";
 import { useSelectedTeamWorkspace } from "@/shared/projects/selected-team-workspace-context";
 import {
   addDevFlowClientContact,
+  devflowClientScope,
   getDevFlowClientContactCandidates,
   listDevFlowProjects,
   removeDevFlowClientContact,
@@ -106,13 +114,29 @@ function extractionBadge(document: { fileName: string | null; extraction: { stat
 
 export function PMClientDetailView({ clientId }: Readonly<{ clientId: string }>) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { client, projects, documents, contacts, loading, error, refresh } =
     useDevFlowClientWorkspace(clientId);
+
+  // The relationship conversation. Fetched here as well as inside the panel because the subnav
+  // badge has to show unread mail on every section, not only while Messages is open.
+  const conversationScope = useMemo(() => devflowClientScope(clientId), [clientId]);
+  const { conversations } = useDevFlowConversations(conversationScope);
+  const unreadMessages = useMemo(
+    () => conversations.reduce((total, conversation) => total + (conversation.unreadCount ?? 0), 0),
+    [conversations],
+  );
   // Projects belonging to some OTHER client. There is no "unassigned" pool to draw from any
   // more, so this modal moves a project that was filed under the wrong client rather than
   // adopting an orphan.
   const [movable, setMovable] = useState<DevFlowProjectSummary[]>([]);
-  const [tab, setTab] = useState<PMClientSectionId>("overview");
+  // Seeded from ?tab= so the project page's "Open conversation" link lands on Messages rather than
+  // dropping the PM on Overview to find it themselves. Validated against the known ids: the value
+  // comes from the URL, so a typo must fall back rather than render a blank section.
+  const [tab, setTab] = useState<PMClientSectionId>(() => {
+    const requested = searchParams.get("tab");
+    return PM_CLIENT_SECTION_IDS.find((section) => section === requested) ?? "overview";
+  });
   const [actionError, setActionError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -124,8 +148,15 @@ export function PMClientDetailView({ clientId }: Readonly<{ clientId: string }>)
   const [candidateId, setCandidateId] = useState("");
 
   const counts = useMemo(
-    () => ({ projects: projects.length, documents: documents.totals.documents, contacts: contacts.length }),
-    [projects.length, documents.totals.documents, contacts.length],
+    () => ({
+      // Unread, not total. A running total of every message ever sent is inventory; what a PM needs
+      // off the side of the screen is whether anyone is waiting on a reply.
+      messages: unreadMessages,
+      projects: projects.length,
+      documents: documents.totals.documents,
+      contacts: contacts.length,
+    }),
+    [unreadMessages, projects.length, documents.totals.documents, contacts.length],
   );
 
   // Everything the overview reads, derived once from the four payloads the workspace hook
@@ -215,6 +246,17 @@ export function PMClientDetailView({ clientId }: Readonly<{ clientId: string }>)
   // Actionable, not decorative: every row names something a PM can go and fix, and links to the
   // section where the fix lives.
   const attention: AttentionItem[] = [];
+  // First, because it is a person waiting rather than a state to tidy.
+  if (unreadMessages > 0) {
+    attention.push({
+      id: "unread-messages",
+      tone: "warn",
+      icon: <IconMessageCircle size={14} />,
+      title: `${unreadMessages} unread message${unreadMessages === 1 ? "" : "s"}`,
+      detail: "Someone at this company is waiting on a reply.",
+      action: { label: "Open messages", run: () => setTab("messages") },
+    });
+  }
   if (projects.length === 0) {
     attention.push({
       id: "no-projects",
@@ -341,6 +383,7 @@ export function PMClientDetailView({ clientId }: Readonly<{ clientId: string }>)
         clientName={client.name}
         activeItem={tab}
         counts={counts}
+        attention={{ messages: true }}
         onSelect={setTab}
       />
 
@@ -659,6 +702,24 @@ export function PMClientDetailView({ clientId }: Readonly<{ clientId: string }>)
               </Card>
             </div>
           </div>
+        )}
+
+        {/* The conversation's home. It used to sit inside whichever project happened to be open,
+            which meant the second engagement with a company started from an empty thread while
+            everything ever said sat in the first project's tab. */}
+        {tab === "messages" && (
+          <ConversationPanel
+            scope={conversationScope}
+            title="Client conversation"
+            subtitle={`Threads with ${client.name}. Not tied to a project — this carries on between builds.`}
+            participantsLabel="Project manager and client"
+            defaultVisibility="CLIENT"
+            defaultCategory="GENERAL"
+            emptyText="No threads with this client yet. Start one to ask for what you need, or to send an update."
+            newThreadTitle={`Start a thread with ${client.name}`}
+            newThreadHint="The client's contacts can read and reply to this. Keep project-specific delivery chatter on the project instead."
+            noScopeText="This client is unavailable."
+          />
         )}
 
         {tab === "projects" && (

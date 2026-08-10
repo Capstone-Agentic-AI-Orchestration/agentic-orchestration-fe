@@ -5391,6 +5391,12 @@ h1, h2, h3, h4 { letter-spacing: -0.025em; margin: 0; font-weight: 700; }
   font-size: 11px;
   font-variant-numeric: tabular-nums;
 }
+/* Something waiting on the PM, not a total. Unread messages are the reason this exists. */
+.pm-client-subnav-count[data-attention="true"] {
+  background: rgba(245,158,11,.16);
+  color: var(--amber);
+  font-weight: 700;
+}
 .pm-client-doc-group {
   display: flex;
   align-items: center;

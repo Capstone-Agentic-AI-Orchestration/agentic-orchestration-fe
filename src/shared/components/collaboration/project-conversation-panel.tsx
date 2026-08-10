@@ -1,4 +1,3 @@
-// @ts-nocheck
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -6,22 +5,52 @@ import { Badge, Button, Card, Field, Input, Modal, Textarea } from "@/shared/com
 import { IconArrowLeft, IconMessageCircle, IconPlus, IconRefresh, IconSend } from "@/shared/components/icons";
 import { useDevFlowConversationMessages, useDevFlowConversations } from "@/shared/hooks/use-devflow-collaboration";
 import { compactDevFlowError, formatDevFlowDate } from "@/shared/utils/devflow-projects";
+import {
+  devflowScopeKey,
+  type DevFlowCollaborationVisibility,
+  type DevFlowConversationCategory,
+  type DevFlowConversationScope,
+} from "@/shared/api/devflow-api";
 
-export function ProjectConversationPanel({
-  projectId,
-  title = "Project conversations",
-  subtitle = "Project-scoped messages from the collaboration backend.",
+export interface ConversationPanelProps {
+  /**
+   * Whose threads these are. A project scope is the developer-and-project-manager delivery
+   * conversation; a client scope is the project manager's conversation with the company, which is
+   * not stored under any project.
+   */
+  scope?: DevFlowConversationScope | null;
+  title?: string;
+  subtitle?: string;
+  /** Who the active thread is between, shown above the message list. */
+  participantsLabel?: string;
+  defaultVisibility?: DevFlowCollaborationVisibility;
+  defaultCategory?: DevFlowConversationCategory;
+  emptyText?: string;
+  newThreadTitle?: string;
+  newThreadHint?: string;
+  /** Shown in place of the panel when no scope is available. */
+  noScopeText?: string;
+}
+
+export function ConversationPanel({
+  scope,
+  title = "Conversations",
+  subtitle = "Messages from the collaboration backend.",
+  participantsLabel = "Developer and project manager",
   defaultVisibility = "CLIENT",
   defaultCategory = "GENERAL",
   emptyText = "No conversations yet.",
-}) {
-  const { conversations, loading, error, refresh, createConversation } = useDevFlowConversations(projectId);
-  const [activeId, setActiveId] = useState(null);
+  newThreadTitle = "Start a thread",
+  newThreadHint = "Start a conversation with the project manager.",
+  noScopeText = "Nothing is selected.",
+}: Readonly<ConversationPanelProps>) {
+  const { conversations, loading, error, refresh, createConversation } = useDevFlowConversations(scope);
+  const [activeId, setActiveId] = useState<string | null>(null);
   const active = useMemo(
     () => conversations.find((conversation) => conversation.id === activeId) || conversations[0] || null,
     [activeId, conversations],
   );
-  const messages = useDevFlowConversationMessages(projectId, active?.id);
+  const messages = useDevFlowConversationMessages(scope, active?.id);
   const [draft, setDraft] = useState("");
   const [newTitle, setNewTitle] = useState("");
   const [newMessage, setNewMessage] = useState("");
@@ -30,6 +59,10 @@ export function ProjectConversationPanel({
   const [creating, setCreating] = useState(false);
   const [mobileDetail, setMobileDetail] = useState(false);
   const lastReadRefreshKey = useRef("");
+
+  // A stable identity for the scope: it is an object literal at the call site, so comparing the
+  // object itself would reset the panel on every render.
+  const scopeKey = devflowScopeKey(scope);
 
   useEffect(() => {
     setActiveId(null);
@@ -40,18 +73,20 @@ export function ProjectConversationPanel({
     setCreating(false);
     setMobileDetail(false);
     lastReadRefreshKey.current = "";
-  }, [projectId]);
+  }, [scopeKey]);
 
   useEffect(() => {
     if (!activeId && conversations[0]) setActiveId(conversations[0].id);
   }, [activeId, conversations]);
 
+  // Opening a thread marks it read on the server, so the unread badges in the list are stale until
+  // the list is refetched. Guarded by a key so this fires once per thread, not on every render.
   useEffect(() => {
-    const readRefreshKey = projectId && active?.id ? `${projectId}:${active.id}` : "";
+    const readRefreshKey = scopeKey && active?.id ? `${scopeKey}:${active.id}` : "";
     if (!readRefreshKey || messages.loading || messages.error || lastReadRefreshKey.current === readRefreshKey) return;
     lastReadRefreshKey.current = readRefreshKey;
     void refresh();
-  }, [active?.id, messages.error, messages.loading, projectId, refresh]);
+  }, [active?.id, messages.error, messages.loading, scopeKey, refresh]);
 
   const createThread = async () => {
     if (!newTitle.trim()) return;
@@ -91,8 +126,8 @@ export function ProjectConversationPanel({
     }
   };
 
-  if (!projectId) {
-    return <Card style={{ padding: 22, color: "var(--text-3)" }}>No backend project is selected.</Card>;
+  if (!scope) {
+    return <Card style={{ padding: 22, color: "var(--text-3)" }}>{noScopeText}</Card>;
   }
 
   return (
@@ -110,7 +145,7 @@ export function ProjectConversationPanel({
                 variant="ghost"
                 size="sm"
                 icon={<IconRefresh size={13} />}
-                onClick={refresh}
+                onClick={() => void refresh()}
                 title="Refresh conversations"
               />
               <Button
@@ -137,6 +172,8 @@ export function ProjectConversationPanel({
             conversations.map((conversation) => (
               <button
                 key={conversation.id}
+                type="button"
+                aria-current={active?.id === conversation.id ? "true" : undefined}
                 className={`conversation-thread${active?.id === conversation.id ? " is-active" : ""}`}
                 onClick={() => {
                   setActiveId(conversation.id);
@@ -145,7 +182,9 @@ export function ProjectConversationPanel({
               >
                 <div className="conversation-thread-heading">
                   <strong>{conversation.title}</strong>
-                  {conversation.unreadCount > 0 && <Badge tone="blue" dot={false}>{conversation.unreadCount}</Badge>}
+                  {Boolean(conversation.unreadCount) && (
+                    <Badge tone="blue" dot={false}>{conversation.unreadCount}</Badge>
+                  )}
                 </div>
                 <span>{conversation._count.messages} messages</span>
                 {conversation.messages?.[0]?.body && <p>{conversation.messages[0].body}</p>}
@@ -169,7 +208,7 @@ export function ProjectConversationPanel({
             <div className="conversation-icon"><IconMessageCircle size={17} /></div>
             <div>
               <h3>{active?.title || "No conversation selected"}</h3>
-              <p>{active ? "Developer and project manager" : "Create a thread to start messaging."}</p>
+              <p>{active ? participantsLabel : "Create a thread to start messaging."}</p>
             </div>
           </div>
         </div>
@@ -195,8 +234,21 @@ export function ProjectConversationPanel({
         <div className="conversation-composer">
           {!creating && actionError && <div className="conversation-error">{compactDevFlowError(actionError)}</div>}
           <div className="conversation-composer-row">
-            <Textarea rows={2} value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={active ? "Write a project message..." : "Select a conversation first"} disabled={!active} />
-            <Button variant="primary" icon={<IconSend size={14} />} disabled={busy || !active || !draft.trim()} onClick={send}>Send</Button>
+            <Textarea
+              rows={2}
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              placeholder={active ? "Write a message..." : "Select a conversation first"}
+              disabled={!active}
+            />
+            <Button
+              variant="primary"
+              icon={<IconSend size={14} />}
+              disabled={busy || !active || !draft.trim()}
+              onClick={() => void send()}
+            >
+              Send
+            </Button>
           </div>
         </div>
       </Card>
@@ -205,7 +257,7 @@ export function ProjectConversationPanel({
       <Modal
         open={creating}
         onClose={() => setCreating(false)}
-        title="Start a project thread"
+        title={newThreadTitle}
         footer={(
           <>
             <Button variant="ghost" onClick={() => setCreating(false)} disabled={busy}>Cancel</Button>
@@ -213,7 +265,7 @@ export function ProjectConversationPanel({
               variant="primary"
               icon={<IconPlus size={13} />}
               disabled={busy || !newTitle.trim()}
-              onClick={createThread}
+              onClick={() => void createThread()}
             >
               {busy ? "Creating…" : "Create thread"}
             </Button>
@@ -221,7 +273,7 @@ export function ProjectConversationPanel({
         )}
       >
         <div className="conversation-new-thread-form">
-          <p>Start a TEAM conversation with the project manager for this project.</p>
+          <p>{newThreadHint}</p>
           <Field label="Thread title">
             <Input
               value={newTitle}
@@ -235,7 +287,7 @@ export function ProjectConversationPanel({
               rows={5}
               value={newMessage}
               onChange={(event) => setNewMessage(event.target.value)}
-              placeholder="Add context for the project manager…"
+              placeholder="Add some context…"
             />
           </Field>
           {creating && actionError && <div className="conversation-error">{compactDevFlowError(actionError)}</div>}
@@ -243,4 +295,12 @@ export function ProjectConversationPanel({
       </Modal>
     </>
   );
+}
+
+/**
+ * @deprecated Prefer `ConversationPanel` with an explicit scope. Kept so the developer console's
+ * project threads keep working without a second rename in the same change.
+ */
+export function ProjectConversationPanel(props: Readonly<ConversationPanelProps>) {
+  return <ConversationPanel {...props} />;
 }

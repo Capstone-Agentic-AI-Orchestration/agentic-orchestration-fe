@@ -842,9 +842,47 @@ export interface DevFlowProjectTimelineEvent {
   actor: DevFlowProfile | null;
 }
 
+/**
+ * Which owner's threads to read or write. Mirrors ConversationScope in the backend.
+ *
+ * A project scope is a delivery thread — developers and the project manager about one build. A
+ * client scope is the relationship thread with a company, which is not stored under any project
+ * because it outlives all of them.
+ */
+export type DevFlowConversationScope =
+  | { kind: "project"; projectId: string }
+  | { kind: "client"; clientId: string };
+
+export const devflowProjectScope = (projectId: string): DevFlowConversationScope => ({
+  kind: "project",
+  projectId,
+});
+
+export const devflowClientScope = (clientId: string): DevFlowConversationScope => ({
+  kind: "client",
+  clientId,
+});
+
+/**
+ * Stable string for a scope, for React dependency arrays.
+ *
+ * A scope is an object literal, so it is a new reference on every render — passing one straight
+ * into a useEffect dependency array re-fires the effect forever. Depend on this instead.
+ */
+export function devflowScopeKey(scope?: DevFlowConversationScope | null): string {
+  if (!scope) return "";
+  return scope.kind === "project" ? `project:${scope.projectId}` : `client:${scope.clientId}`;
+}
+
+const conversationBasePath = (scope: DevFlowConversationScope) =>
+  scope.kind === "project" ? `/projects/${scope.projectId}` : `/clients/${scope.clientId}`;
+
 export interface DevFlowConversation {
   id: string;
-  projectId: string;
+  /** Null on a client-owned thread. Exactly one of this and clientId is set. */
+  projectId: string | null;
+  /** Null on a project-owned thread. */
+  clientId: string | null;
   title: string;
   category: DevFlowConversationCategory;
   visibility: DevFlowCollaborationVisibility;
@@ -861,7 +899,8 @@ export interface DevFlowConversation {
 
 export interface DevFlowMessage {
   id: string;
-  projectId: string;
+  /** Mirrors the owning conversation, so null on a client thread. Never key a read on it. */
+  projectId: string | null;
   conversationId: string;
   authorId: string | null;
   body: string;
@@ -1980,45 +2019,53 @@ export function verifyDevFlowLlmProvider(projectId: string): Promise<DevFlowLlmP
   });
 }
 
-export function getDevFlowConversations(projectId: string): Promise<DevFlowConversation[]> {
-  return request<DevFlowConversation[]>(`/projects/${projectId}/conversations`);
+export function getDevFlowConversations(
+  scope: DevFlowConversationScope,
+): Promise<DevFlowConversation[]> {
+  return request<DevFlowConversation[]>(`${conversationBasePath(scope)}/conversations`);
 }
 
 export function createDevFlowConversation(
-  projectId: string,
+  scope: DevFlowConversationScope,
   input: CreateDevFlowConversationInput,
 ): Promise<DevFlowConversation> {
-  return request<DevFlowConversation>(`/projects/${projectId}/conversations`, {
+  return request<DevFlowConversation>(`${conversationBasePath(scope)}/conversations`, {
     method: "POST",
     body: JSON.stringify(input),
   });
 }
 
 export function getDevFlowConversationMessages(
-  projectId: string,
+  scope: DevFlowConversationScope,
   conversationId: string,
 ): Promise<DevFlowMessage[]> {
-  return request<DevFlowMessage[]>(`/projects/${projectId}/conversations/${conversationId}/messages`);
+  return request<DevFlowMessage[]>(
+    `${conversationBasePath(scope)}/conversations/${conversationId}/messages`,
+  );
 }
 
 export function createDevFlowMessage(
-  projectId: string,
+  scope: DevFlowConversationScope,
   conversationId: string,
   input: CreateDevFlowMessageInput,
 ): Promise<DevFlowMessage> {
-  return request<DevFlowMessage>(`/projects/${projectId}/conversations/${conversationId}/messages`, {
-    method: "POST",
-    body: JSON.stringify(input),
-  });
+  return request<DevFlowMessage>(
+    `${conversationBasePath(scope)}/conversations/${conversationId}/messages`,
+    {
+      method: "POST",
+      body: JSON.stringify(input),
+    },
+  );
 }
 
 export function markDevFlowConversationRead(
-  projectId: string,
+  scope: DevFlowConversationScope,
   conversationId: string,
 ): Promise<{ read: true; lastReadAt: string }> {
-  return request<{ read: true; lastReadAt: string }>(`/projects/${projectId}/conversations/${conversationId}/read`, {
-    method: "PATCH",
-  });
+  return request<{ read: true; lastReadAt: string }>(
+    `${conversationBasePath(scope)}/conversations/${conversationId}/read`,
+    { method: "PATCH" },
+  );
 }
 
 export function getDevFlowCollaborationDocuments(projectId: string): Promise<DevFlowCollaborationDocument[]> {

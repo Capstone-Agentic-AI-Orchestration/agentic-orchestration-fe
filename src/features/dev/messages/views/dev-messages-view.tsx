@@ -4,7 +4,8 @@ import { useRouter } from "next/navigation";
 import { Button, Card } from "@/shared/components/ui";
 import { IconFolder, IconRefresh } from "@/shared/components/icons";
 import { DevPageHeader } from "@/features/dev/shared/components/dev-page-header";
-import { ProjectConversationPanel } from "@/shared/components/collaboration/project-conversation-panel";
+import { ConversationPanel } from "@/shared/components/collaboration/project-conversation-panel";
+import { devflowProjectScope } from "@/shared/api/devflow-api";
 import { useSelectedDevFlowProject } from "@/shared/projects/selected-project-context";
 import { compactDevFlowError } from "@/shared/utils/devflow-projects";
 
@@ -63,10 +64,11 @@ export function DevMessagesView() {
               This TEAM workspace is for communication between developers and the project manager. Clients cannot access it.
             </div>
           </Card>
-          <ProjectConversationPanel
-            projectId={selectedProjectId}
+          <ConversationPanel
+            scope={selectedProjectId ? devflowProjectScope(selectedProjectId) : null}
             title="Project manager inbox"
             subtitle="Project-scoped TEAM threads"
+            participantsLabel="Developer and project manager"
             defaultVisibility="TEAM"
             defaultCategory="GENERAL"
             emptyText="No project-manager conversations yet. Start the first thread for this project."

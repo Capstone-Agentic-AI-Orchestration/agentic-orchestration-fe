@@ -105,7 +105,7 @@ import {
 import { BackendWorkOrdersPanel } from "../components/backend-work-orders-panel";
 import { BackendOrchestrationPanel } from "../components/backend-orchestration-panel";
 import { BackendKickoffPanel } from "../components/backend-kickoff-panel";
-import { ProjectConversationPanel } from "@/shared/components/collaboration/project-conversation-panel";
+import { PMClientConversationRollup } from "../components/pm-client-conversation-rollup";
 import { BackendDocumentsPanel } from "../components/backend-documents-panel";
 import { BackendTasksPanel } from "../components/backend-tasks-panel";
 import { BackendDeliveryReviewPanel } from "../components/backend-delivery-review-panel";
@@ -694,14 +694,12 @@ function BackendProjectDetail({ project, onBack }) {
           />
         )}
 
+        {/* Read-only. The conversation with a company is stored on the client, not here — see
+            PMClientConversationRollup for why the composer deliberately is not on this page. */}
         {tab === "messages" && (
-          <ProjectConversationPanel
-            projectId={detail.id}
-            title="Client conversation"
-            subtitle="Threads the client can see and reply to. Use Work orders or the team workspace for internal discussion."
-            defaultVisibility="CLIENT"
-            defaultCategory="GENERAL"
-            emptyText="No client conversation yet. Start a thread to ask for the documents or details this project still needs."
+          <PMClientConversationRollup
+            clientId={detail.client?.id}
+            clientName={detail.client?.name}
           />
         )}
 

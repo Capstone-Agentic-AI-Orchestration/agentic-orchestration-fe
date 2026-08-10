@@ -5,13 +5,25 @@ import {
   IconActivity,
   IconFileText,
   IconFolder,
+  IconMessageCircle,
   IconUsers,
 } from "@/shared/components/icons";
 
-export type PMClientSectionId = "overview" | "projects" | "documents" | "contacts";
+export type PMClientSectionId = "overview" | "messages" | "projects" | "documents" | "contacts";
+
+export const PM_CLIENT_SECTION_IDS: readonly PMClientSectionId[] = [
+  "overview",
+  "messages",
+  "projects",
+  "documents",
+  "contacts",
+];
 
 const SECTIONS: Array<{ value: PMClientSectionId; label: string; icon: ReactNode }> = [
   { value: "overview", label: "Overview", icon: <IconActivity size={15} /> },
+  // Directly under Overview, above the delivery sections: talking to the client is what a PM does
+  // with a client, and this is the only place the conversation lives now.
+  { value: "messages", label: "Messages", icon: <IconMessageCircle size={15} /> },
   { value: "projects", label: "Projects", icon: <IconFolder size={15} /> },
   { value: "documents", label: "Documents", icon: <IconFileText size={15} /> },
   { value: "contacts", label: "Contacts", icon: <IconUsers size={15} /> },
@@ -21,11 +33,18 @@ export function PMClientSubnav({
   clientName,
   activeItem,
   counts,
+  attention,
   onSelect,
 }: Readonly<{
   clientName: string;
   activeItem: PMClientSectionId;
   counts: Partial<Record<PMClientSectionId, number>>;
+  /**
+   * Sections whose count is something waiting on the PM rather than a plain total. Unread messages
+   * are the case this exists for: "3" next to Messages has to read differently from "3" next to
+   * Documents, or it is just inventory.
+   */
+  attention?: Partial<Record<PMClientSectionId, boolean>>;
   onSelect: (item: PMClientSectionId) => void;
 }>) {
   return (
@@ -49,7 +68,14 @@ export function PMClientSubnav({
               >
                 {item.icon}
                 <span>{item.label}</span>
-                {typeof count === "number" && <span className="pm-client-subnav-count">{count}</span>}
+                {typeof count === "number" && (
+                  <span
+                    className="pm-client-subnav-count"
+                    data-attention={attention?.[item.value] && count > 0 ? "true" : undefined}
+                  >
+                    {count}
+                  </span>
+                )}
               </button>
             );
           })}
