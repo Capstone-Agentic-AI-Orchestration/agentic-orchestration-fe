@@ -5,7 +5,9 @@ import { Badge, Button, Card, Field, Input, Select, Textarea } from "@/shared/co
 import {
   type DevFlowClientIntakePayload,
   type DevFlowFeaturePriority,
+  type DevFlowIntakeDraftProvenance,
   type DevFlowProjectIntakeResponse,
+  draftDevFlowProjectIntake,
   downloadDevFlowProjectIntakeTemplate,
   getDevFlowProjectIntake,
   lockDevFlowProjectIntake,
@@ -18,6 +20,7 @@ import {
 } from "@/shared/api/devflow-api";
 import { useSelectedDevFlowProject } from "@/shared/projects/selected-project-context";
 import { PMProjectSubnav } from "@/features/pm/projects/components/pm-project-subnav";
+import { PMIntakeBrief } from "./pm-intake-brief";
 import { intakeCopy } from "./intake-copy";
 
 type IntakeRole = "client" | "pm";
@@ -225,6 +228,26 @@ export function ProjectIntakeWorkspace({ projectId, role }: { projectId: string;
   const [uploading, setUploading] = useState(false);
   const [uploadNotice, setUploadNotice] = useState("");
   const [confirmedAccurate, setConfirmedAccurate] = useState(false);
+  const [drafting, setDrafting] = useState(false);
+  // Kept only for this visit. Provenance describes the draft the client is looking at right now; a
+  // value they have since edited is their own answer, and persisting the tag would keep calling it
+  // ours long after they rewrote it.
+  const [provenance, setProvenance] = useState<DevFlowIntakeDraftProvenance>({});
+  const [draftNotice, setDraftNotice] = useState("");
+  // PMs read far more often than they edit, so the readable brief is the landing view and the
+  // eight-step form is opt-in. Clients are authoring, so they always get the form.
+  const [pmView, setPmView] = useState<"brief" | "form">("brief");
+
+  /**
+   * Whether there is anything worth drafting from yet.
+   *
+   * Drives the banner's two jobs: with documents it offers to do the work, without them it says
+   * what to attach and sends you there. Offering "fill this in" when nothing has been uploaded
+   * produces an empty draft and teaches people the button does not work.
+   */
+  const hasReadableDocuments = (response?.documents ?? []).some(
+    (document) => document.extraction?.status === "READY",
+  );
 
   const updateResponse = (next: DevFlowProjectIntakeResponse) => {
     setResponse((current) => ({
@@ -275,6 +298,52 @@ export function ProjectIntakeWorkspace({ projectId, role }: { projectId: string;
   const docs = response?.documents ?? [];
   const setOverview = (key: keyof DevFlowClientIntakePayload["overview"], value: string | string[]) => updatePayload({ ...payload, overview: { ...payload.overview, [key]: value } });
   const setDelivery = (key: keyof DevFlowClientIntakePayload["experienceAndDelivery"], value: unknown) => updatePayload({ ...payload, experienceAndDelivery: { ...payload.experienceAndDelivery, [key]: value } });
+
+  /**
+   * Fills the form from the documents already uploaded, plus the brief.
+   *
+   * Merges rather than overwrites: anything the client has typed wins over anything we drafted.
+   * Losing someone's own words to a machine's guess is the one failure that would stop them
+   * trusting this button, and it only has to happen once.
+   */
+  const draftFromSources = async () => {
+    setDrafting(true); setError(""); setDraftNotice("");
+    try {
+      const draft = await draftDevFlowProjectIntake(projectId);
+      const merged: DevFlowClientIntakePayload = {
+        ...draft.payload,
+        overview: {
+          ...draft.payload.overview,
+          // Field by field: an empty answer takes the draft, a filled one keeps what they wrote.
+          projectName: payload.overview.projectName || draft.payload.overview.projectName,
+          businessGoal: payload.overview.businessGoal || draft.payload.overview.businessGoal,
+          successMeasures: payload.overview.successMeasures.length ? payload.overview.successMeasures : draft.payload.overview.successMeasures,
+          primaryContact: payload.overview.primaryContact || draft.payload.overview.primaryContact,
+          approver: payload.overview.approver || draft.payload.overview.approver,
+          targetLaunch: payload.overview.targetLaunch || draft.payload.overview.targetLaunch,
+        },
+        roles: payload.roles.some((role) => role.name.trim()) ? payload.roles : draft.payload.roles,
+        features: payload.features.some((feature) => feature.title.trim()) ? payload.features : draft.payload.features,
+        workflows: payload.workflows.some((workflow) => workflow.title.trim()) ? payload.workflows : draft.payload.workflows,
+        dataAndIntegrations: payload.dataAndIntegrations.entities.length || payload.dataAndIntegrations.integrations.length
+          ? payload.dataAndIntegrations
+          : { ...draft.payload.dataAndIntegrations, dataNotApplicable: payload.dataAndIntegrations.dataNotApplicable, integrationsNotApplicable: payload.dataAndIntegrations.integrationsNotApplicable },
+        experienceAndDelivery: { ...draft.payload.experienceAndDelivery, documentsNotApplicable: payload.experienceAndDelivery.documentsNotApplicable },
+      };
+      setProvenance(draft.provenance);
+      updatePayload(merged);
+      const readCount = draft.sourceDocumentIds.length;
+      setDraftNotice(
+        readCount
+          ? `Filled in from ${readCount} document${readCount === 1 ? "" : "s"}. Check every answer — anything we were unsure of is marked, and anything we could not find is still blank.`
+          : "Filled in from your original brief. Upload a document for a fuller draft, and check every answer before submitting.",
+      );
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : String(nextError));
+    } finally {
+      setDrafting(false);
+    }
+  };
 
   const upload = async (file: File | null) => {
     if (!file) return;
@@ -509,8 +578,45 @@ export function ProjectIntakeWorkspace({ projectId, role }: { projectId: string;
           ? `${completeSectionCount} of ${STEPS.length} sections complete. These are the client's own answers — you review them, request changes, then lock the version the agents build from.`
           : "Autosaves while you work. Locked versions are read-only and used as agent evidence."
       }</div></div><div style={{ display: "flex", gap: 8, alignItems: "center" }}><Badge tone={statusTone(response.intake.status)}>{response.intake.status.replaceAll("_", " ")}</Badge>{dirty && <span style={{ color: "var(--text-3)", fontSize: 12 }}>Saving…</span>}</div></div></Card>
+
+      {/* Above the form, not inside step seven of eight.
+          This is the shortest path through the whole page, so it cannot be somewhere you only find
+          by working through the thing it saves you from. Shown on every step, and it stays visible
+          after a draft so more documents can be added and it can be run again. */}
+      {editable && (
+        <Card style={{ padding: 18, borderColor: "rgba(52,211,153,.32)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
+            <div style={{ minWidth: 240, flex: 1 }}>
+              <strong>{hasReadableDocuments ? "Let us fill this in from your documents" : "Do not fill this in by hand"}</strong>
+              <p style={{ color: "var(--text-2)", fontSize: 13, margin: "6px 0 0", lineHeight: 1.55 }}>
+                {hasReadableDocuments
+                  ? "We will read what is attached and answer as much of this form as we can. Nothing already written is overwritten, and every answer stays editable."
+                  : "Attach a brief, a deck, a process document \u2014 even a photo of a whiteboard \u2014 on the Documents step, and we will answer most of these questions for you."}
+              </p>
+            </div>
+            <Button
+              variant="primary"
+              disabled={drafting}
+              onClick={() => (hasReadableDocuments ? void draftFromSources() : setStepId("documents"))}
+            >
+              {drafting ? "Reading\u2026" : hasReadableDocuments ? "Fill in from the documents" : "Go to Documents"}
+            </Button>
+          </div>
+          {draftNotice && (
+            <div style={{ color: "var(--text-2)", fontSize: 13, marginTop: 12, lineHeight: 1.5 }}>{draftNotice}</div>
+          )}
+        </Card>
+      )}
     <div style={{ display: "grid", gridTemplateColumns: role === "pm" ? "minmax(0, 1fr) 330px" : "minmax(190px, 240px) minmax(0, 1fr)", gap: 18, alignItems: "start" }} className="intake-workspace-grid">
       {role === "client" && <Card glass style={{ padding: 10, position: "sticky", top: 16 }}>{STEPS.map((step) => <button type="button" key={step.id} onClick={() => setStepId(step.id)} style={{ display: "block", width: "100%", textAlign: "left", border: 0, borderRadius: 8, padding: "10px 11px", marginBottom: 3, background: step.id === stepId ? "rgba(74, 112, 255, .18)" : "transparent", color: step.id === stepId ? "white" : "var(--text-2)", cursor: "pointer", fontWeight: step.id === stepId ? 650 : 500 }}>{STEPS.findIndex((item) => item.id === step.id) + 1}. {step.label}</button>)}</Card>}
+      {role === "pm" && pmView === "brief" ? (
+        <PMIntakeBrief
+          payload={payload}
+          readiness={response.readiness}
+          documents={response.documents ?? []}
+          onOpenForm={() => setPmView("form")}
+        />
+      ) : (
       <Card style={{ padding: 22 }}><div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", marginBottom: 14 }}><div><h2 style={{ fontSize: 18, margin: 0 }}>{role === "pm" ? copy.sectionTitle(stepId, current.label) : current.label}</h2><div style={{ fontSize: 12, color: "var(--text-3)", marginTop: 4 }}>{role === "pm" ? "Read-only unless the client has changes outstanding." : "Clear answers reduce rework and make the scope easier to approve."}</div></div>{role === "client" && <Button variant="ghost" size="sm" disabled={!editable || saving} onClick={() => void save()}>Save now</Button>}</div>{role === "pm" && <div className="pm-intake-step-tabs">{STEPS.map((step) => {
         // A dot beside each tab so the PM can see which parts of the brief are thin without
         // opening all eight. Amber = something outstanding, green = nothing outstanding.
@@ -546,6 +652,7 @@ export function ProjectIntakeWorkspace({ projectId, role }: { projectId: string;
           </div>
         </div>
       )}</Card>
+      )}
       {role === "pm" && <PMReviewPanel projectId={projectId} response={response} onResult={updateResponse} />}
     </div>
   </div>;

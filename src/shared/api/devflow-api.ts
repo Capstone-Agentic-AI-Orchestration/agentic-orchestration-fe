@@ -61,6 +61,13 @@ export type DevFlowProjectStatus =
 export type DevFlowUserRole = "CLIENT" | "PM" | "DEV" | "ADMIN";
 export type DevFlowProfileStatus = "PENDING" | "ACTIVE" | "SUSPENDED";
 
+/**
+ * Deliberately without DRAFT, which the database has but this console never receives.
+ *
+ * A draft is a request a client is still writing, and every PM-facing read excludes it — including
+ * a fetch by id. Leaving it out here means the console cannot accidentally render a state it has no
+ * business seeing, rather than relying on a filter to keep it away.
+ */
 export type DevFlowInquiryStatus = "NEW" | "IN_DISCOVERY" | "APPROVED" | "REJECTED";
 
 export type DevFlowScheduleEventType = "MILESTONE" | "MEETING" | "DUE_DATE" | "REMINDER" | "OTHER";
@@ -244,6 +251,14 @@ export interface DevFlowInquiry {
   phone: string | null;
   role: string | null;
   brief: string;
+  /**
+   * The structured brief, if the client filled one in through the guided request flow.
+   *
+   * Null on a lead from the marketing form, which is a sentence and nothing more. When present it
+   * is the same shape as a project's intake, so approving the request hands it straight over rather
+   * than starting requirements from scratch afterwards.
+   */
+  payload: DevFlowClientIntakePayload | null;
   stackKey: string;
   budgetRange: string | null;
   timeline: string | null;
@@ -260,7 +275,12 @@ export interface DevFlowInquiry {
 }
 
 export interface DevFlowAccountInvitationDelivery {
-  status: "SENT" | "EXISTING_ACCOUNT" | "FAILED";
+  /**
+   * SENT — a fresh invitation is on its way.
+   * PASSWORD_LINK_SENT — the address already had an account, so a set-password link was emailed.
+   * EXISTING_ACCOUNT — nothing needed sending; they already accepted and can sign in.
+   */
+  status: "SENT" | "PASSWORD_LINK_SENT" | "OAUTH_ONLY_ACCOUNT" | "EXISTING_ACCOUNT" | "FAILED";
   email: string;
   message: string;
 }
@@ -955,6 +975,14 @@ export interface DevFlowClientIntakePayload {
     futurePhase: string[];
     documentsNotApplicable?: boolean;
   };
+  /**
+   * Replies the assistant could not turn into structured answers, kept verbatim, keyed by topic.
+   *
+   * Present when a model was unavailable or a reply did not parse. The conversation moves on
+   * regardless -- otherwise it re-asks the same question forever -- and these are the client's own
+   * words for that topic, so the brief shows what they said rather than a blank section.
+   */
+  unparsedReplies?: Partial<Record<DevFlowIntakeInterviewTopicId, string>>;
 }
 
 export interface DevFlowIntakeComment {
@@ -1003,7 +1031,14 @@ export interface DevFlowIntakeSectionStatus {
 }
 
 export interface DevFlowIntakeReadiness {
+  /** What actually stops submission and locking. Short by design. */
   blockers: string[];
+  /**
+   * Worth adding, never a wall — the project manager decides at lock whether a thin brief matters.
+   *
+   * Absent on older responses, so treat a missing value as "no suggestions", not as an error.
+   */
+  suggestions?: string[];
   /** Absent on older responses; treat as "no per-step detail available". */
   sections?: DevFlowIntakeSectionStatus[];
   readyForSubmission: boolean;
@@ -1260,6 +1295,14 @@ export interface CreateDevFlowInquiryInput {
 
 export interface ReviewDevFlowInquiryInput {
   reviewNote?: string;
+  /**
+   * The workspace an approved lead becomes work in. Required by the approve route.
+   *
+   * Approval creates both a client and a project, and both carry a workspace — Client.groupId has
+   * been NOT NULL since 20260807000700. Optional here because the same input type is reused for
+   * rejection, which creates nothing and needs no workspace.
+   */
+  groupId?: string;
   /**
    * Existing client to file an approved lead under. Omitted means resolve-or-create by company
    * name — the console suggests a match and the PM confirms it, rather than merging silently.
@@ -2545,6 +2588,72 @@ export function saveDevFlowProjectIntakeDraft(
   return request<DevFlowProjectIntakeResponse>(`/projects/${projectId}/intake/draft`, {
     method: "POST",
     body: JSON.stringify({ payload }),
+  });
+}
+
+/** Where a drafted value came from. Absent entirely when nothing in the sources supported it. */
+export type DevFlowIntakeFieldOrigin = "stated" | "inferred";
+
+/**
+ * Provenance for a drafted payload, keyed by dotted field path (`overview.businessGoal`,
+ * `features.0.title`).
+ *
+ * A draft and a client's own answer must never look alike. The locked intake tells the agents it is
+ * authoritative and not to invent beyond it, so a guess someone scrolled past becomes something the
+ * build treats as fact. This is what lets the UI say "we inferred this" beside the value.
+ */
+export type DevFlowIntakeDraftProvenance = Record<
+  string,
+  { origin: DevFlowIntakeFieldOrigin; documentId?: string }
+>;
+
+export interface DevFlowIntakeDraft {
+  payload: DevFlowClientIntakePayload;
+  provenance: DevFlowIntakeDraftProvenance;
+  /** Documents the draft actually read, for "based on: <these files>". */
+  sourceDocumentIds: string[];
+  usedBrief: boolean;
+}
+
+/**
+ * Drafts the requirements from the documents already uploaded plus the original brief.
+ *
+ * Returns a proposal and saves nothing. The caller decides whether to keep it, so a poor draft is
+ * discarded rather than something the client has to undo.
+ */
+/** The interview agenda, in order. Four topics and no more. */
+export type DevFlowIntakeInterviewTopicId = "goal" | "users" | "musthaves" | "boundaries";
+
+export interface DevFlowIntakeInterviewTurn {
+  /** True once every topic is answered; `topicId` is then null and `message` is the sign-off. */
+  done: boolean;
+  topicId: DevFlowIntakeInterviewTopicId | null;
+  message: string;
+  /** The brief as it now stands, so it can be watched filling in during the conversation. */
+  payload: DevFlowClientIntakePayload;
+  answeredCount: number;
+  totalCount: number;
+}
+
+/**
+ * Advances the guided interview by one turn.
+ *
+ * Stateless across turns: the brief is the state and it is saved server-side each time, so a client
+ * can close the tab and resume from what the brief already says. Omit `reply` for the opening turn.
+ */
+export function takeDevFlowIntakeInterviewTurn(
+  projectId: string,
+  input: { reply?: string; topicId?: DevFlowIntakeInterviewTopicId } = {},
+): Promise<DevFlowIntakeInterviewTurn> {
+  return request<DevFlowIntakeInterviewTurn>(`/projects/${projectId}/intake/interview`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function draftDevFlowProjectIntake(projectId: string): Promise<DevFlowIntakeDraft> {
+  return request<DevFlowIntakeDraft>(`/projects/${projectId}/intake/draft-from-sources`, {
+    method: "POST",
   });
 }
 
