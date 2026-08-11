@@ -7,15 +7,26 @@ import { IconCheck, IconClose, IconMail, IconRefresh } from "@/shared/components
 import { SectionTitle } from "@/features/pm/projects/components/pm-project-ui";
 import { compactBackendError, formatBackendDate } from "@/features/pm/projects/utils/pm-project-detail.utils";
 import { useDevFlowInquiries } from "@/shared/hooks/use-devflow-inquiries";
+import { useSelectedTeamWorkspace } from "@/shared/projects/selected-team-workspace-context";
 import {
   approveDevFlowInquiry,
   getDevFlowInquiryClientSuggestions,
   rejectDevFlowInquiry,
   sendDevFlowInquiryAccountInvite,
   type DevFlowInquiry,
+  type DevFlowClientIntakePayload,
   type DevFlowClientSuggestion,
   type DevFlowInquiryStatus,
+  type DevFlowIntakeInterviewTopicId,
 } from "@/shared/api/devflow-api";
+
+/** What the assistant asked, phrased as a project manager would describe the question. */
+const REQUEST_TOPIC_LABELS: Record<DevFlowIntakeInterviewTopicId, string> = {
+  goal: "What it is for",
+  users: "Who uses it",
+  musthaves: "What it must do",
+  boundaries: "Connections, exclusions and timing",
+};
 
 const STATUS_TONE: Record<DevFlowInquiryStatus, "blue" | "green" | "red" | "amber"> = {
   NEW: "blue",
@@ -43,6 +54,9 @@ export function PMInquiriesView() {
   const router = useRouter();
   const [filter, setFilter] = useState<DevFlowInquiryStatus | "ALL">("NEW");
   const { inquiries, loading, error, refresh } = useDevFlowInquiries(filter);
+  // The switcher's current workspace is where an approved lead lands. Read here rather than added
+  // as another picker in the modal: a PM already chose a workspace to be working in.
+  const { selectedTeamId, selectedTeam } = useSelectedTeamWorkspace();
 
   const [active, setActive] = useState<DevFlowInquiry | null>(null);
   const [suggestions, setSuggestions] = useState<DevFlowClientSuggestion[]>([]);
@@ -81,8 +95,15 @@ export function PMInquiriesView() {
     setActionError("");
     try {
       if (approved) {
+        // The workspace is required: approval creates a client and a project, and both belong to a
+        // team. It was never sent, so every approval failed validation before reaching the service.
+        if (!selectedTeamId) {
+          setActionError("Pick a team workspace first — an approved lead has to belong to one.");
+          return;
+        }
         const result = await approveDevFlowInquiry(active.id, {
           reviewNote: note.trim() || undefined,
+          groupId: selectedTeamId,
           clientId: chosenClientId || undefined,
           clientName: chosenClientId ? undefined : newClientName.trim() || undefined,
         });
@@ -248,7 +269,7 @@ export function PMInquiriesView() {
               </Button>
               <Button
                 icon={<IconCheck size={13} />}
-                disabled={busy || (!chosenClientId && !newClientName.trim())}
+                disabled={busy || !selectedTeamId || (!chosenClientId && !newClientName.trim())}
                 onClick={() => void decide(true)}
               >
                 {busy ? "Working..." : "Accept and open discovery"}
@@ -271,6 +292,12 @@ export function PMInquiriesView() {
                 {[active.budgetRange, active.timeline, active.stackKey].filter(Boolean).join(" · ")}
               </div>
             </Card>
+
+            {/* A guided request arrives with its scope already agreed with the client. Approving it
+                without reading that would be approving a sentence -- and these answers are copied
+                into the project's intake on approval, so this is the last point before they become
+                the thing agents build from. A marketing-form lead has no payload and shows nothing. */}
+            {active.payload && <InquiryBrief payload={active.payload} />}
 
             <div>
               <SectionTitle
@@ -340,6 +367,14 @@ export function PMInquiriesView() {
               )}
             </div>
 
+            {/* Named, not silent. Approval files a real company into a real team, and a PM whose
+                switcher is on the wrong workspace would otherwise only find out afterwards. */}
+            <div className="pm-inquiry-workspace">
+              <span>Filed into</span>
+              <strong>{selectedTeam?.name ?? "No workspace selected"}</strong>
+              {!selectedTeamId && <small>Choose one in the workspace switcher before approving.</small>}
+            </div>
+
             <Field label="Review note" helper="Shared with the client on approval or rejection.">
               <Textarea rows={3} value={note} onChange={(event) => setNote(event.target.value)} />
             </Field>
@@ -348,6 +383,76 @@ export function PMInquiriesView() {
           </div>
         )}
       </Modal>
+    </div>
+  );
+}
+
+
+/**
+ * The scope a client agreed with the assistant, shown before a project manager approves it.
+ *
+ * A short read rather than the full one-page brief that lives on a project: at this moment the
+ * decision is whether to take the work on, and the whole brief is one click away the instant the
+ * project exists. What it must not do is hide that a scope exists at all -- approving copies these
+ * answers into the project's intake, and they become what the agents build from.
+ */
+function InquiryBrief({ payload }: Readonly<{ payload: DevFlowClientIntakePayload }>) {
+  const mustHaves = payload.features
+    .filter((feature) => feature.priority === "MUST_HAVE")
+    .map((feature) => feature.title)
+    .filter(Boolean);
+
+  const unparsed = Object.entries(payload.unparsedReplies ?? {}).filter(
+    (entry): entry is [DevFlowIntakeInterviewTopicId, string] => Boolean(entry[1]?.trim()),
+  );
+
+  return (
+    <div>
+      <SectionTitle
+        title="What they asked for"
+        subtitle="Answered with the assistant before this was sent. Approving copies it into the project's requirements."
+      />
+      <Card style={{ padding: 14 }}>
+        <dl className="pm-inquiry-brief">
+          <BriefFact label="What it is for" value={payload.overview.businessGoal} />
+          <BriefFact label="Success looks like" value={payload.overview.successMeasures} />
+          <BriefFact label="Who uses it" value={payload.roles.map((role) => role.name).filter(Boolean)} />
+          <BriefFact label="Must be able to" value={mustHaves} />
+          <BriefFact
+            label="Connects to"
+            value={payload.dataAndIntegrations.integrations.map((item) => item.name).filter(Boolean)}
+          />
+          <BriefFact label="Not included" value={payload.experienceAndDelivery.outOfScope} />
+          <BriefFact label="Wanted by" value={payload.overview.targetLaunch} />
+        </dl>
+
+        {/* Answers the assistant could not file under a heading. Without these the rows above look
+            unanswered, and a PM would go and ask again for something the client already told us. */}
+        {unparsed.length > 0 && (
+          <div className="pm-inquiry-brief__unparsed">
+            <strong>In their own words</strong>
+            {unparsed.map(([topicId, reply]) => (
+              <p key={topicId}>
+                <span>{REQUEST_TOPIC_LABELS[topicId] ?? topicId}</span>
+                {reply}
+              </p>
+            ))}
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+}
+
+function BriefFact({ label, value }: Readonly<{ label: string; value: string | string[] }>) {
+  const items = Array.isArray(value) ? value.filter((item) => item.trim()) : [];
+  const text = Array.isArray(value) ? "" : value.trim();
+  const answered = Array.isArray(value) ? items.length > 0 : Boolean(text);
+
+  return (
+    <div className="pm-inquiry-brief__row" data-answered={answered ? "true" : "false"}>
+      <dt>{label}</dt>
+      <dd>{answered ? (Array.isArray(value) ? items.join(" · ") : text) : "Not discussed"}</dd>
     </div>
   );
 }

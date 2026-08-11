@@ -11353,3 +11353,49 @@ details.pricing-faq[open] summary .pricing-faq-toggle {
 .pm-inquiry-workspace > span { color: var(--text-3); font-size: 12px; }
 .pm-inquiry-workspace > strong { font-size: 13px; }
 .pm-inquiry-workspace > small { flex-basis: 100%; color: var(--amber); font-size: 11.5px; }
+
+/* ---------------------------------------------------------------------------
+   PM — the scope attached to an inquiry
+
+   A guided request arrives with its brief already agreed. This is the short read
+   inside the approval dialog; the full one-page brief lives on the project once
+   it exists. Same fact-row proportions as that page, so the two read as the
+   same document seen at two moments.
+   --------------------------------------------------------------------------- */
+.pm-inquiry-brief { display: grid; margin: 0; }
+.pm-inquiry-brief__row {
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border-soft);
+  min-width: 0;
+}
+.pm-inquiry-brief__row:last-child { border-bottom: 0; }
+.pm-inquiry-brief__row dt { color: var(--text-3); font-size: 11px; }
+.pm-inquiry-brief__row dd {
+  margin: 3px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+/* Unanswered rows recede but stay: a gap in the scope is information a PM needs
+   before approving, not something to hide from them. */
+.pm-inquiry-brief__row[data-answered="false"] dd { color: var(--text-4); }
+
+.pm-inquiry-brief__unparsed {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-soft);
+}
+.pm-inquiry-brief__unparsed strong { display: block; font-size: 12px; }
+.pm-inquiry-brief__unparsed p {
+  margin: 8px 0 0;
+  color: var(--text-2);
+  font-size: 12.5px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+.pm-inquiry-brief__unparsed span {
+  display: block;
+  color: var(--text-3);
+  font-size: 11px;
+  margin-bottom: 2px;
+}
