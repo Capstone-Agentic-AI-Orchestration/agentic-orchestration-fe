@@ -53,10 +53,15 @@ const PROJECT_SECTIONS: Array<{ label: string; items: ProjectSectionItem[] }> = 
   {
     label: "Delivery",
     items: [
-      // Repository leads: until it exists nothing else in this project can start, and
-      // provisioning it is the PM's own job rather than something they watch.
-      { value: "repository", label: "Repository", icon: <IconGitBranch size={15} /> },
+      // Issues leads, and is where a project opens.
+      //
+      // Repository used to hold both positions, on the reasoning that nothing can start until the
+      // repository exists. True once, at the beginning — and then never again. After provisioning,
+      // Repository is two cards a PM has no reason to revisit, so every later visit to the project
+      // landed on a finished setup step and needed a second click to reach the actual work. Issues
+      // is what changes daily and what a PM comes here to act on.
       { value: "issues", label: "Issues", icon: <IconCheckCircle size={15} /> },
+      { value: "repository", label: "Repository", icon: <IconGitBranch size={15} /> },
       { value: "intake", label: "Intake brief", icon: <IconClipboard size={15} /> },
     ],
   },
@@ -86,8 +91,13 @@ export const PM_PROJECT_SECTION_IDS = new Set<PMProjectSectionId>(
   PROJECT_SECTIONS.flatMap((section) => section.items.map((item) => item.value)),
 );
 
-/** Where a project opens when the URL carries no ?tab=. */
-export const PM_PROJECT_DEFAULT_SECTION: PMProjectSectionId = "repository";
+/**
+ * Where a project opens when the URL carries no ?tab=.
+ *
+ * Must match the first item above. It is also the section whose URL stays clean — the detail view
+ * omits ?tab= for this one — so changing it here changes what /pm/project/:id means.
+ */
+export const PM_PROJECT_DEFAULT_SECTION: PMProjectSectionId = "issues";
 
 export function PMProjectSubnav({
   projectId,
